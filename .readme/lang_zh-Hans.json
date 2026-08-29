@@ -1,0 +1,38 @@
+{
+  "$name": "简体中文",
+  "text_current_lowercase": "当前",
+  "text_plugin_synopsis": "使用 Dear ImGui 创建浮动用户界面",
+  "h3_languages_with_ascii": "语言 (Languages)",
+  "p_languages_all_supported_for_readme": "当前 README.md 支持以下语言",
+  "h3_introduction": "简介",
+  "p_introduction": "ImGui 插件在脚本引擎中提供全局 `imgui` 对象. 它在透明浮动窗口中渲染即时模式控件, 并通过一套紧凑的 API 统一管理窗口创建/帧调度/触摸输入和原生资源清理.",
+  "h3_functions": "功能",
+  "features": [
+    "通过自动挂载或 `plugins.load(packageName)` 加载全局 `imgui` 对象.",
+    "透明浮动窗口, 可配置尺寸/位置/帧率/字体并支持拖动空白区域.",
+    "窗口/子区域/标签页/树形节点/文本/按钮/可变输入/选择器/进度指示/布局辅助/主题以及 Dear ImGui 演示窗口.",
+    "布尔/整数/浮点数/字符串和颜色可变引用, 用于保存有状态控件的数据.",
+    "插件信息/使用说明/README 和 CHANGELOG 的十种语言本地化."
+  ],
+  "h3_usage": "使用示例",
+  "p_usage_intro": "在插件中心启用自动挂载或显式加载插件, 然后创建浮动窗口",
+  "p_usage_references": "可变控件会更新由 `imgui.bool`/`imgui.int`/`imgui.float`/`imgui.string` 和 `imgui.floats` 创建的引用对象. `width`/`height` 和 `fontSize` 使用与屏幕密度无关的单位. 拖动空白区域可移动窗口, 也可传入 `movable: false` 固定窗口.",
+  "h3_api": "API 概览",
+  "p_api_intro": "小驼峰方法对应常用 Dear ImGui 操作, 熟悉原始命名的用户也可使用控件方法的 PascalCase 别名",
+  "api_groups": [
+    "窗口生命周期: `createWindow`/`closeWindow`/`withWindow`/`withChild`/`withTabBar`/`withTabItem` 和 `withTreeNode`.",
+    "控件: `text`/`button`/`checkbox`/`radioButton`/`sliderFloat`/`sliderInt`/`dragFloat`/`dragInt`/`inputText`/`colorEdit3`/`colorEdit4`/`progressBar`/`combo` 和 `selectable`.",
+    "布局与状态: 光标方法/控件宽度方法/`sameLine`/`separator`/`spacing`/控件查询和捕获查询.",
+    "常量: `Cond`/`WindowFlags`/`InputTextFlags`/`SliderFlags`/`TreeNodeFlags`/`SelectableFlags`/`TabBarFlags`/`TabItemFlags` 和 `MouseButton`."
+  ],
+  "h3_release_history": "发行历史",
+  "h5_for_more_release_history": "更多发行历史可参阅",
+  "h3_build": "构建",
+  "text_release_build": "生成带 CRC32 摘要文件名的 Release 构建",
+  "p_build_params": "构建参数来自 `version.properties`, 当前最低 SDK 为 24, 目标 SDK 为 36",
+  "h3_resource_layout": "资源结构",
+  "p_resource_layout": "`strings.xml` 提供插件描述本地化, `plugin_instruction.md` 提供宿主侧展示的插件使用说明. README 与 CHANGELOG 由 `.python/generate_markdown.py` 根据 JSON 源文件生成",
+  "h3_links": "相关链接",
+  "text_link_autojs6": "AutoJs6 项目",
+  "text_link_dear_imgui": "Dear ImGui 官方项目"
+}

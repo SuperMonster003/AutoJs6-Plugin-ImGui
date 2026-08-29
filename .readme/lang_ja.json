@@ -1,0 +1,38 @@
+{
+  "$name": "日本語",
+  "text_current_lowercase": "現在",
+  "text_plugin_synopsis": "Dear ImGui でフローティング UI を作成",
+  "h3_languages_with_ascii": "言語 (Languages)",
+  "p_languages_all_supported_for_readme": "現在の README.md は次の言語に対応しています",
+  "h3_introduction": "概要",
+  "p_introduction": "ImGui プラグインはスクリプトエンジンで Dear ImGui をグローバル `imgui` オブジェクトとして公開します. 透明なフローティングウィンドウに即時モードのコントロールを描画し, ウィンドウ作成/フレームスケジュール/タッチ入力/ネイティブリソース解放をコンパクトな API にまとめます.",
+  "h3_functions": "機能",
+  "features": [
+    "自動マウントまたは `plugins.load(packageName)` でグローバル `imgui` オブジェクトを読み込みます.",
+    "サイズ/位置/フレームレート/フォント/空白領域のドラッグを設定できる透明なフローティングウィンドウを作成します.",
+    "ウィンドウ/子領域/タブ/ツリー/テキスト/ボタン/可変入力/セレクター/進捗表示/レイアウト補助/テーマ/Dear ImGui デモウィンドウを提供します.",
+    "状態を持つコントロール向けに Boolean/整数/浮動小数点/文字列/カラーの可変参照を提供します.",
+    "プラグイン情報/使用説明/README/CHANGELOG を 10 言語にローカライズします."
+  ],
+  "h3_usage": "使い方",
+  "p_usage_intro": "プラグインセンターで自動マウントを有効にするか明示的に読み込み, フローティングウィンドウを作成します",
+  "p_usage_references": "可変コントロールは `imgui.bool`/`imgui.int`/`imgui.float`/`imgui.string`/`imgui.floats` で作成した参照を更新します. `width`/`height`/`fontSize` は画面密度に依存しない単位です. 空白領域をドラッグして移動するか, `movable: false` で固定できます.",
+  "h3_api": "API 概要",
+  "p_api_intro": "lower camel case メソッドは一般的な Dear ImGui 操作に対応し, 慣れたウィジェット呼び出し向けの PascalCase エイリアスも利用できます",
+  "api_groups": [
+    "ライフサイクル: `createWindow`/`closeWindow`/`withWindow`/`withChild`/`withTabBar`/`withTabItem`/`withTreeNode`.",
+    "コントロール: テキスト/ボタン/チェックボックス/ラジオボタン/スライダー/編集フィールド/カラー/進捗/コンボ/選択項目.",
+    "レイアウトと状態: カーソル/幅の各メソッド/`sameLine`/`separator`/`spacing`/項目クエリ/キャプチャクエリ.",
+    "定数: `Cond`/`WindowFlags`/`InputTextFlags`/`SliderFlags`/`TreeNodeFlags`/`SelectableFlags`/`TabBarFlags`/`TabItemFlags`/`MouseButton`."
+  ],
+  "h3_release_history": "リリース履歴",
+  "h5_for_more_release_history": "その他のリリース履歴",
+  "h3_build": "ビルド",
+  "text_release_build": "CRC32 ダイジェスト付きファイル名の Release ビルド",
+  "p_build_params": "ビルドパラメータは `version.properties` から取得します. 現在の最小 SDK は 24, ターゲット SDK は 36 です",
+  "h3_resource_layout": "リソース構成",
+  "p_resource_layout": "`strings.xml` はローカライズされた説明を保持し, `plugin_instruction.md` はホストに表示する使用説明を保持します. `.python/generate_markdown.py` が JSON ソースから README と CHANGELOG を生成します",
+  "h3_links": "リンク",
+  "text_link_autojs6": "AutoJs6 プロジェクト",
+  "text_link_dear_imgui": "Dear ImGui 公式プロジェクト"
+}

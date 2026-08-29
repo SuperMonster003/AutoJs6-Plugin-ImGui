@@ -1,0 +1,38 @@
+{
+  "$name": "العربية",
+  "text_current_lowercase": "الحالية",
+  "text_plugin_synopsis": "إنشاء واجهات عائمة باستخدام Dear ImGui",
+  "h3_languages_with_ascii": "اللغات (Languages)",
+  "p_languages_all_supported_for_readme": "يدعم ملف README.md الحالي اللغات التالية",
+  "h3_introduction": "مقدمة",
+  "p_introduction": "تعرض إضافة ImGui مكتبة Dear ImGui بصفتها الكائن العام `imgui` في محركات البرامج النصية. ترسم عناصر التحكم ذات النمط الفوري في نافذة عائمة شفافة وتجمع إنشاء النافذة وجدولة الإطارات والإدخال باللمس وتنظيف الموارد الأصلية في API موجزة.",
+  "h3_functions": "الميزات",
+  "features": [
+    "تحميل الكائن العام `imgui` عبر التثبيت التلقائي أو `plugins.load(packageName)`.",
+    "إنشاء نوافذ عائمة شفافة مع حجم وموضع ومعدل إطارات وخط وسحب من المساحات الفارغة قابلة للضبط.",
+    "توفير النوافذ والمناطق الفرعية وعلامات التبويب والأشجار والنصوص والأزرار والمدخلات القابلة للتغيير والمحددات ومؤشرات التقدم وأدوات التخطيط والسمات ونافذة Dear ImGui التجريبية.",
+    "توفير مراجع قابلة للتغيير للقيم المنطقية والصحيحة والعشرية والنصية واللونية لعناصر التحكم ذات الحالة.",
+    "توطين معلومات الإضافة وتعليمات الاستخدام و README و CHANGELOG بعشر لغات."
+  ],
+  "h3_usage": "الاستخدام",
+  "p_usage_intro": "فعّل التثبيت التلقائي في مركز الإضافات أو حمّل الإضافة صراحة ثم أنشئ نافذة عائمة",
+  "p_usage_references": "تحدّث عناصر التحكم القابلة للتغيير المراجع المنشأة عبر `imgui.bool` و `imgui.int` و `imgui.float` و `imgui.string` و `imgui.floats`. تستخدم `width` و `height` و `fontSize` وحدات مستقلة عن الكثافة. اسحب مساحة فارغة لتحريك النافذة أو مرر `movable: false` لتثبيتها.",
+  "h3_api": "نظرة عامة على API",
+  "p_api_intro": "تقابل أساليب lower camel case عمليات Dear ImGui الشائعة وتتوفر أسماء PascalCase البديلة لاستدعاءات عناصر التحكم المألوفة",
+  "api_groups": [
+    "دورة الحياة: `createWindow` و `closeWindow` و `withWindow` و `withChild` و `withTabBar` و `withTabItem` و `withTreeNode`.",
+    "عناصر التحكم: النصوص والأزرار ومربعات الاختيار وأزرار الراديو والمنزلقات والحقول القابلة للتحرير والألوان والتقدم والقوائم والعناصر القابلة للتحديد.",
+    "التخطيط والحالة: أساليب المؤشر والعرض و `sameLine` و `separator` و `spacing` واستعلامات العناصر والالتقاط.",
+    "الثوابت: `Cond` و `WindowFlags` و `InputTextFlags` و `SliderFlags` و `TreeNodeFlags` و `SelectableFlags` و `TabBarFlags` و `TabItemFlags` و `MouseButton`."
+  ],
+  "h3_release_history": "سجل الإصدارات",
+  "h5_for_more_release_history": "لمزيد من سجل الإصدارات",
+  "h3_build": "البناء",
+  "text_release_build": "بناء Release بأسماء ملفات تتضمن ملخص CRC32",
+  "p_build_params": "تأتي معلمات البناء من `version.properties`; الحد الأدنى الحالي لحزمة SDK هو 24 وحزمة SDK المستهدفة هي 36",
+  "h3_resource_layout": "بنية الموارد",
+  "p_resource_layout": "يحتوي `strings.xml` على الأوصاف الموطنة ويحتوي `plugin_instruction.md` على تعليمات الاستخدام التي يعرضها المضيف. ينشئ `.python/generate_markdown.py` ملفات README و CHANGELOG من مصادر JSON",
+  "h3_links": "الروابط",
+  "text_link_autojs6": "مشروع AutoJs6",
+  "text_link_dear_imgui": "مشروع Dear ImGui الرسمي"
+}

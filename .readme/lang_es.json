@@ -1,0 +1,38 @@
+{
+  "$name": "Español",
+  "text_current_lowercase": "actual",
+  "text_plugin_synopsis": "Crea interfaces flotantes con Dear ImGui",
+  "h3_languages_with_ascii": "Idiomas (Languages)",
+  "p_languages_all_supported_for_readme": "El archivo README.md actual admite los siguientes idiomas",
+  "h3_introduction": "Introducción",
+  "p_introduction": "El plugin ImGui expone Dear ImGui como el objeto global `imgui` en los motores de scripts. Renderiza controles de modo inmediato en una ventana flotante transparente y reúne la creación de ventanas, la planificación de fotogramas, la entrada táctil y la limpieza de recursos nativos en una API compacta.",
+  "h3_functions": "Funciones",
+  "features": [
+    "Carga el objeto global `imgui` mediante montaje automático o `plugins.load(packageName)`.",
+    "Crea ventanas flotantes transparentes con tamaño, posición, frecuencia de fotogramas, fuente y arrastre de áreas vacías configurables.",
+    "Ofrece ventanas, regiones secundarias, pestañas, árboles, texto, botones, entradas mutables, selectores, indicadores de progreso, ayudas de diseño, temas y la ventana de demostración de Dear ImGui.",
+    "Ofrece referencias mutables booleanas, enteras, decimales, de texto y de color para controles con estado.",
+    "Localiza la información del plugin, las instrucciones, README y CHANGELOG en diez idiomas."
+  ],
+  "h3_usage": "Uso",
+  "p_usage_intro": "Active el montaje automático en el Centro de plugins o cargue el plugin explícitamente y cree una ventana flotante",
+  "p_usage_references": "Los controles mutables actualizan los objetos creados con `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string` y `imgui.floats`. `width`, `height` y `fontSize` usan unidades independientes de la densidad. Arrastre un área vacía para mover la ventana o use `movable: false` para fijarla.",
+  "h3_api": "Resumen de la API",
+  "p_api_intro": "Los métodos lower camel case reflejan operaciones habituales de Dear ImGui y existen alias PascalCase para las llamadas de controles conocidas",
+  "api_groups": [
+    "Ciclo de vida: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `withTabBar`, `withTabItem` y `withTreeNode`.",
+    "Controles: `text`, `button`, `checkbox`, `radioButton`, deslizadores, campos editables, colores, progreso, combos y elementos seleccionables.",
+    "Diseño y estado: métodos de cursor y ancho, `sameLine`, `separator`, `spacing`, consultas de elementos y consultas de captura.",
+    "Constantes: `Cond`, `WindowFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags` y `MouseButton`."
+  ],
+  "h3_release_history": "Historial de versiones",
+  "h5_for_more_release_history": "Para consultar más versiones",
+  "h3_build": "Compilación",
+  "text_release_build": "Compilación Release con nombres que incluyen el resumen CRC32",
+  "p_build_params": "Los parámetros proceden de `version.properties`; el SDK mínimo actual es 24 y el SDK de destino es 36",
+  "h3_resource_layout": "Estructura de recursos",
+  "p_resource_layout": "`strings.xml` contiene descripciones localizadas y `plugin_instruction.md` contiene las instrucciones mostradas por el host. `.python/generate_markdown.py` genera los archivos README y CHANGELOG desde las fuentes JSON",
+  "h3_links": "Enlaces",
+  "text_link_autojs6": "Proyecto AutoJs6",
+  "text_link_dear_imgui": "Proyecto oficial Dear ImGui"
+}

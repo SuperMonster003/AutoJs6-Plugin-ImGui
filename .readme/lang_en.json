@@ -1,0 +1,38 @@
+{
+  "$name": "English",
+  "text_current_lowercase": "current",
+  "text_plugin_synopsis": "Create floating user interfaces with Dear ImGui",
+  "h3_languages_with_ascii": "Languages",
+  "p_languages_all_supported_for_readme": "The current README.md supports the following languages",
+  "h3_introduction": "Introduction",
+  "p_introduction": "The ImGui Plugin exposes Dear ImGui as the global `imgui` object in script engines. It renders immediate-mode controls in a transparent floating window and keeps window creation, frame scheduling, touch input, and native resource cleanup in one compact API.",
+  "h3_functions": "Features",
+  "features": [
+    "Loads as the global `imgui` object through automatic mounting or `plugins.load(packageName)`.",
+    "Creates transparent floating windows with configurable size, position, frame rate, font, and blank-area dragging.",
+    "Provides windows, child regions, tabs, trees, text, buttons, mutable inputs, selectors, progress indicators, layout helpers, themes, and the Dear ImGui demo window.",
+    "Provides mutable Boolean, integer, floating-point, string, and color references for stateful controls.",
+    "Localizes plugin metadata, usage instructions, README, and changelog for ten languages."
+  ],
+  "h3_usage": "Usage",
+  "p_usage_intro": "Enable automatic mounting in Plugin Center or load the plugin explicitly, then create a floating window",
+  "p_usage_references": "Mutable controls update the reference objects created by `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string`, and `imgui.floats`. `width`, `height`, and `fontSize` use density-independent units. Drag a blank area to move the window, or pass `movable: false` to keep it fixed.",
+  "h3_api": "API Overview",
+  "p_api_intro": "The lower camel case methods mirror common Dear ImGui operations, while PascalCase aliases are available for familiar widget calls",
+  "api_groups": [
+    "Window lifecycle: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `withTabBar`, `withTabItem`, and `withTreeNode`.",
+    "Widgets: `text`, `button`, `checkbox`, `radioButton`, `sliderFloat`, `sliderInt`, `dragFloat`, `dragInt`, `inputText`, `colorEdit3`, `colorEdit4`, `progressBar`, `combo`, and `selectable`.",
+    "Layout and state: cursor methods, item width methods, `sameLine`, `separator`, `spacing`, item queries, and capture queries.",
+    "Constants: `Cond`, `WindowFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags`, and `MouseButton`."
+  ],
+  "h3_release_history": "Release History",
+  "h5_for_more_release_history": "For more release history",
+  "h3_build": "Build",
+  "text_release_build": "Release build with CRC32 digest filenames",
+  "p_build_params": "Build parameters come from `version.properties`; the current minimum SDK is 24 and target SDK is 36",
+  "h3_resource_layout": "Resource Layout",
+  "p_resource_layout": "`strings.xml` contains localized plugin descriptions and `plugin_instruction.md` contains usage instructions displayed by the host. README and CHANGELOG files are generated from JSON sources by `.python/generate_markdown.py`",
+  "h3_links": "Links",
+  "text_link_autojs6": "AutoJs6 project",
+  "text_link_dear_imgui": "Dear ImGui official project"
+}

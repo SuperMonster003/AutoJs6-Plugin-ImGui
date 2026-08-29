@@ -1,0 +1,25 @@
+{
+  "changelog_label_hint": "Aviso",
+  "changelog_label_feature": "Función",
+  "changelog_label_fix": "Corrección",
+  "changelog_label_improvement": "Mejora",
+  "changelog_label_dependency": "Dependencia",
+  "$data": {
+    "v1.0.0": {
+      "released_date": "2026/08/29",
+      "feature": [
+        "Objeto global `imgui` con montaje automático y carga explícita mediante `plugins.load`",
+        "Ventanas flotantes transparentes renderizadas por Dear ImGui 1.92.9 con dimensiones, frecuencia de fotogramas, fuentes y arrastre desde áreas vacías configurables",
+        "API de modo inmediato para ventanas, diseño, texto, entrada, selección, color, progreso, árboles, pestañas, temas y demostración",
+        "Referencias mutables booleanas, enteras, decimales, de texto y de color para controles con estado",
+        "Información del plugin, instrucciones, README y CHANGELOG localizados en diez idiomas"
+      ],
+      "dependency": [
+        "Se añadió Common Plugin API para los metadatos de descubrimiento del plugin",
+        "Se añadieron la biblioteca estándar de Kotlin y el entorno de ejecución Parcelize 2.2.21",
+        "Se añadieron Apache Commons Compress 1.28.0 y XZ for Java 1.10 para las herramientas de compilación",
+        "Se añadió JUnit 4.13.2 para las pruebas del contrato del plugin"
+      ]
+    }
+  }
+}

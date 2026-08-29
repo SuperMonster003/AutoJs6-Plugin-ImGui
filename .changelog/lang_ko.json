@@ -1,0 +1,25 @@
+{
+  "changelog_label_hint": "힌트",
+  "changelog_label_feature": "기능",
+  "changelog_label_fix": "수정",
+  "changelog_label_improvement": "개선",
+  "changelog_label_dependency": "의존성",
+  "$data": {
+    "v1.0.0": {
+      "released_date": "2026/08/29",
+      "feature": [
+        "자동 마운트와 명시적 `plugins.load`를 지원하는 전역 `imgui` 객체",
+        "Dear ImGui 1.92.9로 렌더링하며 크기, 프레임 속도, 글꼴, 빈 영역 드래그를 설정할 수 있는 투명 플로팅 창",
+        "창, 레이아웃, 텍스트, 입력, 선택, 색상, 진행 표시, 트리, 탭, 테마, 데모를 위한 즉시 모드 API",
+        "상태를 가진 컨트롤을 위한 Boolean, 정수, 부동 소수점, 문자열, 색상 가변 참조",
+        "플러그인 정보, 사용 설명, README, CHANGELOG의 10개 언어 현지화"
+      ],
+      "dependency": [
+        "플러그인 검색 메타데이터를 위한 Common Plugin API 추가",
+        "Kotlin 표준 라이브러리 및 Parcelize 런타임 2.2.21 추가",
+        "빌드 도구를 위한 Apache Commons Compress 1.28.0 및 XZ for Java 1.10 추가",
+        "플러그인 계약 테스트를 위한 JUnit 4.13.2 추가"
+      ]
+    }
+  }
+}

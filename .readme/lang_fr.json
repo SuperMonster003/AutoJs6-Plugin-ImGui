@@ -1,0 +1,38 @@
+{
+  "$name": "Français",
+  "text_current_lowercase": "actuel",
+  "text_plugin_synopsis": "Créez des interfaces flottantes avec Dear ImGui",
+  "h3_languages_with_ascii": "Langues (Languages)",
+  "p_languages_all_supported_for_readme": "Le fichier README.md actuel prend en charge les langues suivantes",
+  "h3_introduction": "Introduction",
+  "p_introduction": "Le plugin ImGui expose Dear ImGui sous la forme de l'objet global `imgui` dans les moteurs de script. Il affiche des contrôles en mode immédiat dans une fenêtre flottante transparente et réunit la création de fenêtre, la cadence des images, les interactions tactiles et la libération des ressources natives dans une API compacte.",
+  "h3_functions": "Fonctionnalités",
+  "features": [
+    "Charge l'objet global `imgui` par montage automatique ou avec `plugins.load(packageName)`.",
+    "Crée des fenêtres flottantes transparentes dont la taille, la position, la fréquence d'image, la police et le déplacement par zone vide sont configurables.",
+    "Fournit fenêtres, zones enfants, onglets, arbres, textes, boutons, entrées modifiables, sélecteurs, barres de progression, aides de mise en page, thèmes et fenêtre de démonstration Dear ImGui.",
+    "Fournit des références modifiables booléennes, entières, décimales, textuelles et colorimétriques pour les contrôles avec état.",
+    "Localise les informations du plugin, les instructions, le README et le CHANGELOG dans dix langues."
+  ],
+  "h3_usage": "Utilisation",
+  "p_usage_intro": "Activez le montage automatique dans le Centre des plugins ou chargez explicitement le plugin, puis créez une fenêtre flottante",
+  "p_usage_references": "Les contrôles modifiables mettent à jour les objets créés par `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string` et `imgui.floats`. `width`, `height` et `fontSize` utilisent des unités indépendantes de la densité. Faites glisser une zone vide pour déplacer la fenêtre ou utilisez `movable: false` pour la fixer.",
+  "h3_api": "Aperçu de l'API",
+  "p_api_intro": "Les méthodes lower camel case correspondent aux opérations Dear ImGui courantes et des alias PascalCase sont disponibles pour les appels de contrôles familiers",
+  "api_groups": [
+    "Cycle de vie: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `withTabBar`, `withTabItem` et `withTreeNode`.",
+    "Contrôles: `text`, `button`, `checkbox`, `radioButton`, curseurs, champs modifiables, couleurs, progression, listes et éléments sélectionnables.",
+    "Mise en page et état: méthodes de curseur et de largeur, `sameLine`, `separator`, `spacing`, requêtes d'élément et de capture.",
+    "Constantes: `Cond`, `WindowFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags` et `MouseButton`."
+  ],
+  "h3_release_history": "Historique des versions",
+  "h5_for_more_release_history": "Pour consulter davantage de versions",
+  "h3_build": "Compilation",
+  "text_release_build": "Compilation Release avec noms de fichiers contenant le condensé CRC32",
+  "p_build_params": "Les paramètres proviennent de `version.properties`; le SDK minimal actuel est 24 et le SDK cible est 36",
+  "h3_resource_layout": "Structure des ressources",
+  "p_resource_layout": "`strings.xml` contient les descriptions localisées et `plugin_instruction.md` les instructions affichées par l'hôte. `.python/generate_markdown.py` génère les fichiers README et CHANGELOG à partir des sources JSON",
+  "h3_links": "Liens",
+  "text_link_autojs6": "Projet AutoJs6",
+  "text_link_dear_imgui": "Projet officiel Dear ImGui"
+}

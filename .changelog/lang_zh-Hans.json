@@ -1,0 +1,25 @@
+{
+  "changelog_label_hint": "提示",
+  "changelog_label_feature": "新增",
+  "changelog_label_fix": "修复",
+  "changelog_label_improvement": "优化",
+  "changelog_label_dependency": "依赖",
+  "$data": {
+    "v1.0.0": {
+      "released_date": "2026/08/29",
+      "feature": [
+        "全局 `imgui` 对象, 支持自动挂载和显式调用 `plugins.load`",
+        "由 Dear ImGui 1.92.9 渲染的透明浮动窗口, 支持配置尺寸/帧率/字体和空白区域拖动",
+        "即时模式窗口/布局/文本/输入/选择/颜色/进度/树形节点/标签页/主题和演示 API",
+        "布尔/整数/浮点数/字符串和颜色可变引用, 用于保存有状态控件的数据",
+        "插件信息/使用说明/README 和 CHANGELOG 的十种语言本地化"
+      ],
+      "dependency": [
+        "附加 Common Plugin API, 用于插件发现元数据",
+        "附加 Kotlin 标准库与 Parcelize 运行时版本 2.2.21",
+        "附加 Apache Commons Compress 1.28.0 与 XZ for Java 1.10, 用于构建工具",
+        "附加 JUnit 版本 4.13.2, 用于插件契约测试"
+      ]
+    }
+  }
+}
