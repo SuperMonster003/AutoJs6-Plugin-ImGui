@@ -1,0 +1,12 @@
+[versions]
+commons-compress = "1.28.0"
+junit = "4.13.2"
+kotlin-runtime = "2.2.21"
+xz = "1.10"
+
+[libraries]
+apache-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+junit = { module = "junit:junit", version.ref = "junit" }
+kotlin-parcelize-runtime = { module = "org.jetbrains.kotlin:kotlin-parcelize-runtime", version.ref = "kotlin-runtime" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin-runtime" }
+tukaani-xz = { module = "org.tukaani:xz", version.ref = "xz" }

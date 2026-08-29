@@ -1,0 +1,25 @@
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
+rootProject.name = "autojs6-plugin-imgui"
+
+pluginManagement {
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+    }
+    plugins {
+        id("org.autojs.build.platform-versions") version "1.4.1"
+        id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+    }
+}
+
+plugins {
+    id("org.autojs.build.platform-versions")
+    id("org.gradle.toolchains.foojay-resolver-convention")
+}
+
+includeBuild("build-logic")
+
+include(":app")

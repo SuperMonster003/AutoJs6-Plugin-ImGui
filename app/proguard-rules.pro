@@ -1,0 +1,3 @@
+-keep class io.github.supermonster003.autojs6.plugin.imgui.** { *; }
+-keep class org.autojs.plugin.common.api.** { *; }
+-dontwarn kotlinx.parcelize.Parcelize
