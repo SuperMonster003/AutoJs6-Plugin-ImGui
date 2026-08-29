@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="plugin_description">使用 Dear ImGui 创建浮动用户界面</string>
+</resources>
