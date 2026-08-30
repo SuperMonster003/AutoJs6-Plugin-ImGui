@@ -4,19 +4,18 @@ rootProject.name = "autojs6-plugin-imgui"
 
 pluginManagement {
     repositories {
-        mavenLocal()
         gradlePluginPortal()
         mavenCentral()
         google()
     }
     plugins {
-        id("org.autojs.build.platform-versions") version "1.4.1"
+        id("io.github.supermonster003.autojs6-platform-versions") version "1.6.0"
         id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
     }
 }
 
 plugins {
-    id("org.autojs.build.platform-versions")
+    id("io.github.supermonster003.autojs6-platform-versions")
     id("org.gradle.toolchains.foojay-resolver-convention")
 }
 
