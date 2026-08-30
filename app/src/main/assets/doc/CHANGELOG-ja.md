@@ -4,11 +4,143 @@
 
 ******
 
+# v1.9.0
+
+###### 2026/08/30
+
+* `機能` 選択可能な `launchPrivileged` / `WindowMode.Privileged` バックエンドを追加し、`auto`・`shizuku`・`root` の明示的な起動方針と `Session.getBackendInfo()` のライブ診断に対応
+* `機能` AutoJs6 の RootMode、`RootUtils` / `ProcessShell`、認可済み `WrappedShizuku` UserService を再利用するリフレクション専用ホストアダプターを追加
+* `機能` 認証付き Binder Surface v2 プロトコルを追加: UID 0/2000 の特権子プロセスが SurfaceControl レイヤーを保持し、Surface だけを既存の完全なホストレンダラーへ転送
+* `機能` 特権 Type A/Type B `/dev/input` リーダーを通常の有界 ImGui 入力キューへ接続し、非排他的な観測方針と `Passthrough` によるコールバック制御を実装
+* `修正` Android 29+ の正式な `IContentProvider.call` オーバーロードを選択し、API 31+ の外部 Provider ランデブーで実際の Broker authority を保持
+* `修正` `app_process` 子プロセスを終了可能な Looper に変更し、正常なクリーンアップ時の誤った `Main thread not allowed to quit` を解消
+* `修正` Broker の通常バインドを AutoJs6 プラグイン権限で保護し、endpoint 登録を一度だけに制限しつつ UID・所有者・定時間 token・Binder death 検証を維持
+* `改善` バックエンド能力と TypeScript を schema v2 へ更新し、ホスト Root/Shizuku 状態、Binder 転送、256-bit token 境界、レンダラー位置、direct-input 方針を公開
+* `改善` API 28 Magisk root と API 31 Shizuku 13.5 の実際の AutoJs6 ホスト経路で、UID 0/2000 レイヤー、既存 JS API 描画、Type A/Type B 入力検出、スクリーンショット、残留なし終了を検証
+
+# v1.8.0
+
+###### 2026/08/30
+
+* `機能` ウィンドウ/フローティングボタン用 `moreTouch` とセッション/グローバル `setMoreTouch` を追加し、`FLAG_SPLIT_TOUCH` を一貫して制御
+* `機能` `BackendStatus` と `getBackendCapabilities` を追加し、本番ウィンドウ、split-touch、特権プロセス、direct input、Docking、Multi-Viewport の状態を型付きで公開
+* `機能` 独立 `app_process` による実験的な特権レンダリング垂直スライスを実装: SurfaceControl レイヤー → Surface → EGL ES 3 → Dear ImGui、256-bit token 認証のローカル socket フレームプロトコルに対応
+* `機能` `/dev/input` の 16/24-byte デコード、Type A/Type B マルチタッチ追跡、回転座標変換、フレーム先頭で消費する有界入力キューを実装
+* `修正` Activity/overlay の split-touch フラグを実行時に変更可能にし、終了時にホストの元フラグを確実に復元、既存ボタンも同期
+* `修正` 特権プロトコルは不正な magic/version、過大・切断 payload、未認証クライアントを拒否し、timeout/切断/終了後に input、EGL、SurfaceControl、プロセスを清掃
+* `改善` API 28 root 実機で UID 2000 → UID 0 socket フレーム、独立 ImGui レイヤー、`/dev/input/event6` の down/move/up を検証し、API 28/35 実機でも connected テスト 3 件を通過
+* `改善` 特権バックエンドおよび Docking/Multi-Viewport の設計記録、protocol/evdev 単体テスト、ビルド安全チェックを追加; P6 は明示的に experimental のまま
+
+# v1.7.0
+
+###### 2026/08/30
+
+* `機能` 214 個の呼び出し可能 API、36 定数グループ、セッション、コンポーネント、DrawList、グローバル/プラグイン/モジュール入口を網羅する完全な `types/imgui.d.ts` を公開し、strict TypeScript スモーク契約で検証
+* `機能` 内蔵ライブラリを直接実行できる 5 例へ拡張: ウィジェット概要、パラメーターパネル、ログ HUD、データテーブルデモ、テーマギャラリー
+* `機能` 実 Surface 上で初期化、フレーム構築、コントロール、描画、PixelCopy の意味的スクリーンショット基準、終了を確認する Android 計装テストを追加
+* `機能` GitHub Actions の PR 検証と署名付き `v*` リリース自動化を追加し、署名再検証と APK 成果物公開に対応
+* `機能` チェックサム付き Dear ImGui 上流スナップショットと、不変 tag/commit、アーカイブ検証、dry-run、ホワイトリスト展開に対応する安全な更新ツールを追加
+* `修正` タッチ、IME、キー、ホイールイベントを有界ロックフリー FIFO キューへ投入しフレーム開始時に消費; ライフサイクル時のキュー交換で遅延イベントが新しいネイティブセッションへ届くことを防止
+* `修正` フレームスケジューラを絶対期限補正方式に変更し、処理時間とタイマー待ちの累積ドリフトを抑え、遅延または折りたたみフレーム後に確実にリセット
+* `改善` テキスト 64 KiB、選択項目 512 件、入力イベント 2,048 件の `Limits` を公開・強制し、設定可能化の判断と安全上の根拠を文書化
+* `改善` ビルド検証を実行時 API、別名、定数、TypeScript 宣言、サンプル、入力キュー不変条件、vendored 上流ファイル全ハッシュの相互照合へ拡張
+
+# v1.6.0
+
+###### 2026/08/30
+
+* `機能` 従来の Java 配列ヘルパーとの互換性を保ちながら、すべてのステートフルウィジェットで軽量な `imgui.ref(value)` と `{ value: ... }` 参照を利用できるようにしました
+* `機能` セッション管理の `logWindow` と、レベル色・エクスポート・確実なクリーンアップを備えた積み重ね表示の時限 `toast` 通知を追加しました
+* `機能` モーダルを順番に表示する Promise ベースの `alert`、`confirm`、`singleChoice`、`multiChoice` を追加しました
+* `機能` しきい値で色分けする `statsOverlay` と、安定した行・CRUD・ツールバー・カスタム描画を備えた選択可能な `dataTable` を追加しました
+* `機能` 完全な `widget-overview` サンプルと `listExamples`、`getExampleSource`、`runExample`、ホスト検出用メタデータを同梱しました
+* `修正` 保留中のダイアログ Promise が確定的なキャンセル値で解決され、セッション終了時にすべての高レベルコンポーネントが破棄されるようにしました
+* `修正` サンプルソースの取得をコントラクトの許可リストに限定し、パストラバーサルを拒否するようにしました
+* `修正` 遅延 Surface 復旧プローブを Android の holder コールバックと直列化し、低速端末でのネイティブコンテキスト二重初期化を防止しました
+* `改善` `LogLevel` と `ToastPosition` を追加して定数を 35 グループに拡張し、PascalCase エイリアスとソース検証も強化しました
+* `改善` 物理 OpenGL ES 3.2 端末で高レベル描画、公開サンプル実行、結果の意味、クリーンアップを検証しました
+
+# v1.5.0
+
+###### 2026/08/30
+
+* `機能` `TouchMode.Touchable` / `Passthrough` / `Auto` を追加しました。Auto は ImGui ルートウィンドウ単位の透明タッチプロキシを作り、空白領域の操作を背後のアプリへ渡します
+* `機能` セッションの `collapse` / `expand`、低 FPS ミニバブル、独立してドラッグ可能な `addButtonEx`、実行時の透明度と `FLAG_SECURE` 制御を追加しました
+* `機能` `imgui.launch` の Activity 全画面モードと明示的な `launchFloaty` オーバーレイモードを追加し、1 つのレンダラーで複数の `begin` / `withWindow` ルートに対応しました
+* `機能` 画面サイズ追跡、`AlwaysAutoResize` による外枠追従、任意の `iniPath` 永続化、セッションイベントを追加しました
+* `修正` Surface 破棄時は切り離し、復帰時に再接続することで EGL/ImGui コンテキストと管理テクスチャハンドルを保持するようにしました
+* `修正` 自動タッチ透過を Android の公開 API のみで実装し、プロキシを最大 64 個の対話ルートに制限しました
+* `改善` JNI を 186 から 190 バインディングへ拡張し、ソース検証を P3 セッションファサードまで広げました
+* `改善` 終了時に Activity フラグ、システム UI、オーバーレイ、タッチプロキシ、フローティングボタンを確実に復元または解放します
+* `改善` APK Manifest とインストール文書に OpenGL ES 3.0 ハードウェア要件を明記しました
+
+# v1.4.0
+
+###### 2026/08/30
+
+* `機能` セッション管理の `createTexture` を追加し、ファイルパス、エンコード済み `byte[]` / `ByteBuffer`、Android `Bitmap`、ストリーム、AutoJs6 `Image` に対応
+* `機能` 原寸・アスペクト比ヘルパー、UV 範囲、色調、背景色に対応した `image` / `imageButton` を追加
+* `機能` AutoJs6 の `images.read` とスクリーンショット結果を直接テクスチャ化でき、呼び出し側が所有する画像はリサイクルしない設計に変更
+* `機能` ウィンドウ/前景/背景の 3 層 DrawList と、線・矩形・円・三角形・テキスト・ポリライン・3 次ベジェ曲線・画像プリミティブを追加
+* `修正` Bitmap アップロードで行ストライドを正しく処理し、Android の乗算済み Alpha を復元して半透明色の暗い縁を解消
+* `修正` キュー済み描画データのレンダリング後までテクスチャ破棄を遅延し、期限切れ・破棄済み・別セッションのハンドルを安全に拒否
+* `改善` JNI バインディングを 172 から 186 に拡張し、ソース検証をテクスチャと DrawList ファサードにも適用
+* `改善` エンコードデータ 128 MiB、3,200 万画素、OpenGL 最大サイズの制限と、セッション内に残る全テクスチャの自動解放を追加
+
+# v1.3.0
+
+###### 2026/08/30
+
+* `機能` `Themes` / `setTheme(name)` に 11 種類の完全なテーマを追加し、Pink、Blue、ModernDark、CyanDusk、OrangeDark、CrystalClear、VibrantNight、PurpleDream を収録
+* `機能` 永続的な `setStyleColor` と一括 `setStyleProperties` を追加し、`createWindow` から `theme` / `appearance` / `style`、角丸、境界線、影を直接設定可能に変更
+* `機能` `AssetManager` のフォント経路を有効化し、約 9,800 文字の CJK サブセットを内蔵して Noto CJK のない軽量システムを補完
+* `機能` `Fonts` / `pushFont` / `popFont` / `withFont` と `createWindow.fonts` を追加し、assets/ファイルフォント、名前付きハンドル、Dear ImGui 1.92 の動的サイズに対応
+* `機能` 38 グリフの Material Icons サブセットと `Icons` テーブル、`icon(name, label)` ヘルパーを内蔵
+* `修正` テーマ切り替え時に密度スケーリング済みの基準スタイルから確実にリセットし、現在のフォントサイズとグローバルスケールは保持するよう修正
+* `改善` JNI バインディングを 167 から 172 に拡張し、テーマ/フォント API 一覧と 2 つのフォント資産の SHA-256 整合性検査を追加
+* `改善` 既定フォントと追加フォントへ CJK フォールバックとアイコンを自動マージし、スクリプト側の手動アトラス構築を不要化
+
+# v1.2.0
+
+###### 2026/08/30
+
+* `機能` システム IME 統合: `inputText` / `inputTextMultiline` のフォーカス時にソフトキーボードを自動表示し, 変換中/確定テキストと Backspace/Enter/矢印キーを処理
+* `機能` スクリプトから次の入力コントロールへフォーカスして IME に渡せる `setKeyboardFocusHere` を追加
+* `機能` 二本指スクロールに `fling` / `flingFriction` / `flingMinVelocity` / `flingMaxVelocity` で設定可能な慣性減衰を追加
+* `機能` 一本指の長押しを右クリックとして設定可能にし, `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` を追加
+* `修正` ウィンドウ移動, 二本指スクロール, 長押し切替のキャンセル時にアクティブなコントロールを解除し, 意図しないクリックを防止
+* `修正` IME プロキシ作成前に SurfaceHolder コールバックを登録し, すでに有効な Surface で描画セッションが未初期化のままになる競合を修正
+* `修正` フローティングウィンドウがフォーカスを得た後にソフトキーボード要求を再試行し, Android が IME ビューを serve する前の要求消失を防止
+* `修正` 起動ドキュメントを修正し, 既定では `plugins.load` を使用し, ホストの自動マウントは AutoJs6 の任意設定として説明
+* `改善` `verifyImGuiSource` を JNI → Java 接続層 → JavaScript ファサードの三層ラッパーカバレッジ検証へ拡張
+* `改善` IME の変換中文字列は以前のプレエディットを置換して同期するため, スクリプト側で候補処理を管理する必要なし
+
+# v1.1.0
+
+###### 2026/08/30
+
+* `機能` テーブル API ファミリー: `withTable`/`beginTable`/`tableNextRow`/`tableNextColumn`/`tableSetupColumn`/`tableSetupScrollFreeze`/`tableHeadersRow`/`tableSetBgColor`. 罫線/行の縞模様/行と列の固定/背景色に対応
+* `機能` ポップアップとメニュー: `openPopup`/`withPopup`/`withPopupModal`/`closeCurrentPopup`/`isPopupOpen`/`withMenuBar`/`withMenu`/`menuItem`
+* `機能` ツールチップ: `setTooltip`/`setItemTooltip`/`withTooltip`/`withItemTooltip`
+* `機能` モバイルスタイルの `toggle` スイッチコントロール (`toggleSwitch` および `ToggleSwitch` エイリアス付き)
+* `機能` さらに多くのコントロールとテキスト項目: `separatorText`/`bullet`/`bulletText`/`labelText`/`textDisabled`/`arrowButton`/`invisibleButton`/`inputInt`/`inputFloat`/`inputTextMultiline`/`listBox`/`withListBox`/`colorPicker3`/`colorPicker4`/`colorButton`/`plotLines`/`plotHistogram`/`treeNodeEx`/`vSliderFloat`/`vSliderInt`/`withCombo`
+* `機能` スタイルスタックと構造 API: `pushStyleColor`/`popStyleColor`/`pushStyleVar`/`popStyleVar`/`setWindowFontScale`/`pushId`/`withId`/`withGroup`/`withDisabled`/`indent`/`unindent`/`alignTextToFramePadding`
+* `機能` スクロールファミリー: `getScrollX/Y`/`getScrollMaxX/Y`/`setScrollX/Y`/`setScrollHereX/Y`
+* `機能` 状態クエリ: `isItemActive`/`isItemEdited`/`isItemDeactivatedAfterEdit`/`isItemFocused`/`isWindowHovered`/`isWindowFocused`/`isWindowCollapsed`/`isMouseDown`/`isMouseClicked`/`isMouseDragging`/`getMousePos`/`getMouseDragDelta`/`calcTextSize`/`getFrameHeight`/`framerate` など
+* `機能` 入力プリミティブ: `addInputCharacters`/`addKeyEvent`/`sendKey`/`addMouseWheel`/`wantTextInput`. 今後の IME サポートに向けたイベントチャネルを整備
+* `機能` 二本指の縦スワイプでウィンドウコンテンツをスクロールし, 一本指のウィンドウドラッグと自動的に区別
+* `機能` 定数テーブルを 24 グループに拡張し, `ChildFlags`/`ComboFlags`/`PopupFlags`/`HoveredFlags`/`FocusedFlags`/`ColorEditFlags`/`TableFlags`/`TableColumnFlags`/`TableRowFlags`/`TableBgTarget`/`Col`/`StyleVar`/`Dir`/`Key`/`ButtonFlags` を新規追加
+* `修正` ネイティブコンテキスト上のタッチスレッドとレンダースレッドの競合を修正し, インタラクションクエリがフレーム終了時のスナップショットを読み取るように変更
+* `修正` `WantCaptureMouse` および `StyleColorsDark`/`StyleColorsLight`/`StyleColorsClassic` の欠落していた PascalCase エイリアスを追加
+* `改善` ドキュメントとサンプルがホスト常駐のグローバルオブジェクトの仕組みを説明するようになり, `plugins.load` の呼び出しを提案しないように変更
+* `改善` 必要なホストバージョンコードと ABI リストを `ImGuiPluginContract` に一元化し, ビルドスクリプトで解析するように変更
+* `改善` すべての新規 API に, 対応する Dear ImGui と一致する PascalCase エイリアスを同梱
+
 # v1.0.0
 
 ###### 2026/08/29
 
-* `機能` 自動マウントと `plugins.load` による明示的な読み込みに対応したグローバル `imgui` オブジェクト
+* `機能` ホストによりスクリプトエンジンへ自動マウントされるグローバル `imgui` オブジェクト
 * `機能` Dear ImGui 1.92.9 で描画し, サイズ/フレームレート/フォント/空白領域のドラッグを設定できる透明なフローティングウィンドウ
 * `機能` ウィンドウ/レイアウト/テキスト/入力/選択/カラー/進捗/ツリー/タブ/テーマ/デモの即時モード API
 * `機能` 状態を持つコントロール向けの Boolean/整数/浮動小数点/文字列/カラー可変参照

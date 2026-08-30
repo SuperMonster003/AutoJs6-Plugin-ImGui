@@ -44,5 +44,31 @@ public class ImGuiPluginContractTest {
         assertEquals("imgui", ImGuiPluginContract.PLUGIN_ID);
         assertEquals("imgui", ImGuiPluginContract.ENGINE);
         assertEquals("imgui", ImGuiPluginContract.GLOBAL_OBJECT_NAME);
+        assertEquals(
+            "types/imgui.d.ts",
+            ImGuiPluginContract.TYPESCRIPT_DECLARATION_ASSET
+        );
+    }
+
+    @Test
+    public void exampleInventoryIsWhitelistedAndStable() {
+        assertArrayEquals(
+            new String[]{
+                "widget-overview",
+                "parameter-panel",
+                "log-hud",
+                "data-table-demo",
+                "theme-gallery",
+            },
+            ImGuiPluginContract.exampleNames()
+        );
+        assertEquals(
+            "examples/widget-overview.js",
+            ImGuiPluginContract.exampleAssetPath("widget-overview")
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> ImGuiPluginContract.exampleAssetPath("../plugin/index")
+        );
     }
 }

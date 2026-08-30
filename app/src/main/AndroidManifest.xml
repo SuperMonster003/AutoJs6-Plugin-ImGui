@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+    </queries>
+
     <uses-permission android:name="org.autojs.permission.PLUGIN" />
+
+    <uses-feature
+        android:glEsVersion="0x00030000"
+        android:required="true" />
 
     <application
         android:allowBackup="false"
@@ -30,6 +38,12 @@
             android:name="org.autojs.plugin.imgui.NATIVE_LIBRARY"
             android:value="${imguiNativeLibrary}" />
         <meta-data
+            android:name="org.autojs.plugin.imgui.EXAMPLE_MANIFEST"
+            android:value="examples/index.json" />
+        <meta-data
+            android:name="org.autojs.plugin.imgui.TYPESCRIPT_DECLARATION"
+            android:value="types/imgui.d.ts" />
+        <meta-data
             android:name="requiresHostVersion"
             android:value="${imguiRequiredHostVersion}" />
 
@@ -56,6 +70,21 @@
                 <category android:name="imgui-runtime" />
             </intent-filter>
         </service>
+
+        <service
+            android:name=".ImGuiPrivilegeBrokerService"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="org.autojs.permission.PLUGIN"
+            android:process=":privilege_broker" />
+
+        <provider
+            android:name=".ImGuiPrivilegeBrokerProvider"
+            android:authorities="${applicationId}.privilege_broker"
+            android:enabled="true"
+            android:exported="true"
+            android:grantUriPermissions="false"
+            android:process=":privilege_broker" />
 
     </application>
 

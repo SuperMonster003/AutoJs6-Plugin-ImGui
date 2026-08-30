@@ -10,6 +10,7 @@
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-ImGui?label=Release"/></a>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/issues"><img alt="GitHub closed issues" src="https://img.shields.io/github/issues/SuperMonster003/AutoJs6-Plugin-ImGui?color=A24232&label=Issues"/></a>
+    <a href="https://github.com/ocornut/imgui"><img alt="Dear ImGui" src="https://img.shields.io/badge/Dear%20ImGui-1.92.9-3D6CB4"/></a>
     <br>
     <a href="https://developer.android.com/studio/archive"><img alt="Android Studio" src="https://img.shields.io/badge/Android%20Studio-2023.3+-B64FC8"/></a>
     <a href="https://www.jetbrains.com/idea/download/other.html"><img alt="IntelliJ IDEA" src="https://img.shields.io/badge/IntelliJ%20IDEA-2023.3+-EE4677"/></a>
@@ -42,7 +43,9 @@
 
 ******
 
-ImGui 플러그인은 스크립트 엔진에서 Dear ImGui를 전역 `imgui` 객체로 제공합니다. 투명한 플로팅 창에 즉시 모드 컨트롤을 렌더링하고 창 생성, 프레임 예약, 터치 입력, 네이티브 리소스 정리를 하나의 간결한 API로 관리합니다.
+ImGui 플러그인은 [Dear ImGui](https://github.com/ocornut/imgui) 즉시 모드 GUI 라이브러리를 AutoJs6에 도입하여 투명한 플로팅 창 안에서 OpenGL ES로 컨트롤을 렌더링합니다. 디버그 패널, 매개변수 조정기, 실행 중 HUD 같은 가벼운 플로팅 인터페이스에 잘 어울리며 창 생성, 프레임 예약, 터치 입력, 네이티브 리소스 정리를 하나의 간결한 API로 관리합니다.
+
+가장 호환성이 높은 진입점은 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`입니다. AutoJs6 6.8 이상에서는 플러그인 센터 설정에서 객체 이름을 `imgui`로 지정해 자동 마운트를 선택적으로 활성화할 수도 있습니다. 이 옵션을 켠 경우에만 전역 객체를 바로 사용할 수 있습니다.
 
 ******
 
@@ -50,37 +53,59 @@ ImGui 플러그인은 스크립트 엔진에서 Dear ImGui를 전역 `imgui` 객
 
 ******
 
-- 자동 마운트 또는 `plugins.load(packageName)`로 전역 `imgui` 객체를 불러옵니다.
-- 크기, 위치, 프레임 속도, 글꼴, 빈 영역 드래그를 설정할 수 있는 투명 플로팅 창을 만듭니다.
-- 창, 하위 영역, 탭, 트리, 텍스트, 버튼, 변경 가능한 입력, 선택기, 진행 표시, 레이아웃 도우미, 테마, Dear ImGui 데모 창을 제공합니다.
-- 상태를 가진 컨트롤을 위한 Boolean, 정수, 부동 소수점, 문자열, 색상 가변 참조를 제공합니다.
+- 자동 터치 통과, 접기/펼치기, 독립 플로팅 버튼, 투명도/보안, 레이아웃 저장과 수명 주기 이벤트를 제공하는 반응형 오버레이 및 Activity 전체 화면 세션.
+- `launchPrivileged`는 AutoJs6가 관리하는 Shizuku/root를 이용하는 명시적 운영 SurfaceFlinger 모드입니다. 인증 Binder가 권한 Surface를 기존의 완전한 렌더러로 전달하고 `/dev/input`이 관찰형 포인터 입력을 제공합니다.
+- 안정적인 `plugins.load` 진입점은 호스트 마운트 설정 없이 동작하며 AutoJs6의 선택적 자동 마운트를 활성화하면 같은 API가 전역 `imgui` 객체로 제공됩니다.
+- 크기, 위치, 프레임 속도, 글꼴을 설정할 수 있는 투명 플로팅 창을 제공하며 빈 영역 드래그로 이동하고 두 손가락 관성 스크롤과 한 손가락 길게 누르기 오른쪽 클릭을 지원합니다.
+- `inputText` 계열은 조합 중 텍스트, 소프트 키보드 자동 표시/숨김, 일반 편집 키를 포함해 시스템 IME와 완전히 연동됩니다.
+- 창, 탭, 트리 노드, 테이블, 팝업, 메뉴, 툴팁과 모바일 스타일 `toggle` 스위치를 포함한 60개 이상의 즉시 모드 컨트롤을 제공합니다.
+- 11개 `Themes`, 일괄 스타일, 둥근 모서리/테두리/그림자 외형, 다중 글꼴 스택, CJK 대체 글꼴, Material Icons 하위 집합을 제공합니다.
+- 관리형 텍스처는 파일 경로, 인코딩된 바이트, Android `Bitmap`, AutoJs6 `Image`를 지원하며 `image` / `imageButton`과 3개 DrawList 레이어로 이미지 표시와 사용자 지정 그리기를 제공합니다.
+- 가벼운 `imgui.ref(value)` / `{value: x}` 참조는 모든 상태형 컨트롤에서 작동하며 기존 Java 배열 참조 헬퍼도 완전히 호환됩니다.
+- 세션 관리 `logWindow`, 스택형 `toast`, Promise 대화상자, 임계값 색상 `statsOverlay`, 선택/CRUD `dataTable`로 즉시 디버그 UI를 구성할 수 있습니다.
+- 상수 열거형과 PascalCase 메서드 별칭은 Dear ImGui 네이티브 명명을 그대로 따르므로 기존 지식을 비용 없이 활용할 수 있습니다.
+- 완전한 TypeScript 선언, 실행 가능한 예제 5개, Android 렌더링 계측 테스트, 락프리 입력 큐, 검증 가능한 업스트림 업데이트 도구, CI 릴리스 자동화를 제공합니다.
 - 플러그인 정보, 사용 설명, README, CHANGELOG를 10개 언어로 현지화합니다.
 
 ******
 
-### 사용법
+### 설치
 
 ******
 
-플러그인 센터에서 자동 마운트를 활성화하거나 플러그인을 명시적으로 불러온 뒤 플로팅 창을 만듭니다:
+- [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases)에서 기기 아키텍처에 맞는 APK를 내려받습니다. 잘 모르겠다면 `universal` 패키지를 선택하세요.
+- APK를 설치한 뒤 AutoJs6를 열고 플러그인 관리 페이지에서 이 플러그인이 인식되고 활성화되어 있는지 확인합니다.
+- `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`로 플러그인을 로드한 다음 `imgui.createWindow(...)`를 호출합니다. 처음 사용할 때 AutoJs6에 오버레이 (플로팅 창) 권한을 부여하세요.
+- `launchPrivileged`를 사용하기 전에 AutoJs6에서 평소처럼 Root 또는 Shizuku를 설정하고 승인하세요. 플러그인은 해당 호스트 상태를 재사용하며 권한 모드에는 오버레이 권한이 필요하지 않습니다.
+
+호스트 요구 사항: versionCode 3853 이상의 AutoJs6. 플러그인은 `arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86` 바이너리를 제공하며 Android 7.0 (API 24) 이상과 OpenGL ES 3.0 지원 GPU/드라이버가 필요합니다.
+
+******
+
+### 빠른 시작
+
+******
+
+플러그인을 설치하고 활성화한 뒤 API를 로드하고 가변 참조를 만든 다음 플로팅 창을 엽니다:
 
 ```js
-plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
-
-var enabled = imgui.bool(true);
-var value = imgui.float(0.5);
+var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
+var enabled = imgui.ref(true);
+var volume = imgui.ref(0.5);
+var themeColor = imgui.ref([0.25, 0.55, 0.90]);
 
 imgui.createWindow(function (ui, overlay) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
     ui.setNextWindowSize(overlay.width, overlay.height, ui.Cond.Always);
     ui.withWindow(
-        "ImGui controls",
+        "ImGui Panel",
         null,
         ui.WindowFlags.NoMove | ui.WindowFlags.NoResize | ui.WindowFlags.NoCollapse,
         function () {
             ui.text("Dear ImGui " + ui.version());
-            ui.checkbox("Enabled", enabled);
-            ui.sliderFloat("Value", value, 0, 1, "%.2f");
+            ui.toggle("Enabled", enabled);
+            ui.sliderFloat("Volume", volume, 0, 1, "%.2f");
+            ui.colorEdit3("Theme", themeColor);
             if (ui.button("Close", 120, 0)) {
                 overlay.close();
             }
@@ -90,11 +115,25 @@ imgui.createWindow(function (ui, overlay) {
     width: 360,
     height: 240,
     fontSize: 16,
+    theme: imgui.Themes.ModernDark,
+    appearance: imgui.Appearance.Rounded,
     fps: 60
 });
 ```
 
-가변 컨트롤은 `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string`, `imgui.floats`로 만든 참조를 갱신합니다. `width`, `height`, `fontSize`는 화면 밀도와 무관한 단위를 사용합니다. 빈 영역을 드래그해 창을 옮기거나 `movable: false`로 고정할 수 있습니다.
+가변 컨트롤은 `imgui.ref(value)`로 만든 가벼운 참조나 일반 `{ value: ... }` 객체를 허용하며, 기존 `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string`, `imgui.floats` 헬퍼와도 호환됩니다. `inputText`에 포커스하면 조합 입력을 지원하는 시스템 IME가 자동으로 열리며 `ime: false`로 끌 수 있습니다. `width`, `height`, `fontSize`는 화면 밀도와 무관한 단위를 사용합니다. 빈 영역 드래그로 창을 옮길 수 있고 (`movable: false`로 고정), 두 손가락 세로 스와이프에는 설정 가능한 관성 (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`)이 적용되며 한 손가락 길게 누르기는 오른쪽 클릭을 보냅니다 (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). 시스템 글꼴이 필요한 문자를 지원하지 않으면 `fontPath`로 TTF 또는 OTF 글꼴 파일을 지정하세요.
+
+테마와 글꼴: `setTheme`은 11개 `Themes` 값을 받고 `setStyleProperties`는 여러 `StyleVar`를 한 번에 갱신합니다. `createWindow`에는 `theme`, `appearance`, `style`, `shadow`도 지정할 수 있습니다. `fonts` 배열로 assets (`asset://...`) 또는 파일 글꼴을 미리 로드하고 `pushFont` / `withFont`로 전환합니다. CJK 대체 글꼴과 아이콘은 자동 병합되며 `Icons` / `icon(name)`으로 아이콘 글리프를 얻습니다.
+
+텍스처와 사용자 지정 그리기: 창 세션이 준비된 뒤 `createTexture`를 호출하세요 (일반적으로 렌더 콜백 안에서 처음 한 번 생성). 반환 객체는 `width`, `height`, 멱등인 `dispose()` / `close()`를 제공하며 남은 텍스처는 세션 종료 시 자동으로 해제됩니다. `image` / `imageButton`으로 텍스처를 표시하고 `getWindowDrawList`, `getForegroundDrawList`, `getBackgroundDrawList`로 일반적인 그리기 프리미티브를 사용할 수 있습니다. DrawList 좌표는 Surface 픽셀 좌표입니다. AutoJs6 `images.read(...)`와 스크린샷 `Image` 값을 직접 전달할 수 있습니다.
+
+창 세션: 오버레이는 기본적으로 `TouchMode.Auto`를 사용하여 ImGui 루트 창은 상호작용 가능하게 유지하고 Surface 빈 영역의 입력은 뒤쪽 앱으로 전달합니다. 고정 정책은 `Touchable` 또는 `Passthrough`를 선택하세요. 세션은 투명도/보안/터치 모드 변경, 저 FPS 미니 버블로 접기, 독립적인 `addButtonEx`, `AlwaysAutoResize` 콘텐츠 추적, `iniPath` 레이아웃 저장, `on` / `once` / `off` 또는 옵션 콜백 이벤트를 지원합니다. `imgui.launch(...)`는 현재 resumed 상태인 AutoJs6 Activity에 전체 화면 Surface를 만들고 `launchFloaty(...)`는 오버레이를 명시합니다. 스크립트 엔진당 네이티브 렌더 세션은 하나지만 같은 콜백에서 원하는 수의 `begin` / `withWindow` ImGui 루트를 만들 수 있습니다. 새 세션은 이전 세션을 닫습니다.
+
+고수준 컴포넌트는 활성 세션에 연결되어 사용자 렌더 콜백 뒤에 그려집니다. `logWindow`는 레벨 색상, 지우기, 내보내기, 자동 스크롤을, `toast`는 위치 지정 시간 알림을, `alert` / `confirm` / `singleChoice` / `multiChoice`는 Promise를, `statsOverlay`는 프레임 시간 그래프를, `dataTable`은 선택과 CRUD를 제공합니다. 내장 예제 5개(`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`)는 `listExamples` / `getExampleSource`로 찾고 `runExample`로 실행할 수 있습니다. AutoJs6 6.8 플러그인 센터는 아직 범용 예제 메타데이터를 사용하지 않으므로 호스트 지원 전에는 아래 호출을 직접 실행하세요:
+
+```js
+imgui.runExample("widget-overview");
+```
 
 ******
 
@@ -102,12 +141,29 @@ imgui.createWindow(function (ui, overlay) {
 
 ******
 
-lower camel case 메서드는 일반적인 Dear ImGui 작업에 대응하며 익숙한 컨트롤 호출을 위한 PascalCase 별칭도 제공합니다:
+lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며 네이티브 명명에 익숙한 사용자를 위한 PascalCase 별칭도 제공합니다 (예: `ui.Button`은 `ui.button`과 같습니다):
 
-- 수명 주기: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `withTabBar`, `withTabItem`, `withTreeNode`.
-- 컨트롤: 텍스트, 버튼, 체크박스, 라디오 버튼, 슬라이더, 편집 필드, 색상, 진행 표시, 콤보, 선택 항목.
-- 레이아웃과 상태: 커서 및 너비 메서드, `sameLine`, `separator`, `spacing`, 항목 조회, 캡처 조회.
-- 상수: `Cond`, `WindowFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags`, `MouseButton`.
+- 세션 런타임: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 세션별 형식을 포함한 `on` / `once` / `off`.
+- 세션과 창: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `setNextWindowPos`, `setNextWindowSize`, `setNextWindowBgAlpha` 및 `isWindowHovered` 같은 창 상태 조회.
+- 텍스트와 컨트롤: `text`, `textColored`, `textWrapped`, `separatorText`, `bulletText`, `labelText`, `button`, `arrowButton`, `invisibleButton`, `checkbox`, `toggle`, `radioButton`, `sliderFloat`, `sliderInt`, `vSliderFloat`, `dragFloat`, `dragInt`, `inputText`, `inputInt`, `inputFloat`, `inputTextMultiline`, `colorEdit3`, `colorEdit4`, `colorPicker4`, `colorButton`, `progressBar`, `plotLines`, `plotHistogram` 등.
+- 컨테이너와 탐색: `withTabBar`, `withTabItem`, `withTreeNode`, `treeNodeEx`, `collapsingHeader`, `withTable` 테이블 계열, `withListBox`, `withCombo`, `selectable`.
+- 팝업과 메뉴: `openPopup`, `withPopup`, `withPopupModal`, `beginPopupContextItem`, `beginPopupContextWindow`, `withContextItem`, `withContextWindow`, `closeCurrentPopup`, `withMenuBar`, `withMenu`, `menuItem`, `setTooltip`, `setItemTooltip`, `withItemTooltip`.
+- 스타일과 레이아웃: `styleColorsDark`, `styleColorsLight`, `styleColorsClassic`, `pushStyleColor`, `pushStyleVar`, `setWindowFontScale`, `withGroup`, `withDisabled`, `withId`, `indent`, `sameLine`, `separator`, `spacing` 및 커서와 스크롤 계열.
+- 텍스처와 그리기: `createTexture`, `destroyTexture`, `image`, `imageButton`, `colorU32` 및 선, 사각형, 원, 삼각형, 텍스트, 폴리라인, 베지어 곡선, 이미지 프리미티브를 제공하는 `getWindowDrawList`, `getForegroundDrawList`, `getBackgroundDrawList`.
+- 조회와 입력: `isItemClicked`, `isItemHovered`, `isItemActive`, `isItemEdited`, `isMouseDown`, `getMousePos`, `calcTextSize`, `framerate` 같은 상태 조회, `setKeyboardFocusHere` 능동 포커스, 입력 프리미티브 `addInputCharacters`, `sendKey`, `addMouseWheel`, `wantTextInput`. 현재 공개된 모든 `InputTextFlags` 값은 Dear ImGui로 전달되며 콜백 의존 플래그는 제외되고 `WordWrap`은 여러 줄 입력에만 적용됩니다.
+- 고수준 컴포넌트와 예제: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, 그리고 `listExamples` / `getExampleSource` / `runExample`; 각 세션에도 같은 팩터리가 있습니다.
+- 가변 참조: 가벼운 `imgui.ref`(또는 일반 `{value: x}` 객체)와 호환 Java 배열 헬퍼 `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string`, `imgui.floats`, `imgui.strings`.
+- 상수: `Cond`, `WindowFlags`, `ChildFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags`, `ComboFlags`, `PopupFlags`, `HoveredFlags`, `FocusedFlags`, `ColorEditFlags`, `TableFlags`, `TableColumnFlags`, `TableRowFlags`, `TableBgTarget`, `Col`, `StyleVar`, `Themes`, `Appearance`, `Fonts`, `Icons`, `Dir`, `Key`, `MouseButton`, `ButtonFlags`, `TextureFlags`, `DrawListLayer`, `DrawFlags`, `LogLevel`, `ToastPosition`, `Limits`. 값은 같은 이름의 Dear ImGui 열거형 또는 플러그인 표와 일치합니다.
+
+******
+
+### 알려진 제한
+
+******
+
+- 각 스크립트 엔진은 한 번에 하나의 네이티브 렌더 세션만 지원합니다. 여러 패널이 필요하면 해당 세션 안에 여러 ImGui 루트 창을 만드세요. 새 오버레이 또는 Activity 세션은 이전 세션을 닫습니다.
+- `imgui.launch`에는 현재 resumed 상태인 AutoJs6 Activity가 필요합니다. 전면 호스트 Activity 없이 계속 렌더링해야 하면 `launchFloaty`를 사용하세요.
+- v1.9 권한 모드는 고정 전체 화면의 포인터 전용이며 IME/키 입력, 호스트 레이어 알파/보안, 접기, 보조 Android 버튼, 회전 시 동적 재생성을 지원하지 않습니다. 직접 입력은 `EVIOCGRAB`을 쓰지 않으며 OEM SurfaceControl/SELinux 정책으로 시작이 거부될 수 있습니다. 기능 탐지는 `su` 실행이나 Shizuku 권한 요청을 하지 않습니다.
 
 ******
 
@@ -115,19 +171,46 @@ lower camel case 메서드는 일반적인 Dear ImGui 작업에 대응하며 익
 
 ******
 
-# v1.0.0
+#### v1.9.0
 
-###### 2026/08/29
+###### 2026/08/30
 
-* `기능` 자동 마운트와 명시적 `plugins.load`를 지원하는 전역 `imgui` 객체
-* `기능` Dear ImGui 1.92.9로 렌더링하며 크기, 프레임 속도, 글꼴, 빈 영역 드래그를 설정할 수 있는 투명 플로팅 창
-* `기능` 창, 레이아웃, 텍스트, 입력, 선택, 색상, 진행 표시, 트리, 탭, 테마, 데모를 위한 즉시 모드 API
-* `기능` 상태를 가진 컨트롤을 위한 Boolean, 정수, 부동 소수점, 문자열, 색상 가변 참조
-* `기능` 플러그인 정보, 사용 설명, README, CHANGELOG의 10개 언어 현지화
-* `의존성` 플러그인 검색 메타데이터를 위한 Common Plugin API 추가
-* `의존성` Kotlin 표준 라이브러리 및 Parcelize 런타임 2.2.21 추가
-* `의존성` 빌드 도구를 위한 Apache Commons Compress 1.28.0 및 XZ for Java 1.10 추가
-* `의존성` 플러그인 계약 테스트를 위한 JUnit 4.13.2 추가
+* `기능` 선택 가능한 `launchPrivileged` / `WindowMode.Privileged` 백엔드를 추가하고 명시적 `auto`·`shizuku`·`root` 실행 정책 및 `Session.getBackendInfo()` 실시간 진단을 지원
+* `기능` AutoJs6 RootMode, `RootUtils` / `ProcessShell`, 이미 승인된 `WrappedShizuku` UserService를 재사용하는 리플렉션 전용 호스트 어댑터 추가
+* `기능` 인증된 Binder Surface v2 프로토콜 추가: UID 0/2000 권한 자식 프로세스가 SurfaceControl 레이어를 소유하고 Surface만 기존의 완전한 호스트 렌더러로 전달
+* `기능` 권한 Type A/Type B `/dev/input` 리더를 일반 제한형 ImGui 입력 큐에 연결하고 비독점 관찰 정책과 `Passthrough` 콜백 제어를 구현
+* `수정` Android 29+의 권위 있는 `IContentProvider.call` 오버로드를 선택하여 API 31+ 외부 Provider 랑데부에서 실제 Broker authority를 보존
+* `수정` `app_process` 자식이 종료 가능한 Looper를 사용하도록 변경하여 정상 정리 중의 잘못된 `Main thread not allowed to quit` 오류 제거
+* `수정` Broker 일반 바인딩에 AutoJs6 플러그인 권한을 적용하고 endpoint 등록을 1회로 제한하면서 UID·소유자·상수 시간 token·Binder death 검증 유지
+* `개선` 백엔드 기능과 TypeScript를 schema v2로 갱신하여 호스트 Root/Shizuku 상태, Binder 전송, 256-bit token 경계, 렌더러 위치 및 direct-input 정책 공개
+* `개선` API 28 Magisk root 및 API 31 Shizuku 13.5의 실제 AutoJs6 호스트 경로에서 UID 0/2000 레이어, 기존 JS API 렌더링, Type A/Type B 입력 감지, 스크린샷과 잔여 프로세스 없는 종료를 검증
+
+#### v1.8.0
+
+###### 2026/08/30
+
+* `기능` 창/플로팅 버튼용 `moreTouch` 옵션과 세션/전역 `setMoreTouch`를 추가하여 `FLAG_SPLIT_TOUCH`를 일관되게 제어
+* `기능` `BackendStatus`와 `getBackendCapabilities`를 추가하여 운영 창 백엔드, split-touch, 권한 프로세스, direct input, Docking, Multi-Viewport 상태를 타입과 함께 공개
+* `기능` 독립 `app_process`의 실험적 권한 렌더링 수직 경로 구현: SurfaceControl 레이어 → Surface → EGL ES 3 → Dear ImGui, 256-bit token 인증 로컬 socket 프레임 프로토콜 지원
+* `기능` `/dev/input` 16/24-byte 디코딩, Type A/Type B 멀티터치 추적, 회전 좌표 매핑 및 프레임 시작 시 소비하는 제한 입력 큐 구현
+* `수정` Activity/overlay split-touch 플래그를 런타임에 변경하고 종료 시 호스트 원본 플래그를 확정적으로 복원하며 기존 버튼도 동기화
+* `수정` 권한 프로토콜이 잘못된 magic/version, 과대·잘린 payload, 미인증 클라이언트를 거부하고 timeout/연결 종료 후 input, EGL, SurfaceControl, 프로세스를 정리
+* `개선` API 28 root 실기기에서 UID 2000 → UID 0 socket 프레임, 독립 ImGui 레이어, `/dev/input/event6` down/move/up을 검증하고 API 28/35 실기기에서 connected 테스트 3개 통과
+* `개선` 권한 백엔드 및 Docking/Multi-Viewport 설계 문서, protocol/evdev 단위 테스트와 빌드 안전 검사를 추가; P6는 명시적으로 experimental 상태 유지
+
+#### v1.7.0
+
+###### 2026/08/30
+
+* `기능` 호출 가능한 API 214개, 상수 그룹 36개, 세션, 컴포넌트, DrawList, 전역/플러그인/모듈 진입점을 모두 다루는 완전한 `types/imgui.d.ts`를 strict TypeScript 스모크 계약과 함께 제공
+* `기능` 내장 라이브러리를 바로 실행할 수 있는 예제 5개로 확장: 위젯 개요, 매개변수 패널, 로그 HUD, 데이터 테이블 데모, 테마 갤러리
+* `기능` 실제 Surface에서 초기화, 프레임 구성, 컨트롤, 렌더링, PixelCopy 의미 기반 스크린샷 기준선, 종료를 검증하는 Android 계측 테스트 추가
+* `기능` GitHub Actions PR 검증과 서명된 `v*` 릴리스 자동화를 추가하고 서명 재검증 및 APK 결과물 게시 지원
+* `기능` 체크섬이 있는 Dear ImGui 업스트림 스냅샷과 불변 tag/commit, 아카이브 검증, dry-run, 허용 목록 추출을 지원하는 안전한 업데이트 도구 추가
+* `수정` 터치, IME, 키, 휠 이벤트가 프레임 시작 시 소비되는 용량 제한 락프리 FIFO 큐에 들어가며, 수명 주기 큐 교체로 지연 이벤트가 새 네이티브 세션에 도달하지 않도록 수정
+* `수정` 프레임 스케줄링을 절대 마감 시각 보정 방식으로 바꿔 작업 시간과 타이머 지연의 누적 드리프트를 줄이고 늦거나 접힌 프레임 뒤에 안정적으로 재설정
+* `개선` 텍스트 64 KiB, 선택 항목 512개, 입력 이벤트 2,048개의 `Limits`를 공개하고 강제하며 구성 가능성 판단과 안전 근거를 문서화
+* `개선` 빌드 검증을 런타임 API, 별칭, 상수, TypeScript 선언, 예제, 입력 큐 불변 조건, 모든 vendored 업스트림 해시의 교차 확인으로 확장
 
 ##### 더 많은 릴리스 기록
 
@@ -149,11 +232,17 @@ CRC32 요약을 파일 이름에 포함하는 Release 빌드:
 .\gradlew.bat :app:appendDigestToReleasedFiles
 ```
 
+네이티브 소스 목록, JNI 선언 일치, 단위 테스트, ABI 분할 무결성을 검증:
+
+```powershell
+.\gradlew.bat :app:verifyImGuiDebugApks
+```
+
 빌드 매개변수는 `version.properties`에서 가져옵니다. 현재 최소 SDK는 24이고 대상 SDK는 36입니다.
 
 ******
 
-### 리소스 구성
+### 프로젝트 구성
 
 ******
 
@@ -161,11 +250,15 @@ CRC32 요약을 파일 이름에 포함하는 Release 빌드:
 .readme/lang_*.json
 .changelog/lang_*.json
 .python/generate_markdown.py
+app/src/main/assets/plugin/index.js
+app/src/main/assets/examples/widget-overview.js
+app/src/main/cpp/ImGuiBridge.cpp
 app/src/main/res/values-*/strings.xml
 app/src/main/res/raw-*/plugin_instruction.md
+Roadmap.md
 ```
 
-`strings.xml`에는 현지화된 설명이 있고 `plugin_instruction.md`에는 호스트가 표시하는 사용 설명이 있습니다. `.python/generate_markdown.py`가 JSON 소스에서 README와 CHANGELOG를 생성합니다.
+`index.js`는 스크립트 엔진 쪽 `imgui` 모듈이고 `ImGuiBridge.cpp`는 Dear ImGui로 이어지는 JNI 브리지입니다. `strings.xml`에는 현지화된 플러그인 설명이 있고 `plugin_instruction.md`에는 호스트가 표시하는 사용 설명이 있습니다. README와 CHANGELOG는 `.python/generate_markdown.py`가 JSON 소스에서 생성하므로 생성된 파일 대신 JSON 소스를 편집하세요.
 
 ******
 
@@ -175,3 +268,4 @@ app/src/main/res/raw-*/plugin_instruction.md
 
 - AutoJs6 프로젝트: https://github.com/SuperMonster003/AutoJs6
 - Dear ImGui 공식 프로젝트: https://github.com/ocornut/imgui
+- 기능 확장 로드맵 (Roadmap): https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md

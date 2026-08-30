@@ -4,16 +4,148 @@
 
 ******
 
+# v1.9.0
+
+###### 2026/08/30
+
+* `Fonctionnalité` Ajout du backend sélectionnable `launchPrivileged` / `WindowMode.Privileged`, avec politiques explicites `auto`, `shizuku` et `root` et diagnostics directs via `Session.getBackendInfo()`
+* `Fonctionnalité` Ajout d'un adaptateur hôte uniquement par réflexion qui réutilise RootMode, `RootUtils` / `ProcessShell` et le UserService `WrappedShizuku` déjà autorisé par AutoJs6
+* `Fonctionnalité` Ajout du protocole Binder Surface v2 authentifié : un processus privilégié UID 0/2000 conserve le calque SurfaceControl et ne transfère que sa Surface au moteur hôte complet existant
+* `Fonctionnalité` Connexion du lecteur privilégié Type A/Type B `/dev/input` à la file d'entrée ImGui bornée, avec politique d'observation non exclusive et contrôle du rappel par `Passthrough`
+* `Correctif` Sélection de la surcharge `IContentProvider.call` faisant autorité sur Android 29+, afin que le rendez-vous Provider externe API 31+ conserve la véritable authority du Broker
+* `Correctif` Utilisation d'un Looper quittable dans l'enfant `app_process`, supprimant la fausse erreur `Main thread not allowed to quit` pendant un nettoyage réussi
+* `Correctif` Protection de la liaison Broker par la permission plugin AutoJs6 et enregistrement unique de l'endpoint, en plus des contrôles UID, propriétaire, token en temps constant et mort Binder
+* `Amélioration` Passage des capacités backend et de TypeScript au schema v2 : état Root/Shizuku hôte, transport Binder, frontière token 256 bits, emplacement du rendu et stratégie direct-input
+* `Amélioration` Validation de la chaîne hôte AutoJs6 réelle sur API 28 avec Magisk root et API 31 avec Shizuku 13.5 : calques UID 0/2000, rendu de l'API JS existante, entrées Type A/Type B, captures et fermeture sans processus résiduel
+
+# v1.8.0
+
+###### 2026/08/30
+
+* `Fonctionnalité` Ajout des options `moreTouch` pour fenêtres/boutons flottants et de `setMoreTouch` au niveau session/global, avec contrôle cohérent de `FLAG_SPLIT_TOUCH`
+* `Fonctionnalité` Ajout de `BackendStatus` et `getBackendCapabilities`, avec états typés du backend de fenêtre, du split-touch, du processus privilégié, de l'entrée directe, de Docking et de Multi-Viewport
+* `Fonctionnalité` Réalisation d'une tranche verticale expérimentale dans un `app_process` indépendant: couche SurfaceControl → Surface → EGL ES 3 → Dear ImGui, pilotée par un protocole socket local authentifié par jeton 256 bits
+* `Fonctionnalité` Implémentation du décodage `/dev/input` sur 16/24 octets, du suivi multitactile Type A/Type B, de la rotation des coordonnées et d'une file bornée consommée au début de l'image
+* `Correctif` Les indicateurs split-touch Activity/overlay sont modifiables à l'exécution; la fermeture restaure les indicateurs d'origine de l'hôte et synchronise les boutons existants
+* `Correctif` Le protocole privilégié rejette magic/version invalides, charges tronquées ou surdimensionnées et clients non authentifiés, puis nettoie entrée, EGL, SurfaceControl et processus
+* `Amélioration` Validation sur appareil root API 28 des images socket UID 2000 → UID 0, de la couche ImGui indépendante et des événements down/move/up de `/dev/input/event6`; trois tests connectés passent aussi sur API 28 et 35
+* `Amélioration` Ajout des dossiers d'architecture du backend privilégié et Docking/Multi-Viewport, de tests protocole/evdev et de garde-fous de build; P6 reste explicitement expérimental
+
+# v1.7.0
+
+###### 2026/08/30
+
+* `Fonctionnalité` Publication d'un `types/imgui.d.ts` complet couvrant les 214 API appelables, 36 groupes de constantes, sessions, composants, DrawList et points d'entrée globaux/plugin/module, protégé par un test TypeScript strict
+* `Fonctionnalité` Extension de la bibliothèque à cinq exemples directement exécutables : vue d'ensemble des widgets, panneau de paramètres, HUD de journaux, démo de table et galerie de thèmes
+* `Fonctionnalité` Ajout d'un test Android instrumenté sur une vraie Surface couvrant initialisation, construction de trame, contrôles, rendu, référence sémantique PixelCopy et arrêt
+* `Fonctionnalité` Ajout de la vérification PR GitHub Actions et de l'automatisation des versions `v*` signées, avec contrôle de signature et publication des APK
+* `Fonctionnalité` Ajout d'un instantané Dear ImGui vérifié par sommes de contrôle et d'un outil de mise à jour sûr par tag/commit immuable, avec vérification d'archive, dry-run et extraction en liste blanche
+* `Correctif` Les événements tactiles, IME, clavier et molette passent désormais par une file FIFO non bloquante et bornée consommée au début de la trame; son remplacement au cycle de vie empêche les événements retardés d'atteindre une nouvelle session native
+* `Correctif` La planification des trames compense désormais des échéances absolues, réduisant la dérive cumulative du travail et des délais et se réinitialisant après une trame tardive ou réduite
+* `Amélioration` Publication et application de `Limits` : 64 Kio de texte, 512 éléments de sélection et 2 048 événements en file, avec décision de configuration et justification de sécurité documentées
+* `Amélioration` Extension de la vérification de build aux API, alias, constantes, déclarations TypeScript, exemples, invariants de file d'entrée et hachages de toutes les sources amont vendored
+
+# v1.6.0
+
+###### 2026/08/30
+
+* `Fonctionnalité` Ajout des références légères `imgui.ref(value)` et `{ value: ... }` à tous les contrôles avec état, tout en conservant les anciens assistants de tableaux Java
+* `Fonctionnalité` Ajout de `logWindow` gérée par la session et de notifications `toast` empilées et temporisées, avec couleurs par niveau, export et nettoyage déterministe
+* `Fonctionnalité` Ajout des boîtes de dialogue Promise `alert`, `confirm`, `singleChoice` et `multiChoice`, présentées dans une file modale
+* `Fonctionnalité` Ajout de `statsOverlay` coloré par seuil et de `dataTable` sélectionnable avec lignes stables, opérations CRUD, barre d’outils et rendu personnalisé
+* `Fonctionnalité` Ajout de l’exemple complet `widget-overview` avec `listExamples`, `getExampleSource`, `runExample` et des métadonnées de découverte pour l’hôte
+* `Correctif` Les promesses de dialogue en attente produisent désormais des valeurs d’annulation déterministes et tous les composants de haut niveau sont libérés à la fermeture de leur session
+* `Correctif` La lecture du code source des exemples est limitée à la liste blanche du contrat et rejette la traversée de chemins
+* `Correctif` La récupération tardive du Surface est désormais sérialisée avec les callbacks du holder Android, évitant une double initialisation native sur les appareils plus lents
+* `Amélioration` Ajout de `LogLevel` et `ToastPosition`, portant l’inventaire à 35 groupes de constantes, ainsi que d’alias PascalCase et d’une vérification de source étendue
+* `Amélioration` Validation du rendu de haut niveau, de l’exécution de l’exemple public, de la sémantique des résultats et du nettoyage sur un appareil OpenGL ES 3.2 physique
+
+# v1.5.0
+
+###### 2026/08/30
+
+* `Fonctionnalité` Ajout de `TouchMode.Touchable` / `Passthrough` / `Auto` ; le mode Auto crée des relais tactiles transparents par fenêtre ImGui afin que les zones vides atteignent l’application située dessous
+* `Fonctionnalité` Ajout de `collapse` / `expand`, d’une mini-bulle à faible FPS, de `addButtonEx` déplaçables indépendants et du contrôle dynamique de l’opacité et de `FLAG_SECURE`
+* `Fonctionnalité` Ajout du mode Activity plein écran `imgui.launch` et du mode superposition explicite `launchFloaty` ; un rendu prend en charge plusieurs racines `begin` / `withWindow`
+* `Fonctionnalité` Ajout du suivi adaptatif de l’écran, du redimensionnement externe `AlwaysAutoResize`, de la persistance `iniPath` facultative et des événements de session
+* `Correctif` La destruction du Surface le détache désormais puis le rattache sans perdre le contexte EGL/ImGui ni les identifiants de texture gérés
+* `Correctif` Le passage automatique emploie uniquement les API Android publiques et limite les relais tactiles à 64 racines interactives
+* `Amélioration` Extension de l’interface JNI de 186 à 190 liaisons et de la vérification des sources à la façade de session P3
+* `Amélioration` Les indicateurs Activity, l’interface système, les superpositions, les relais tactiles et les boutons flottants sont restaurés ou nettoyés de façon déterministe à la fermeture
+* `Amélioration` Déclaration de l’exigence matérielle OpenGL ES 3.0 dans le manifeste APK et la documentation d’installation
+
+# v1.4.0
+
+###### 2026/08/30
+
+* `Fonctionnalité` Ajout de `createTexture` géré par la session pour les chemins, données encodées `byte[]` / `ByteBuffer`, `Bitmap` Android, flux et objets `Image` AutoJs6
+* `Fonctionnalité` Ajout de `image` / `imageButton` avec taille naturelle et conservation des proportions, plages UV, teinte et couleur d’arrière-plan
+* `Fonctionnalité` Connexion directe des résultats AutoJs6 `images.read` et des captures d’écran à la création de textures, sans recycler les images appartenant à l’appelant
+* `Fonctionnalité` Ajout des couches DrawList de fenêtre, premier plan et arrière-plan avec primitives de ligne, rectangle, cercle, triangle, texte, polyligne, Bézier cubique et image
+* `Correctif` Le téléversement des Bitmap respecte maintenant le pas de ligne et annule l’Alpha prémultiplié d’Android, évitant les franges sombres sur les couleurs translucides
+* `Correctif` La suppression d’une texture est différée jusqu’au rendu des données en attente ; les handles périmés, supprimés ou provenant d’une autre session sont rejetés en toute sécurité
+* `Amélioration` Le nombre de liaisons JNI passe de 172 à 186 et la vérification des sources couvre désormais la façade des textures et de DrawList
+* `Amélioration` Ajout de limites de 128 MiB pour les données encodées, 32 mégapixels et la taille maximale OpenGL, avec nettoyage automatique des textures restantes de la session
+
+# v1.3.0
+
+###### 2026/08/30
+
+* `Fonctionnalité` Ajout de 11 thèmes complets via `Themes` / `setTheme(name)`, dont Pink, Blue, ModernDark, CyanDusk, OrangeDark, CrystalClear, VibrantNight et PurpleDream
+* `Fonctionnalité` Ajout de `setStyleColor` persistant et de `setStyleProperties` groupé ; `createWindow` accepte désormais `theme`, `appearance`, `style` et des raccourcis pour arrondis, bordures et ombre
+* `Fonctionnalité` Activation du canal de polices `AssetManager` avec un sous-ensemble CJK intégré d’environ 9 800 caractères pour les systèmes allégés sans Noto CJK
+* `Fonctionnalité` Ajout de `Fonts`, `pushFont` / `popFont` / `withFont` et `createWindow.fonts` pour les polices assets/fichiers, les handles nommés et les tailles dynamiques de Dear ImGui 1.92
+* `Fonctionnalité` Intégration d’un sous-ensemble de 38 glyphes Material Icons avec la table `Icons` et l’aide `icon(name, label)`
+* `Correctif` Le changement de thème repart maintenant de façon déterministe du style de base mis à l’échelle selon la densité, tout en conservant la taille et l’échelle globales de police
+* `Amélioration` Extension de l’interface JNI de 167 à 172 liaisons ; la vérification contrôle désormais l’inventaire thème/police et l’intégrité SHA-256 des deux polices
+* `Amélioration` Les polices par défaut et supplémentaires fusionnent le secours CJK et les icônes, sans assemblage manuel d’atlas dans les scripts
+
+# v1.2.0
+
+###### 2026/08/30
+
+* `Fonctionnalité` Intégration de l'IME système: le focus sur `inputText` / `inputTextMultiline` ouvre automatiquement le clavier avec texte de composition, texte validé et touches Retour arrière, Entrée et flèches
+* `Fonctionnalité` Ajout de `setKeyboardFocusHere` pour qu'un script place activement le focus sur le prochain contrôle de saisie et le confie à l'IME
+* `Fonctionnalité` Le défilement à deux doigts dispose désormais d'une inertie configurable via `fling` / `flingFriction` / `flingMinVelocity` / `flingMaxVelocity`
+* `Fonctionnalité` Un appui long à un doigt peut émettre un clic droit; ajout de `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow`
+* `Correctif` L'annulation d'un déplacement, d'un défilement à deux doigts ou d'une transition d'appui long efface désormais le contrôle actif afin d'éviter les clics involontaires
+* `Correctif` Le callback SurfaceHolder est enregistré avant la création du proxy IME afin qu'une surface déjà valide ne laisse pas la session de rendu non initialisée
+* `Correctif` La demande de clavier est relancée lorsque la fenêtre flottante obtient le focus, au lieu d'être perdue avant qu'Android ne serve la vue IME
+* `Correctif` La documentation de démarrage utilise désormais `plugins.load` par défaut et présente le montage automatique de l'hôte comme un réglage AutoJs6 facultatif
+* `Amélioration` `verifyImGuiSource` vérifie maintenant la couverture des wrappers sur trois couches: JNI → connexion Java → façade JavaScript
+* `Amélioration` La composition IME remplace la chaîne de préédition précédente, sans gestion du processus de candidats par le script
+
+# v1.1.0
+
+###### 2026/08/30
+
+* `Fonctionnalité` Famille d'API de tableaux: `withTable` / `beginTable` / `tableNextRow` / `tableNextColumn` / `tableSetupColumn` / `tableSetupScrollFreeze` / `tableHeadersRow` / `tableSetBgColor`, avec bordures, rayures de lignes, lignes/colonnes figées et couleurs d'arrière-plan
+* `Fonctionnalité` Popups et menus: `openPopup` / `withPopup` / `withPopupModal` / `closeCurrentPopup` / `isPopupOpen` / `withMenuBar` / `withMenu` / `menuItem`
+* `Fonctionnalité` Infobulles: `setTooltip` / `setItemTooltip` / `withTooltip` / `withItemTooltip`
+* `Fonctionnalité` Contrôle interrupteur `toggle` de style mobile, avec les alias `toggleSwitch` et `ToggleSwitch`
+* `Fonctionnalité` Contrôles et éléments de texte supplémentaires: `separatorText` / `bullet` / `bulletText` / `labelText` / `textDisabled` / `arrowButton` / `invisibleButton` / `inputInt` / `inputFloat` / `inputTextMultiline` / `listBox` / `withListBox` / `colorPicker3` / `colorPicker4` / `colorButton` / `plotLines` / `plotHistogram` / `treeNodeEx` / `vSliderFloat` / `vSliderInt` / `withCombo`
+* `Fonctionnalité` Piles de styles et API de structure: `pushStyleColor` / `popStyleColor` / `pushStyleVar` / `popStyleVar` / `setWindowFontScale` / `pushId` / `withId` / `withGroup` / `withDisabled` / `indent` / `unindent` / `alignTextToFramePadding`
+* `Fonctionnalité` Famille de défilement: `getScrollX/Y` / `getScrollMaxX/Y` / `setScrollX/Y` / `setScrollHereX/Y`
+* `Fonctionnalité` Requêtes d'état: `isItemActive` / `isItemEdited` / `isItemDeactivatedAfterEdit` / `isItemFocused` / `isWindowHovered` / `isWindowFocused` / `isWindowCollapsed` / `isMouseDown` / `isMouseClicked` / `isMouseDragging` / `getMousePos` / `getMouseDragDelta` / `calcTextSize` / `getFrameHeight` / `framerate`, entre autres
+* `Fonctionnalité` Primitives d'entrée: `addInputCharacters` / `addKeyEvent` / `sendKey` / `addMouseWheel` / `wantTextInput`, qui posent le canal d'événements pour la future prise en charge de l'IME
+* `Fonctionnalité` Le balayage vertical à deux doigts fait défiler le contenu de la fenêtre et se distingue automatiquement du déplacement de la fenêtre à un seul doigt
+* `Fonctionnalité` Tables de constantes étendues à 24 groupes avec les nouveaux `ChildFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `Col` / `StyleVar` / `Dir` / `Key` / `ButtonFlags`
+* `Correctif` Correction d'une situation de concurrence entre le thread tactile et le thread de rendu sur le contexte natif; les requêtes d'interaction lisent désormais un instantané capturé en fin d'image
+* `Correctif` Ajout des alias PascalCase manquants pour `WantCaptureMouse` et `StyleColorsDark` / `StyleColorsLight` / `StyleColorsClassic`
+* `Amélioration` La documentation et les exemples décrivent désormais le mécanisme d'objet global résident dans l'hôte et ne suggèrent plus d'appeler `plugins.load`
+* `Amélioration` Le code de version requis de l'hôte et la liste des ABI proviennent désormais de la source unique `ImGuiPluginContract` et sont analysés par le script de compilation
+* `Amélioration` Chaque nouvelle API est livrée avec un alias PascalCase correspondant à son équivalent Dear ImGui
+
 # v1.0.0
 
 ###### 2026/08/29
 
-* `Fonctionnalité` Objet global `imgui` avec montage automatique et chargement explicite par `plugins.load`
+* `Fonctionnalité` Objet global `imgui` monté automatiquement dans les moteurs de script par l'hôte
 * `Fonctionnalité` Fenêtres flottantes transparentes rendues par Dear ImGui 1.92.9 avec dimensions, fréquence d'image, polices et déplacement par zone vide configurables
 * `Fonctionnalité` API en mode immédiat pour les fenêtres, la mise en page, le texte, les entrées, la sélection, les couleurs, la progression, les arbres, les onglets, les thèmes et la démonstration
 * `Fonctionnalité` Références modifiables booléennes, entières, décimales, textuelles et colorimétriques pour les contrôles avec état
-* `Fonctionnalité` Informations du plugin, instructions, README et CHANGELOG localisés dans dix langues
-* `Dépendance` Ajout de Common Plugin API pour les métadonnées de découverte du plugin
-* `Dépendance` Ajout de la bibliothèque standard Kotlin et de l'environnement d'exécution Parcelize 2.2.21
+* `Fonctionnalité` Métadonnées du plugin, instructions d'utilisation, README et CHANGELOG localisés dans dix langues
+* `Dépendance` Ajout de la Common Plugin API embarquée pour les métadonnées de découverte du plugin
+* `Dépendance` Ajout de la bibliothèque standard Kotlin et de l'environnement d'exécution Parcelize version 2.2.21
 * `Dépendance` Ajout d'Apache Commons Compress 1.28.0 et de XZ for Java 1.10 pour les outils de compilation
-* `Dépendance` Ajout de JUnit 4.13.2 pour les tests du contrat du plugin
+* `Dépendance` Ajout de JUnit version 4.13.2 pour les tests du contrat du plugin

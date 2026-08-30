@@ -21,6 +21,6 @@ public final class ImGuiPluginRegistry {
         if (pluginContext == null) {
             throw new IllegalArgumentException("Plugin context must not be null");
         }
-        return new ImGuiPluginConnection(hostContext, pluginContext);
+        return new ImGuiPluginConnection(hostContext, pluginContext, runtime);
     }
 }

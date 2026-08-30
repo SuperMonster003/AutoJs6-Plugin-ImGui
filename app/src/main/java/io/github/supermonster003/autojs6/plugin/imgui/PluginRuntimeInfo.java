@@ -48,6 +48,26 @@ final class PluginRuntimeInfo {
         capabilities.putString("dearImGuiVersion", BuildConfig.DEAR_IMGUI_VERSION);
         capabilities.putBoolean("providesGlobalObject", true);
         capabilities.putString("globalObjectName", ImGuiPluginContract.GLOBAL_OBJECT_NAME);
+        capabilities.putStringArray(
+            ImGuiPluginContract.CAPABILITY_EXAMPLE_NAMES,
+            ImGuiPluginContract.exampleNames()
+        );
+        capabilities.putString(
+            ImGuiPluginContract.CAPABILITY_DEFAULT_EXAMPLE,
+            ImGuiPluginContract.DEFAULT_EXAMPLE
+        );
+        capabilities.putString(
+            ImGuiPluginContract.CAPABILITY_EXAMPLE_API,
+            "imgui.runExample"
+        );
+        capabilities.putString(
+            ImGuiPluginContract.CAPABILITY_EXAMPLE_MANIFEST,
+            ImGuiPluginContract.EXAMPLE_MANIFEST_ASSET
+        );
+        capabilities.putString(
+            ImGuiPluginContract.CAPABILITY_TYPESCRIPT_DECLARATION,
+            ImGuiPluginContract.TYPESCRIPT_DECLARATION_ASSET
+        );
         info.setCapabilities(capabilities);
         return info;
     }

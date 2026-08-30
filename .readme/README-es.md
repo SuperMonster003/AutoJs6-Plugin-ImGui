@@ -5,11 +5,12 @@
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-imgui-ic-launcher" border="0" width="128" />
   </p>
 
-  <p>Crea interfaces flotantes con Dear ImGui</p>
+  <p>Crea interfaces de usuario flotantes con Dear ImGui</p>
 
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-ImGui?label=Release"/></a>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/issues"><img alt="GitHub closed issues" src="https://img.shields.io/github/issues/SuperMonster003/AutoJs6-Plugin-ImGui?color=A24232&label=Issues"/></a>
+    <a href="https://github.com/ocornut/imgui"><img alt="Dear ImGui" src="https://img.shields.io/badge/Dear%20ImGui-1.92.9-3D6CB4"/></a>
     <br>
     <a href="https://developer.android.com/studio/archive"><img alt="Android Studio" src="https://img.shields.io/badge/Android%20Studio-2023.3+-B64FC8"/></a>
     <a href="https://www.jetbrains.com/idea/download/other.html"><img alt="IntelliJ IDEA" src="https://img.shields.io/badge/IntelliJ%20IDEA-2023.3+-EE4677"/></a>
@@ -42,7 +43,9 @@ El archivo README.md actual admite los siguientes idiomas:
 
 ******
 
-El plugin ImGui expone Dear ImGui como el objeto global `imgui` en los motores de scripts. Renderiza controles de modo inmediato en una ventana flotante transparente y reúne la creación de ventanas, la planificación de fotogramas, la entrada táctil y la limpieza de recursos nativos en una API compacta.
+El plugin ImGui lleva la biblioteca de interfaz gráfica de modo inmediato [Dear ImGui](https://github.com/ocornut/imgui) a AutoJs6 y renderiza los controles con OpenGL ES dentro de una ventana flotante transparente. Encaja de forma natural en interfaces flotantes ligeras como paneles de depuración, ajustadores de parámetros y HUD de tiempo de ejecución, y reúne la creación de ventanas, la planificación de fotogramas, la entrada táctil y la limpieza de recursos nativos en una API compacta.
+
+El punto de entrada más compatible es `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`. AutoJs6 6.8 o posterior también puede montar el plugin automáticamente desde los ajustes del Centro de plugins con el nombre de objeto `imgui`; solo cuando se habilita esa opción se puede usar directamente el objeto global.
 
 ******
 
@@ -50,37 +53,59 @@ El plugin ImGui expone Dear ImGui como el objeto global `imgui` en los motores d
 
 ******
 
-- Carga el objeto global `imgui` mediante montaje automático o `plugins.load(packageName)`.
-- Crea ventanas flotantes transparentes con tamaño, posición, frecuencia de fotogramas, fuente y arrastre de áreas vacías configurables.
-- Ofrece ventanas, regiones secundarias, pestañas, árboles, texto, botones, entradas mutables, selectores, indicadores de progreso, ayudas de diseño, temas y la ventana de demostración de Dear ImGui.
-- Ofrece referencias mutables booleanas, enteras, decimales, de texto y de color para controles con estado.
-- Localiza la información del plugin, las instrucciones, README y CHANGELOG en diez idiomas.
+- Sesiones adaptables superpuestas y Activity de pantalla completa con paso táctil automático, contraer/expandir, botones flotantes independientes, opacidad/seguridad, diseño persistente y eventos de ciclo de vida.
+- `launchPrivileged` ofrece un modo SurfaceFlinger de producción explícito mediante Shizuku/root gestionado por AutoJs6; Binder autenticado entrega la Surface privilegiada al renderizador completo existente y `/dev/input` aporta entrada de puntero observada.
+- El punto de entrada estable `plugins.load` funciona sin configurar el montaje del host; el montaje automático opcional de AutoJs6 expone la misma API como objeto global `imgui`.
+- Ventanas flotantes transparentes con tamaño, posición, frecuencia de fotogramas y fuente configurables; arrastre un área vacía para mover la ventana, use desplazamiento inercial con dos dedos y mantenga pulsado con uno para hacer clic derecho.
+- La familia `inputText` está completamente conectada al IME del sistema, incluido el texto en composición, la visibilidad automática del teclado virtual y las teclas de edición habituales.
+- Ventanas, pestañas, nodos de árbol, tablas, ventanas emergentes, menús, tooltips y más de 60 controles de modo inmediato, incluido un interruptor `toggle` de estilo móvil.
+- Sistema visual y tipográfico con 11 `Themes`, estilos por lotes, apariencias redondeadas/con borde/sombra, pila multifuente, respaldo CJK y subconjunto Material Icons.
+- Las texturas administradas aceptan rutas de archivo, bytes codificados, `Bitmap` de Android y objetos `Image` de AutoJs6; `image` / `imageButton` y tres capas DrawList cubren la visualización de imágenes y el dibujo personalizado.
+- Las referencias ligeras `imgui.ref(value)` / `{value: x}` funcionan con todos los controles con estado y los helpers de arrays Java existentes siguen siendo totalmente compatibles.
+- Los componentes de sesión `logWindow`, `toast` apilados, diálogos Promise, `statsOverlay` con umbrales y `dataTable` CRUD seleccionable ofrecen interfaces de depuración listas para usar.
+- Las enumeraciones de constantes y los alias de métodos en PascalCase siguen la nomenclatura nativa de Dear ImGui, por lo que migrar el conocimiento existente no cuesta nada.
+- El soporte de ingeniería incluye declaraciones TypeScript completas, cinco ejemplos ejecutables, pruebas Android de renderizado, cola de entrada sin bloqueo, actualización upstream verificable y automatización CI de versiones.
+- Metadatos del plugin, instrucciones de uso, README y CHANGELOG localizados en diez idiomas.
 
 ******
 
-### Uso
+### Instalación
 
 ******
 
-Active el montaje automático en el Centro de plugins o cargue el plugin explícitamente y cree una ventana flotante:
+- Descargue desde [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases) el APK que corresponda a la arquitectura de su dispositivo; si tiene dudas, elija el paquete `universal`.
+- Instale el APK, abra AutoJs6 y confirme en la página de gestión de plugins que este plugin está reconocido y habilitado.
+- Cargue el plugin con `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` y luego llame a `imgui.createWindow(...)`; conceda a AutoJs6 el permiso de superposición (ventana flotante) en el primer uso.
+- Antes de `launchPrivileged`, configure y autorice Root o Shizuku normalmente en AutoJs6. El plugin reutiliza ese estado del host y el modo privilegiado no necesita permiso de superposición.
+
+Requisito del host: AutoJs6 con versionCode 3853 o posterior. El plugin incluye binarios `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` y requiere Android 7.0 (API 24) o posterior además de una GPU/controlador compatible con OpenGL ES 3.0.
+
+******
+
+### Inicio rápido
+
+******
+
+Con el plugin instalado y habilitado, cargue su API, cree referencias mutables y abra una ventana flotante:
 
 ```js
-plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
-
-var enabled = imgui.bool(true);
-var value = imgui.float(0.5);
+var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
+var enabled = imgui.ref(true);
+var volume = imgui.ref(0.5);
+var themeColor = imgui.ref([0.25, 0.55, 0.90]);
 
 imgui.createWindow(function (ui, overlay) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
     ui.setNextWindowSize(overlay.width, overlay.height, ui.Cond.Always);
     ui.withWindow(
-        "ImGui controls",
+        "ImGui Panel",
         null,
         ui.WindowFlags.NoMove | ui.WindowFlags.NoResize | ui.WindowFlags.NoCollapse,
         function () {
             ui.text("Dear ImGui " + ui.version());
-            ui.checkbox("Enabled", enabled);
-            ui.sliderFloat("Value", value, 0, 1, "%.2f");
+            ui.toggle("Enabled", enabled);
+            ui.sliderFloat("Volume", volume, 0, 1, "%.2f");
+            ui.colorEdit3("Theme", themeColor);
             if (ui.button("Close", 120, 0)) {
                 overlay.close();
             }
@@ -90,11 +115,25 @@ imgui.createWindow(function (ui, overlay) {
     width: 360,
     height: 240,
     fontSize: 16,
+    theme: imgui.Themes.ModernDark,
+    appearance: imgui.Appearance.Rounded,
     fps: 60
 });
 ```
 
-Los controles mutables actualizan los objetos creados con `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string` y `imgui.floats`. `width`, `height` y `fontSize` usan unidades independientes de la densidad. Arrastre un área vacía para mover la ventana o use `movable: false` para fijarla.
+Los controles mutables aceptan referencias ligeras creadas con `imgui.ref(value)` u objetos `{ value: ... }`; los ayudantes anteriores `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` siguen siendo compatibles. Al enfocar `inputText` se abre automáticamente el IME del sistema con composición; pase `ime: false` para desactivarlo. `width`, `height` y `fontSize` usan unidades independientes de la densidad. Arrastre un área vacía para mover la ventana (`movable: false` la fija); el deslizamiento vertical con dos dedos tiene inercia configurable (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`) y una pulsación larga con un dedo emite un clic derecho (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). Cuando la fuente del sistema no cubra los caracteres necesarios, apunte `fontPath` a un archivo de fuente TTF u OTF.
+
+Temas y fuentes: `setTheme` acepta los 11 valores de `Themes` y `setStyleProperties` actualiza varios `StyleVar`; `createWindow` también admite `theme`, `appearance`, `style` y `shadow`. El arreglo `fonts` precarga fuentes de assets (`asset://...`) o archivos para `pushFont` / `withFont`. El respaldo CJK y los iconos se fusionan automáticamente; use `Icons` / `icon(name)` para obtener glifos de iconos.
+
+Texturas y dibujo personalizado: llame a `createTexture` solo cuando la sesión de ventana esté lista (normalmente la primera vez dentro de su callback de renderizado). El objeto devuelto expone `width`, `height` y `dispose()` / `close()` idempotentes; las texturas restantes se liberan automáticamente al cerrar la sesión. `image` / `imageButton` muestran texturas, mientras que `getWindowDrawList`, `getForegroundDrawList` y `getBackgroundDrawList` ofrecen primitivas habituales. Las coordenadas DrawList son píxeles del Surface. Se pueden pasar directamente valores `Image` de AutoJs6 obtenidos mediante `images.read(...)` o capturas de pantalla.
+
+Sesiones de ventana: las superposiciones usan `TouchMode.Auto` por defecto, manteniendo interactivas las raíces ImGui y pasando las zonas vacías del Surface a la aplicación inferior; elija `Touchable` o `Passthrough` para una política fija. Una sesión puede cambiar opacidad/seguridad/modo táctil, reducirse a una miniburbuja de pocos FPS, crear `addButtonEx` arrastrables, seguir contenido `AlwaysAutoResize`, guardar el diseño con `iniPath` y emitir eventos mediante `on` / `once` / `off` o callbacks de opciones. `imgui.launch(...)` crea un Surface de pantalla completa en la Activity AutoJs6 actualmente reanudada y `launchFloaty(...)` selecciona explícitamente una superposición. Cada motor de scripts tiene una sesión de renderizado nativa, pero su callback puede crear todas las raíces ImGui `begin` / `withWindow` necesarias; una sesión nueva cierra la anterior.
+
+Los componentes de alto nivel se adjuntan a la sesión activa y se dibujan después del callback del usuario: `logWindow` ofrece niveles con color, limpieza, exportación y desplazamiento automático; `toast` muestra avisos temporizados; `alert` / `confirm` / `singleChoice` / `multiChoice` resuelven Promises; `statsOverlay` grafica el tiempo de cuadro; y `dataTable` ofrece selección y CRUD. Los cinco ejemplos (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo` y `theme-gallery`) se descubren con `listExamples` / `getExampleSource` y se ejecutan con `runExample`. AutoJs6 6.8 aún no consume los metadatos genéricos de ejemplos en su centro de plugins; hasta que el host lo admita, ejecute directamente la llamada siguiente:
+
+```js
+imgui.runExample("widget-overview");
+```
 
 ******
 
@@ -102,12 +141,29 @@ Los controles mutables actualizan los objetos creados con `imgui.bool`, `imgui.i
 
 ******
 
-Los métodos lower camel case reflejan operaciones habituales de Dear ImGui y existen alias PascalCase para las llamadas de controles conocidas:
+Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mismo nombre, y existen alias en PascalCase para los usuarios familiarizados con la nomenclatura nativa (p. ej., `ui.Button` equivale a `ui.button`):
 
-- Ciclo de vida: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `withTabBar`, `withTabItem` y `withTreeNode`.
-- Controles: `text`, `button`, `checkbox`, `radioButton`, deslizadores, campos editables, colores, progreso, combos y elementos seleccionables.
-- Diseño y estado: métodos de cursor y ancho, `sameLine`, `separator`, `spacing`, consultas de elementos y consultas de captura.
-- Constantes: `Cond`, `WindowFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags` y `MouseButton`.
+- Ejecución de sesión: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx` y `on` / `once` / `off` junto con sus formas por sesión.
+- Sesión y ventanas: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, además de consultas de estado de ventana como `isWindowHovered`.
+- Texto y controles: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram`, entre otros.
+- Contenedores y navegación: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / la familia de tablas `withTable` / `withListBox` / `withCombo` / `selectable`.
+- Ventanas emergentes y menús: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
+- Estilo y diseño: `styleColorsDark` / `styleColorsLight` / `styleColorsClassic` / `pushStyleColor` / `pushStyleVar` / `setWindowFontScale` / `withGroup` / `withDisabled` / `withId` / `indent` / `sameLine` / `separator` / `spacing`, además de las familias de cursor y desplazamiento.
+- Texturas y dibujo: `createTexture` / `destroyTexture` / `image` / `imageButton` / `colorU32`, además de `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` con primitivas de línea, rectángulo, círculo, triángulo, texto, polilínea, Bézier e imagen.
+- Consultas y entrada: consultas de estado como `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate`, enfoque activo con `setKeyboardFocusHere` y primitivas `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput`. Todos los valores de `InputTextFlags` expuestos se pasan a Dear ImGui; se omiten los que dependen de callbacks y `WordWrap` solo se aplica a la entrada multilínea.
+- Componentes de alto nivel y ejemplos: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, además de `listExamples` / `getExampleSource` / `runExample`; cada sesión ofrece las mismas fábricas.
+- Referencias mutables: `imgui.ref` ligero (o un objeto `{value: x}`), además de los helpers compatibles de arrays Java `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.strings`.
+- Constantes: `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, que coinciden con las enumeraciones de Dear ImGui o tablas del plugin del mismo nombre.
+
+******
+
+### Limitaciones conocidas
+
+******
+
+- Cada motor de scripts admite una sola sesión de renderizado nativa; cree varias ventanas raíz ImGui en esa sesión si necesita varios paneles. Una nueva sesión superpuesta o Activity cierra la anterior.
+- `imgui.launch` requiere una Activity AutoJs6 actualmente en estado resumed; use `launchFloaty` si el script debe seguir renderizando sin una Activity anfitriona en primer plano.
+- En v1.9 el modo privilegiado es fijo a pantalla completa y solo admite puntero: no incluye IME/teclas, alfa/seguridad de capa, reducción, botones Android auxiliares ni reconstrucción dinámica al rotar. La entrada directa no usa `EVIOCGRAB` y las políticas OEM SurfaceControl/SELinux aún pueden impedir el inicio; el sondeo no ejecuta `su` ni solicita Shizuku.
 
 ******
 
@@ -115,19 +171,46 @@ Los métodos lower camel case reflejan operaciones habituales de Dear ImGui y ex
 
 ******
 
-# v1.0.0
+#### v1.9.0
 
-###### 2026/08/29
+###### 2026/08/30
 
-* `Función` Objeto global `imgui` con montaje automático y carga explícita mediante `plugins.load`
-* `Función` Ventanas flotantes transparentes renderizadas por Dear ImGui 1.92.9 con dimensiones, frecuencia de fotogramas, fuentes y arrastre desde áreas vacías configurables
-* `Función` API de modo inmediato para ventanas, diseño, texto, entrada, selección, color, progreso, árboles, pestañas, temas y demostración
-* `Función` Referencias mutables booleanas, enteras, decimales, de texto y de color para controles con estado
-* `Función` Información del plugin, instrucciones, README y CHANGELOG localizados en diez idiomas
-* `Dependencia` Se añadió Common Plugin API para los metadatos de descubrimiento del plugin
-* `Dependencia` Se añadieron la biblioteca estándar de Kotlin y el entorno de ejecución Parcelize 2.2.21
-* `Dependencia` Se añadieron Apache Commons Compress 1.28.0 y XZ for Java 1.10 para las herramientas de compilación
-* `Dependencia` Se añadió JUnit 4.13.2 para las pruebas del contrato del plugin
+* `Función` Añadido el backend seleccionable `launchPrivileged` / `WindowMode.Privileged`, con políticas explícitas `auto`, `shizuku` y `root` y diagnósticos en vivo mediante `Session.getBackendInfo()`
+* `Función` Añadido un adaptador de host solo por reflexión que reutiliza RootMode, `RootUtils` / `ProcessShell` y el UserService `WrappedShizuku` ya autorizado por AutoJs6
+* `Función` Añadido el protocolo Binder Surface v2 autenticado: un proceso privilegiado UID 0/2000 conserva la capa SurfaceControl y transfiere únicamente su Surface al renderizador completo existente del host
+* `Función` Conectado el lector privilegiado Type A/Type B de `/dev/input` a la cola acotada de ImGui, con política de observación no exclusiva y control de callbacks mediante `Passthrough`
+* `Corrección` Seleccionada la sobrecarga autoritativa de `IContentProvider.call` en Android 29+, conservando la authority real del Broker en el encuentro con Provider externo de API 31+
+* `Corrección` El hijo `app_process` ahora usa un Looper que puede finalizar, eliminando el falso error `Main thread not allowed to quit` durante una limpieza correcta
+* `Corrección` Protegido el enlace normal del Broker con el permiso de plugin de AutoJs6 y registro único del endpoint, además de las comprobaciones de UID, propietario, token en tiempo constante y muerte de Binder
+* `Mejora` Capacidades del backend y TypeScript actualizados al schema v2 con estado Root/Shizuku del host, transporte Binder, límite de token de 256 bits, ubicación del renderizador y política direct-input
+* `Mejora` Verificada la cadena real del host AutoJs6 en API 28 con Magisk root y API 31 con Shizuku 13.5: capas UID 0/2000, renderizado de la fachada JS existente, entrada Type A/Type B, capturas y cierre sin procesos huérfanos
+
+#### v1.8.0
+
+###### 2026/08/30
+
+* `Función` Se añadieron opciones `moreTouch` para ventanas/botones flotantes y `setMoreTouch` de sesión/global, controlando `FLAG_SPLIT_TOUCH` de forma uniforme
+* `Función` Se añadieron `BackendStatus` y `getBackendCapabilities` con estados tipados para el backend de ventana, split-touch, proceso privilegiado, entrada directa, Docking y Multi-Viewport
+* `Función` Se creó un corte vertical experimental en un `app_process` independiente: capa SurfaceControl → Surface → EGL ES 3 → Dear ImGui, con protocolo de frames por socket local autenticado mediante token de 256 bits
+* `Función` Se implementó decodificación `/dev/input` de 16/24 bytes, seguimiento multitáctil Type A/Type B, mapeo con rotación y una cola acotada consumida al inicio del frame
+* `Corrección` Los flags split-touch de Activity/overlay ahora cambian en ejecución; el cierre restaura los flags originales del host y sincroniza los botones existentes
+* `Corrección` El protocolo privilegiado rechaza magic/versión incorrectos, cargas truncadas o excesivas y clientes sin autenticar, y limpia entrada, EGL, SurfaceControl y proceso
+* `Mejora` Se validaron frames por socket UID 2000 → UID 0, la capa ImGui independiente y down/move/up de `/dev/input/event6` en un dispositivo root API 28; los tres tests conectados pasan en API 28 y 35
+* `Mejora` Se añadieron documentos de arquitectura del backend privilegiado y Docking/Multi-Viewport, pruebas de protocolo/evdev y controles de build; P6 sigue explícitamente experimental
+
+#### v1.7.0
+
+###### 2026/08/30
+
+* `Función` Publicación de un `types/imgui.d.ts` completo que cubre las 214 API invocables, 36 grupos de constantes, sesiones, componentes, DrawList y entradas global/plugin/módulo, protegido por una prueba TypeScript estricta
+* `Función` Ampliación de la biblioteca a cinco ejemplos ejecutables directamente: resumen de controles, panel de parámetros, HUD de registros, demo de tabla y galería de temas
+* `Función` Nueva prueba instrumentada Android sobre una Surface real que cubre inicialización, construcción de cuadro, controles, renderizado, línea base semántica PixelCopy y cierre
+* `Función` Nueva verificación de PR con GitHub Actions y automatización de versiones `v*` firmadas, con comprobación de firma y publicación de APK
+* `Función` Nuevo snapshot de Dear ImGui con sumas verificadas y actualizador seguro por tag/commit inmutable, con verificación de archivo, dry-run y extracción por lista blanca
+* `Corrección` Los eventos táctiles, IME, teclado y rueda ahora entran en una cola FIFO acotada sin bloqueo consumida al inicio del cuadro; reemplazarla durante el ciclo de vida impide que eventos tardíos lleguen a una nueva sesión nativa
+* `Corrección` La planificación de cuadros ahora compensa plazos absolutos, reduce la deriva acumulada del trabajo y el temporizador y se restablece tras cuadros tardíos o contraídos
+* `Mejora` Publicación y aplicación de `Limits`: 64 KiB de texto, 512 elementos de selección y 2.048 eventos de entrada en cola, con la decisión de configuración y su justificación de seguridad documentadas
+* `Mejora` Verificación de compilación ampliada para cruzar API, alias, constantes, declaraciones TypeScript, ejemplos, invariantes de la cola de entrada y todos los hashes de fuentes vendorizadas
 
 ##### Para consultar más versiones
 
@@ -149,11 +232,17 @@ Compilación Release con nombres que incluyen el resumen CRC32:
 .\gradlew.bat :app:appendDigestToReleasedFiles
 ```
 
-Los parámetros proceden de `version.properties`; el SDK mínimo actual es 24 y el SDK de destino es 36.
+Verificación del inventario del código fuente nativo, de la paridad de las declaraciones JNI, de las pruebas unitarias y de la integridad de la división por ABI:
+
+```powershell
+.\gradlew.bat :app:verifyImGuiDebugApks
+```
+
+Los parámetros de compilación proceden de `version.properties`; el SDK mínimo actual es 24 y el SDK de destino es 36.
 
 ******
 
-### Estructura de recursos
+### Estructura del proyecto
 
 ******
 
@@ -161,11 +250,15 @@ Los parámetros proceden de `version.properties`; el SDK mínimo actual es 24 y 
 .readme/lang_*.json
 .changelog/lang_*.json
 .python/generate_markdown.py
+app/src/main/assets/plugin/index.js
+app/src/main/assets/examples/widget-overview.js
+app/src/main/cpp/ImGuiBridge.cpp
 app/src/main/res/values-*/strings.xml
 app/src/main/res/raw-*/plugin_instruction.md
+Roadmap.md
 ```
 
-`strings.xml` contiene descripciones localizadas y `plugin_instruction.md` contiene las instrucciones mostradas por el host. `.python/generate_markdown.py` genera los archivos README y CHANGELOG desde las fuentes JSON.
+`index.js` es el módulo `imgui` del lado del motor de scripts e `ImGuiBridge.cpp` es el puente JNI hacia Dear ImGui. `strings.xml` contiene las descripciones localizadas del plugin y `plugin_instruction.md` contiene las instrucciones de uso que muestra el host. Los archivos README y CHANGELOG se generan a partir de las fuentes JSON con `.python/generate_markdown.py`; edite las fuentes JSON en lugar de los archivos generados.
 
 ******
 
@@ -175,3 +268,4 @@ app/src/main/res/raw-*/plugin_instruction.md
 
 - Proyecto AutoJs6: https://github.com/SuperMonster003/AutoJs6
 - Proyecto oficial Dear ImGui: https://github.com/ocornut/imgui
+- Hoja de ruta de funciones: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md

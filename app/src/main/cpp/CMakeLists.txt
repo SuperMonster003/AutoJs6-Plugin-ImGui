@@ -40,6 +40,7 @@ target_include_directories(
 find_library(ANDROID_LIBRARY android REQUIRED)
 find_library(EGL_LIBRARY EGL REQUIRED)
 find_library(GLES_LIBRARY GLESv3 REQUIRED)
+find_library(JNIGRAPHICS_LIBRARY jnigraphics REQUIRED)
 find_library(LOG_LIBRARY log REQUIRED)
 
 target_link_libraries(
@@ -48,5 +49,6 @@ target_link_libraries(
     "${ANDROID_LIBRARY}"
     "${EGL_LIBRARY}"
     "${GLES_LIBRARY}"
+    "${JNIGRAPHICS_LIBRARY}"
     "${LOG_LIBRARY}"
 )

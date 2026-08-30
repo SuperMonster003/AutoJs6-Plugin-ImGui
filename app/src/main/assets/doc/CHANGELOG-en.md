@@ -4,11 +4,143 @@
 
 ******
 
+# v1.9.0
+
+###### 2026/08/30
+
+* `Feature` Added the selectable `launchPrivileged` / `WindowMode.Privileged` backend, with explicit `auto`, `shizuku`, and `root` launcher policies and live `Session.getBackendInfo()` diagnostics
+* `Feature` Added a reflection-only host adapter that reuses AutoJs6 RootMode, `RootUtils` / `ProcessShell`, and the already-authorized `WrappedShizuku` UserService instead of introducing a second privilege manager
+* `Feature` Added authenticated Binder Surface protocol v2: a privileged UID 0/2000 child owns the SurfaceControl layer and transfers only its Surface to the existing complete host renderer
+* `Feature` Connected the privileged Type A/Type B `/dev/input` reader to the normal bounded ImGui input queue with an explicit non-grabbing observation policy and `Passthrough` callback control
+* `Fix` Selected the authoritative Android 29+ `IContentProvider.call` overload so API 31+ external-provider rendezvous preserves the real Broker authority
+* `Fix` Changed the raw `app_process` child to a quit-enabled Looper, eliminating the false `Main thread not allowed to quit` error during otherwise successful cleanup
+* `Fix` Restricted normal Broker binding with the AutoJs6 plugin permission, made endpoint registration one-shot, and retained UID, owner, constant-time token, and Binder-death checks
+* `Improvement` Upgraded backend capabilities and TypeScript to schema v2, including the host Root/Shizuku state, Binder transport, 256-bit token boundary, renderer location, and direct-input routing policy
+* `Improvement` Verified the real AutoJs6 host chain on API 28 Magisk root and API 31 Shizuku 13.5: UID 0/2000 Surface creation, existing JS facade rendering, Type A/Type B input discovery, screenshots, and orphan-free close all passed
+
+# v1.8.0
+
+###### 2026/08/30
+
+* `Feature` Added `moreTouch` window/floating-button options plus session/global `setMoreTouch`, consistently controlling `FLAG_SPLIT_TOUCH` so a button can receive a new finger while another remains down
+* `Feature` Added `BackendStatus` and `getBackendCapabilities` with typed status for the production window backend, split touch, privileged process, direct input, Docking, and Multi-Viewport
+* `Feature` Built an experimental independent `app_process` renderer vertical slice from SurfaceControl layer through Surface, EGL ES 3, and Dear ImGui, with a 256-bit-token authenticated local-socket frame protocol
+* `Feature` Implemented 16/24-byte `/dev/input` event decoding, Type A/Type B multitouch tracking, rotation-aware coordinate mapping, and bounded frame-start input handoff
+* `Fix` Activity and overlay split-touch flags can now be changed at runtime; closing restores the host's original flags and existing independent buttons update with the session
+* `Fix` The privileged protocol rejects bad magic/version, oversized or truncated payloads, and unauthenticated clients, then cleans up input, EGL, SurfaceControl, and the process after timeout, disconnect, or shutdown
+* `Improvement` Verified UID 2000-to-UID 0 socket frames, the independent ImGui layer, and `/dev/input/event6` down/move/up on a rooted API 28 device, while all three connected tests passed on API 28 and API 35 devices
+* `Improvement` Added privileged-backend and Docking/Multi-Viewport architecture records, protocol/evdev unit tests, and build-time safety inventory; P6 remains explicitly experimental and cannot yet be selected by ordinary scripts
+
+# v1.7.0
+
+###### 2026/08/30
+
+* `Feature` Published a complete `types/imgui.d.ts` for all 214 callable APIs, 36 constant groups, sessions, components, DrawList, and global/plugin/module entry points, guarded by a strict TypeScript smoke contract
+* `Feature` Expanded the bundled library to five directly runnable examples: widget overview, parameter panel, log HUD, data-table demo, and theme gallery
+* `Feature` Added an Android instrumented real-Surface render test covering init, frame construction, controls, rendering, a PixelCopy semantic screenshot baseline, and shutdown
+* `Feature` Added GitHub Actions PR verification and signed `v*` release automation with signature checks and APK artifact publishing
+* `Feature` Added a checksummed Dear ImGui upstream snapshot plus a safe immutable-tag/commit updater with archive verification, dry-run, and whitelisted extraction
+* `Fix` Touch, IME, key, and wheel events now enter a bounded lock-free FIFO queue consumed at frame start; lifecycle queue replacement prevents delayed events from reaching a new native session
+* `Fix` Frame scheduling now compensates against absolute deadlines, reducing cumulative work-plus-timeout drift and resetting cleanly after late or collapsed frames
+* `Improvement` Published and enforced `Limits` for 64 KiB text input, 512 selection items, and 2,048 queued input events, with the configuration decision and safety rationale documented
+* `Improvement` Extended build verification to cross-check runtime APIs, aliases, constants, TypeScript declarations, examples, input-queue invariants, and every vendored upstream hash
+
+# v1.6.0
+
+###### 2026/08/30
+
+* `Feature` Added lightweight `imgui.ref(value)` and `{ value: ... }` references across every stateful widget while retaining the legacy Java-array helpers
+* `Feature` Added session-managed `logWindow` and stacked, timed `toast` notifications with level colors, export, and deterministic cleanup
+* `Feature` Added Promise-based `alert`, `confirm`, `singleChoice`, and `multiChoice` dialogs with queued modal presentation
+* `Feature` Added a threshold-colored `statsOverlay` and selectable `dataTable` with stable rows, CRUD operations, toolbar actions, and custom rendering
+* `Feature` Bundled the complete `widget-overview` example with `listExamples`, `getExampleSource`, `runExample`, and host-discovery metadata
+* `Fix` Pending modal promises now resolve to deterministic cancellation values and all high-level components are disposed when their session closes
+* `Fix` Example source lookup is restricted to a contract whitelist and rejects path traversal
+* `Fix` Serialized the late-Surface recovery probe with Android holder callbacks, preventing duplicate native initialization on slower devices
+* `Improvement` Added `LogLevel` and `ToastPosition`, bringing the constant inventory to 35 groups, plus PascalCase aliases and expanded source verification
+* `Improvement` Validated high-level rendering, public example execution, result semantics, and cleanup on a physical OpenGL ES 3.2 device
+
+# v1.5.0
+
+###### 2026/08/30
+
+* `Feature` Added `TouchMode.Touchable` / `Passthrough` / `Auto`; Auto mode uses per-ImGui-window transparent touch proxies so blank overlay areas reach apps underneath
+* `Feature` Added session `collapse` / `expand`, a low-FPS mini bubble, independently draggable `addButtonEx`, and runtime alpha and `FLAG_SECURE` controls
+* `Feature` Added `imgui.launch` full-screen Activity mode and explicit `launchFloaty` overlay mode; one renderer supports multiple `begin` / `withWindow` roots
+* `Feature` Added responsive display tracking, `AlwaysAutoResize` outer-window sizing, optional `iniPath` persistence, and session event callbacks
+* `Fix` Surface destruction now detaches and later reattaches without discarding the EGL/ImGui context or managed texture handles
+* `Fix` Automatic pass-through uses public Android window/view APIs and limits touch proxies to 64 interactive roots
+* `Improvement` Expanded the JNI surface from 186 to 190 bindings and extended source verification across the P3 session facade
+* `Improvement` Activity flags, system UI state, overlay windows, touch proxies, and floating buttons are restored or cleaned up deterministically on close
+* `Improvement` Declared the OpenGL ES 3.0 hardware requirement in the APK manifest and installation documentation
+
+# v1.4.0
+
+###### 2026/08/30
+
+* `Feature` Added session-managed `createTexture` for file paths, encoded `byte[]` / `ByteBuffer` data, Android `Bitmap`, streams, and AutoJs6 `Image` objects
+* `Feature` Added `image` / `imageButton` with natural-size and aspect-ratio helpers, UV ranges, tint colors, and backgrounds
+* `Feature` Connected AutoJs6 `images.read` and screenshot results directly to texture creation without recycling caller-owned images
+* `Feature` Added window, foreground, and background DrawList layers with line, rectangle, circle, triangle, text, polyline, cubic Bézier, and image primitives
+* `Fix` Bitmap uploads now honor row stride and undo Android premultiplied alpha, preserving translucent colors without dark fringes
+* `Fix` Texture disposal is deferred until queued draw data has rendered; stale, disposed, and cross-session handles are rejected safely
+* `Improvement` Expanded the JNI surface from 172 to 186 bindings and extended source verification across the texture and DrawList facade
+* `Improvement` Added 128 MiB encoded-data, 32-megapixel, and OpenGL maximum-size guards, with automatic cleanup of all remaining session textures
+
+# v1.3.0
+
+###### 2026/08/30
+
+* `Feature` Added 11 complete themes through `Themes` / `setTheme(name)`, including Pink, Blue, ModernDark, CyanDusk, OrangeDark, CrystalClear, VibrantNight, and PurpleDream
+* `Feature` Added persistent `setStyleColor` and bulk `setStyleProperties`; `createWindow` now accepts `theme`, `appearance`, `style`, and direct rounding, border, and shadow shortcuts
+* `Feature` Activated the `AssetManager` font channel with a bundled CJK fallback subset of about 9,800 characters, preserving common Chinese text on stripped systems without Noto CJK
+* `Feature` Added `Fonts`, `pushFont` / `popFont` / `withFont`, and `createWindow.fonts` for asset/file fonts, named handles, and Dear ImGui 1.92 dynamic sizes
+* `Feature` Bundled a 38-glyph Material Icons subset with the `Icons` table and `icon(name, label)` helper
+* `Fix` Theme changes now reset deterministically from the density-scaled baseline while preserving the current font size and global font scales
+* `Improvement` Expanded the JNI surface from 167 to 172 bindings; source verification now checks the theme/font facade inventory and SHA-256 integrity of both font assets
+* `Improvement` The default and additional fonts merge the CJK fallback and icon glyphs, so scripts do not have to assemble fallback atlases manually
+
+# v1.2.0
+
+###### 2026/08/30
+
+* `Feature` System IME integration: focusing `inputText` / `inputTextMultiline` automatically opens the soft keyboard with composing text, committed text, and editing keys such as Backspace, Enter, and the arrows
+* `Feature` Added `setKeyboardFocusHere` so scripts can actively focus the next input widget and hand it to the IME
+* `Feature` Two-finger scrolling now has configurable inertial decay through the `fling` / `flingFriction` / `flingMinVelocity` / `flingMaxVelocity` window options
+* `Feature` A configurable one-finger long press emits a right click; added the `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` context-popup family
+* `Fix` Cancelling a window drag, two-finger scroll, or long-press transition now clears the active widget, preventing accidental left clicks and cancelled right-click popups
+* `Fix` Registered the SurfaceHolder callback before creating the IME proxy so an already-valid surface cannot leave the rendering session uninitialized
+* `Fix` The soft-keyboard request now retries after the overlay gains window focus instead of being lost when Android has not served the IME view yet
+* `Fix` Corrected startup documentation to use `plugins.load` by default and describe host auto-mount as an optional AutoJs6 setting
+* `Improvement` Extended `verifyImGuiSource` into a three-layer JNI → Java connection → JavaScript facade wrapper-coverage check
+* `Improvement` IME composition is synchronized by replacing the previous pre-edit string, so scripts do not have to manage the candidate process
+
+# v1.1.0
+
+###### 2026/08/30
+
+* `Feature` Table API family: `withTable` / `beginTable` / `tableNextRow` / `tableNextColumn` / `tableSetupColumn` / `tableSetupScrollFreeze` / `tableHeadersRow` / `tableSetBgColor` with borders, row stripes, frozen rows/columns, and background colors
+* `Feature` Popups and menus: `openPopup` / `withPopup` / `withPopupModal` / `closeCurrentPopup` / `isPopupOpen` / `withMenuBar` / `withMenu` / `menuItem`
+* `Feature` Tooltips: `setTooltip` / `setItemTooltip` / `withTooltip` / `withItemTooltip`
+* `Feature` Mobile-style `toggle` switch widget with `toggleSwitch` and `ToggleSwitch` aliases
+* `Feature` More widgets and text items: `separatorText` / `bullet` / `bulletText` / `labelText` / `textDisabled` / `arrowButton` / `invisibleButton` / `inputInt` / `inputFloat` / `inputTextMultiline` / `listBox` / `withListBox` / `colorPicker3` / `colorPicker4` / `colorButton` / `plotLines` / `plotHistogram` / `treeNodeEx` / `vSliderFloat` / `vSliderInt` / `withCombo`
+* `Feature` Style stacks and structure APIs: `pushStyleColor` / `popStyleColor` / `pushStyleVar` / `popStyleVar` / `setWindowFontScale` / `pushId` / `withId` / `withGroup` / `withDisabled` / `indent` / `unindent` / `alignTextToFramePadding`
+* `Feature` Scrolling family: `getScrollX/Y` / `getScrollMaxX/Y` / `setScrollX/Y` / `setScrollHereX/Y`
+* `Feature` State queries: `isItemActive` / `isItemEdited` / `isItemDeactivatedAfterEdit` / `isItemFocused` / `isWindowHovered` / `isWindowFocused` / `isWindowCollapsed` / `isMouseDown` / `isMouseClicked` / `isMouseDragging` / `getMousePos` / `getMouseDragDelta` / `calcTextSize` / `getFrameHeight` / `framerate`, and more
+* `Feature` Input primitives: `addInputCharacters` / `addKeyEvent` / `sendKey` / `addMouseWheel` / `wantTextInput`, laying the event channel for upcoming IME support
+* `Feature` Two-finger vertical swipe scrolls window content, automatically distinguished from single-finger window dragging
+* `Feature` Constant tables expanded to 24 groups with the new `ChildFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `Col` / `StyleVar` / `Dir` / `Key` / `ButtonFlags`
+* `Fix` Fixed a race between the touch thread and the render thread on the native context; interaction queries now read an end-of-frame snapshot
+* `Fix` Added the missing PascalCase aliases for `WantCaptureMouse` and `StyleColorsDark` / `StyleColorsLight` / `StyleColorsClassic`
+* `Improvement` Documentation and samples now describe the host-resident global object mechanism and no longer suggest calling `plugins.load`
+* `Improvement` The required host version code and the ABI list are now single-sourced from `ImGuiPluginContract` and parsed by the build script
+* `Improvement` Every new API ships with a PascalCase alias matching its Dear ImGui counterpart
+
 # v1.0.0
 
 ###### 2026/08/29
 
-* `Feature` Global `imgui` object with automatic mounting and explicit `plugins.load` support
+* `Feature` Global `imgui` object automatically mounted into script engines by the host
 * `Feature` Transparent floating windows rendered by Dear ImGui 1.92.9 with configurable dimensions, frame rate, fonts, and blank-area dragging
 * `Feature` Immediate-mode window, layout, text, input, selection, color, progress, tree, tab, theme, and demo APIs
 * `Feature` Mutable Boolean, integer, floating-point, string, and color references for stateful controls

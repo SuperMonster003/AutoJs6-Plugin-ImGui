@@ -5,10 +5,178 @@
   "changelog_label_improvement": "优化",
   "changelog_label_dependency": "依赖",
   "$data": {
+    "v1.9.0": {
+      "released_date": "2026/08/30",
+      "feature": [
+        "新增可选择的 `launchPrivileged` / `WindowMode.Privileged` 后端, 显式支持 `auto`、`shizuku`、`root` 启动策略与实时 `Session.getBackendInfo()` 诊断",
+        "新增纯反射宿主适配器, 直接复用 AutoJs6 RootMode、`RootUtils` / `ProcessShell` 及已授权的 `WrappedShizuku` UserService, 不再引入第二套提权管理",
+        "新增鉴权 Binder Surface v2 协议: UID 0/2000 特权子进程持有 SurfaceControl 图层, 仅将 Surface 转交给现有完整宿主渲染器",
+        "将特权 Type A/Type B `/dev/input` 读取器接入普通有界 ImGui 输入队列, 明确采用非独占观察策略, 并由 `Passthrough` 控制回调"
+      ],
+      "fix": [
+        "选择 Android 29+ 的权威 `IContentProvider.call` 重载, API 31+ 外部 Provider 会合现可保留真实 Broker authority",
+        "特权 `app_process` 子进程改用可退出 Looper, 消除正常清理时错误出现的 `Main thread not allowed to quit`",
+        "Broker 常规绑定增加 AutoJs6 插件权限, endpoint 注册改为单次, 并保留 UID、会话所有者、常量时间 token 与 Binder death 多重校验"
+      ],
+      "improvement": [
+        "后端能力与 TypeScript 升级至 schema v2, 覆盖宿主 Root/Shizuku 状态、Binder 传输、256-bit token 边界、渲染进程位置和 direct-input 路由策略",
+        "在 API 28 Magisk root 与 API 31 Shizuku 13.5 上验证真实 AutoJs6 宿主链: UID 0/2000 图层、现有 JS 门面渲染、Type A/Type B 输入发现、截图及无残留关闭全部通过"
+      ]
+    },
+    "v1.8.0": {
+      "released_date": "2026/08/30",
+      "feature": [
+        "新增 `moreTouch` 窗口/悬浮按钮选项及会话、全局 `setMoreTouch`, 统一控制 `FLAG_SPLIT_TOUCH`, 已有手指在屏时仍可独立触发浮窗按钮",
+        "新增 `BackendStatus` 与 `getBackendCapabilities`, 结构化报告生产窗口后端、split-touch、特权进程、direct input、Docking 与 Multi-Viewport 状态, 并同步覆盖 TypeScript",
+        "落地实验性独立 `app_process` 特权渲染垂直切片: SurfaceControl 图层 → Surface → EGL ES 3 → Dear ImGui, 支持 256-bit token 鉴权的本地 socket 帧协议",
+        "实现 `/dev/input` 16/24-byte 事件解码、Type A/Type B 多点跟踪、旋转坐标映射与有界帧首输入队列"
+      ],
+      "fix": [
+        "Activity 与悬浮窗 split-touch 标志现可动态启停; 会话关闭时确定性恢复宿主原始窗口标志, 已存在的独立按钮也会同步更新",
+        "特权协议拒绝错误 magic/版本、超长或截断载荷与未认证客户端, 并在超时、断连及显式关闭后清理输入线程、EGL、SurfaceControl 与进程"
+      ],
+      "improvement": [
+        "在 API 28 root 实机验证 UID 2000 → UID 0 socket 帧、独立 ImGui 图层及 `/dev/input/event6` down/move/up, 同时在 API 28/35 实机通过三项 connected 测试",
+        "新增特权后端与 Docking/Multi-Viewport 架构文档、协议/evdev 单测及构建期安全清单; P6 原型保持显式 experimental, 尚不可由普通脚本选择"
+      ]
+    },
+    "v1.7.0": {
+      "released_date": "2026/08/30",
+      "feature": [
+        "发布完整 `types/imgui.d.ts`, 覆盖全部 214 个可调用 API、36 组常量、会话、高层组件、DrawList 及全局/插件/模块入口, 并由严格 TypeScript 冒烟契约守护",
+        "内置示例扩展为五个可直接运行的脚本: 控件总览、参数调节面板、日志 HUD、表格 Demo 与主题画廊",
+        "新增 Android 真实 Surface 仪器化渲染测试, 覆盖初始化、建帧、关键控件、渲染、PixelCopy 截图语义基线与关闭",
+        "新增 GitHub Actions PR 校验与签名 `v*` 发布自动化, 包含签名复验和 APK 产物上传",
+        "新增带校验和的 Dear ImGui 上游快照及安全更新器, 支持不可变 tag/commit、归档校验、dry-run 与白名单解包"
+      ],
+      "fix": [
+        "触摸、IME、按键与滚轮事件现进入有界无锁 FIFO 队列并在帧首消费; 生命周期替换队列可阻止延迟事件进入新的原生会话",
+        "帧调度改为绝对截止时间补偿, 降低工作耗时与定时延迟的累积漂移, 并在迟到或收起帧后确定性重置"
+      ],
+      "improvement": [
+        "公开并强制执行 `Limits`: 文本输入 64 KiB、选择项 512 个、输入事件队列 2,048 条, 同时记录可配置化结论与安全依据",
+        "构建校验扩展至交叉核对运行时 API、别名、常量、TypeScript 声明、示例、输入队列约束及全部 vendored 上游哈希"
+      ]
+    },
+    "v1.6.0": {
+      "released_date": "2026/08/30",
+      "feature": [
+        "为所有有状态控件新增轻量 `imgui.ref(value)` 与 `{ value: ... }` 引用, 同时保留旧版 Java 数组辅助方法",
+        "新增会话托管的 `logWindow` 与堆叠定时 `toast`, 支持级别颜色、导出及确定性清理",
+        "新增基于 Promise 的 `alert`、`confirm`、`singleChoice` 与 `multiChoice` 对话框, 模态窗口按队列依次显示",
+        "新增按阈值着色的 `statsOverlay`, 以及具有稳定行、选择、CRUD、工具栏和自定义渲染的 `dataTable`",
+        "内置完整 `widget-overview` 示例, 并提供 `listExamples`、`getExampleSource`、`runExample` 与宿主发现元数据"
+      ],
+      "fix": [
+        "未决对话框 Promise 现会解析为确定的取消值, 会话关闭时也会释放全部高级组件",
+        "示例源码查询现仅允许契约白名单, 并拒绝路径穿越",
+        "将延迟 Surface 恢复探测与 Android holder 回调串行化, 避免较慢设备重复初始化原生上下文"
+      ],
+      "improvement": [
+        "新增 `LogLevel` 与 `ToastPosition`, 常量扩展至 35 组, 同时补充 PascalCase 别名与源码验证覆盖",
+        "已在 OpenGL ES 3.2 实体机验证高级渲染、公开示例执行、结果语义与资源清理"
+      ]
+    },
+    "v1.5.0": {
+      "released_date": "2026/08/30",
+      "feature": [
+        "新增 `TouchMode.Touchable` / `Passthrough` / `Auto`; 自动模式按 ImGui 根窗口建立透明触摸代理, 浮窗空白区域可直接触达下层应用",
+        "新增会话 `collapse` / `expand`、低帧率迷你悬浮球、独立可拖动 `addButtonEx`, 以及运行期透明度和 `FLAG_SECURE` 控制",
+        "新增 `imgui.launch` Activity 全屏模式与显式 `launchFloaty` 悬浮窗模式; 单个渲染器可承载多个 `begin` / `withWindow` 根窗口",
+        "新增屏幕尺寸自适应、`AlwaysAutoResize` 外层窗口跟随、可选 `iniPath` 持久化与会话事件回调"
+      ],
+      "fix": [
+        "Surface 销毁后改为分离并在恢复时重新附着, 不再丢弃 EGL/ImGui 上下文及托管纹理句柄",
+        "自动点击穿透仅使用 Android 公共窗口/视图 API, 并将触摸代理限制为最多 64 个交互根窗口"
+      ],
+      "improvement": [
+        "JNI 绑定由 186 个扩展至 190 个, 源码校验同步覆盖 P3 会话门面",
+        "会话关闭时会确定性还原 Activity 标志与系统 UI, 并清理悬浮窗、触摸代理和独立按钮",
+        "在 APK Manifest 与安装文档中明确声明 OpenGL ES 3.0 硬件要求"
+      ]
+    },
+    "v1.4.0": {
+      "released_date": "2026/08/30",
+      "feature": [
+        "新增会话托管的 `createTexture`, 支持文件路径、编码 `byte[]` / `ByteBuffer`、Android `Bitmap`、输入流与 AutoJs6 `Image`",
+        "新增 `image` / `imageButton`, 支持原始尺寸与宽高比辅助、UV 范围、着色和背景色",
+        "打通 AutoJs6 `images.read` 与截图产物, 可直接创建纹理且不会回收调用方持有的图像",
+        "新增窗口/前景/背景三层 DrawList, 提供线段、矩形、圆形、三角形、文本、折线、三次贝塞尔曲线与图像原语"
+      ],
+      "fix": [
+        "Bitmap 上传现会正确处理行跨度并还原 Android 预乘 Alpha, 半透明颜色不再出现暗边",
+        "纹理销毁延迟至已排队绘图数据完成渲染; 过期、已销毁及跨会话句柄会被安全拒绝"
+      ],
+      "improvement": [
+        "JNI 绑定由 172 个扩展至 186 个, 源码校验同步覆盖纹理与 DrawList 门面",
+        "新增 128 MiB 编码数据、3,200 万像素与 OpenGL 最大尺寸保护, 会话结束自动清理全部剩余纹理"
+      ]
+    },
+    "v1.3.0": {
+      "released_date": "2026/08/30",
+      "feature": [
+        "内置 11 套完整主题与 `Themes` / `setTheme(name)`, 新增 Pink、Blue、ModernDark、CyanDusk、OrangeDark、CrystalClear、VibrantNight、PurpleDream 等预设",
+        "新增持久化 `setStyleColor` 与批量 `setStyleProperties`, `createWindow` 可通过 `theme` / `appearance` / `style` 以及圆角、边框、阴影快捷项直接配置视觉样式",
+        "启用 `AssetManager` 字体通道并内置约 9,800 字符的 CJK 裁剪兜底, 精简系统缺少 Noto CJK 时仍可显示常用中文",
+        "新增 `Fonts` / `pushFont` / `popFont` / `withFont` 与 `createWindow.fonts`, 支持 assets 或文件字体、多字体句柄及 Dear ImGui 1.92 动态字号",
+        "内置 38 枚 Material Icons 子集, 提供 `Icons` 常量表与 `icon(name, label)` 辅助"
+      ],
+      "fix": [
+        "主题切换会从按设备密度缩放的基准样式确定性重置, 同时保留当前字体字号与全局字体缩放"
+      ],
+      "improvement": [
+        "JNI 绑定由 167 个扩展至 172 个; 源码校验新增主题/字体门面清单及两份内置字体的 SHA-256 完整性检查",
+        "默认字体和额外字体会合并 CJK 兜底与图标字形, 自定义字体缺字时无需脚本手动拼接字体图集"
+      ]
+    },
+    "v1.2.0": {
+      "released_date": "2026/08/30",
+      "feature": [
+        "系统输入法 (IME) 集成: `inputText` / `inputTextMultiline` 聚焦时自动唤起软键盘, 支持中文拼音组合文本、提交文本及退格/回车/方向键等编辑键",
+        "新增 `setKeyboardFocusHere`, 支持脚本主动聚焦下一个输入控件并自动衔接 IME",
+        "双指滚动加入可配置的惯性衰减, 提供 `fling` / `flingFriction` / `flingMinVelocity` / `flingMaxVelocity` 窗口选项",
+        "单指长按可配置为右键, 新增 `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` 上下文弹窗族"
+      ],
+      "fix": [
+        "取消窗口拖动、双指滚动或长按切换手势时会清除原活动控件, 避免误触发左键点击或被取消的右键弹窗",
+        "在创建 IME 代理前注册 SurfaceHolder 回调, 避免 Surface 已有效但渲染会话未初始化的时序问题",
+        "悬浮窗取得窗口焦点后会重试软键盘请求, 避免 Android 尚未将 IME 视图设为 served view 时丢失首次请求",
+        "修正启动文档: 默认使用 `plugins.load`, 并将宿主自动挂载明确为 AutoJs6 的可选设置"
+      ],
+      "improvement": [
+        "`verifyImGuiSource` 扩展为 JNI → Java 连接层 → JavaScript 门面的三层包装覆盖率校验",
+        "输入法组合串通过撤销旧预编辑文本并写入新文本同步, 无需脚本手动管理拼音候选过程"
+      ]
+    },
+    "v1.1.0": {
+      "released_date": "2026/08/30",
+      "feature": [
+        "表格 API 族: `withTable` / `beginTable` / `tableNextRow` / `tableNextColumn` / `tableSetupColumn` / `tableSetupScrollFreeze` / `tableHeadersRow` / `tableSetBgColor`, 支持边框/条纹/行列冻结与背景色",
+        "弹窗与菜单: `openPopup` / `withPopup` / `withPopupModal` / `closeCurrentPopup` / `isPopupOpen` / `withMenuBar` / `withMenu` / `menuItem`",
+        "工具提示: `setTooltip` / `setItemTooltip` / `withTooltip` / `withItemTooltip`",
+        "移动端风格 `toggle` 开关控件, 提供 `toggleSwitch` 与 `ToggleSwitch` 别名",
+        "更多控件与文本项: `separatorText` / `bullet` / `bulletText` / `labelText` / `textDisabled` / `arrowButton` / `invisibleButton` / `inputInt` / `inputFloat` / `inputTextMultiline` / `listBox` / `withListBox` / `colorPicker3` / `colorPicker4` / `colorButton` / `plotLines` / `plotHistogram` / `treeNodeEx` / `vSliderFloat` / `vSliderInt` / `withCombo`",
+        "样式栈与结构 API: `pushStyleColor` / `popStyleColor` / `pushStyleVar` / `popStyleVar` / `setWindowFontScale` / `pushId` / `withId` / `withGroup` / `withDisabled` / `indent` / `unindent` / `alignTextToFramePadding`",
+        "滚动控制族: `getScrollX/Y` / `getScrollMaxX/Y` / `setScrollX/Y` / `setScrollHereX/Y`",
+        "状态查询: `isItemActive` / `isItemEdited` / `isItemDeactivatedAfterEdit` / `isItemFocused` / `isWindowHovered` / `isWindowFocused` / `isWindowCollapsed` / `isMouseDown` / `isMouseClicked` / `isMouseDragging` / `getMousePos` / `getMouseDragDelta` / `calcTextSize` / `getFrameHeight` / `framerate` 等",
+        "输入原语: `addInputCharacters` / `addKeyEvent` / `sendKey` / `addMouseWheel` / `wantTextInput`, 为后续系统输入法支持奠定事件通道",
+        "双指纵向滑动滚动窗口内容, 与单指拖动窗口的手势自动区分",
+        "常量表扩充至 24 组: 新增 `ChildFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `Col` / `StyleVar` / `Dir` / `Key` / `ButtonFlags`"
+      ],
+      "fix": [
+        "修复触摸线程与渲染线程并发访问原生上下文的竞态问题, 交互查询改为帧末快照缓存",
+        "补齐 `WantCaptureMouse` 与 `StyleColorsDark` / `StyleColorsLight` / `StyleColorsClassic` 缺失的 PascalCase 别名"
+      ],
+      "improvement": [
+        "文档与示例统一为宿主常驻全局对象机制, 不再引导调用 `plugins.load`",
+        "宿主最低版本码与 ABI 列表由 `ImGuiPluginContract` 单一数据源提供, 构建脚本自动解析",
+        "全部新增 API 均提供与 Dear ImGui 同名的 PascalCase 别名"
+      ]
+    },
     "v1.0.0": {
       "released_date": "2026/08/29",
       "feature": [
-        "全局 `imgui` 对象, 支持自动挂载和显式调用 `plugins.load`",
+        "全局 `imgui` 对象, 由宿主自动挂载至脚本引擎",
         "由 Dear ImGui 1.92.9 渲染的透明浮动窗口, 支持配置尺寸/帧率/字体和空白区域拖动",
         "即时模式窗口/布局/文本/输入/选择/颜色/进度/树形节点/标签页/主题和演示 API",
         "布尔/整数/浮点数/字符串和颜色可变引用, 用于保存有状态控件的数据",

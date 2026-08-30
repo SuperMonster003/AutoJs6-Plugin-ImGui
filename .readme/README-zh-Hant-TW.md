@@ -10,6 +10,7 @@
   <p>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases"><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/v/release/SuperMonster003/AutoJs6-Plugin-ImGui?label=Release"/></a>
     <a href="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/issues"><img alt="GitHub closed issues" src="https://img.shields.io/github/issues/SuperMonster003/AutoJs6-Plugin-ImGui?color=A24232&label=Issues"/></a>
+    <a href="https://github.com/ocornut/imgui"><img alt="Dear ImGui" src="https://img.shields.io/badge/Dear%20ImGui-1.92.9-3D6CB4"/></a>
     <br>
     <a href="https://developer.android.com/studio/archive"><img alt="Android Studio" src="https://img.shields.io/badge/Android%20Studio-2023.3+-B64FC8"/></a>
     <a href="https://www.jetbrains.com/idea/download/other.html"><img alt="IntelliJ IDEA" src="https://img.shields.io/badge/IntelliJ%20IDEA-2023.3+-EE4677"/></a>
@@ -42,45 +43,69 @@
 
 ******
 
-ImGui 外掛在指令碼引擎中提供全域 `imgui` 物件. 它在透明浮動視窗中渲染立即模式控制項, 並透過一套精簡的 API 統一管理視窗建立/影格排程/觸控輸入和原生資源清理.
+ImGui 外掛將 [Dear ImGui](https://github.com/ocornut/imgui) 立即模式圖形函式庫帶入 AutoJs6, 在透明浮動視窗中以 OpenGL ES 渲染控制項, 適合為指令碼編寫除錯面板/參數調節器/執行狀態 HUD 等輕量浮動介面. 外掛透過一套精簡的 API 統一管理視窗建立/影格排程/觸控輸入和原生資源清理.
+
+相容性最佳的入口是 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`. AutoJs6 6.8 或以上版本也可在外掛中心設定中按需啟用自動掛載, 並將物件名稱設為 `imgui`; 只有啟用後, 指令碼才可直接使用同名全域物件.
 
 ******
 
-### 功能
+### 功能特性
 
 ******
 
-- 透過自動掛載或 `plugins.load(packageName)` 載入全域 `imgui` 物件.
-- 透明浮動視窗, 可設定尺寸/位置/影格率/字型並支援拖曳空白區域.
-- 視窗/子區域/分頁/樹狀節點/文字/按鈕/可變輸入/選擇器/進度指示/版面配置輔助/主題以及 Dear ImGui 示範視窗.
-- 布林/整數/浮點數/字串和顏色可變參照, 用於保存具狀態控制項的資料.
+- 自適應懸浮窗與 Activity 全螢幕工作階段, 支援自動點擊穿透、收合/展開、獨立懸浮按鈕、透明度/防擷取控制、版面持久化與生命週期事件.
+- `launchPrivileged` 透過 AutoJs6 已管理的 Shizuku/root 提供明確正式 SurfaceFlinger 模式; 已驗證 Binder 將特權 Surface 交給現有完整渲染器, `/dev/input` 則提供觀察式指標輸入.
+- 預設透過穩定的 `plugins.load` 入口載入, 無需預先設定宿主掛載; 也可啟用 AutoJs6 自動掛載, 將相同 API 公開為全域 `imgui` 物件.
+- 透明浮動視窗: 尺寸/位置/影格率/字型可設定, 拖曳空白區域移動視窗, 雙指滑動與慣性捲動內容, 單指長按模擬右鍵.
+- `inputText` 系列完整整合系統輸入法, 支援中文拼音組合輸入、自動顯示/隱藏軟鍵盤與常用編輯鍵.
+- 視窗/分頁/樹狀節點/表格/彈窗/選單/工具提示與 60 餘個立即模式控制項, 含行動裝置風格 `toggle` 開關.
+- 視覺與字型系統: 11 套 `Themes` 主題、批次樣式、圓角/邊框/陰影外觀、多字型堆疊、CJK 備援與 Material Icons 子集.
+- 代管紋理支援檔案路徑、編碼位元組、Android `Bitmap` 與 AutoJs6 `Image`; `image` / `imageButton` 和三層 DrawList 可完成圖片顯示與浮動視窗自繪.
+- 輕量 `imgui.ref(value)` / `{value: x}` 參照可用於所有具狀態控制項, 現有 Java 陣列參照輔助方法保持完全相容.
+- 工作階段託管的 `logWindow`、堆疊 `toast`、Promise 對話框、閾值變色 `statsOverlay` 與可選取 CRUD `dataTable` 可直接組成偵錯介面.
+- 常數列舉與 PascalCase 方法別名和 Dear ImGui 原始命名保持一致, 遷移零成本.
+- 工程支援包含完整 TypeScript 宣告、五個可執行範例、Android 渲染儀器測試、無鎖輸入佇列、可驗證的上游更新工具與 CI 發布自動化.
 - 外掛資訊/使用說明/README 和 CHANGELOG 的十種語言本地化.
 
 ******
 
-### 使用範例
+### 安裝與啟用
 
 ******
 
-在外掛中心啟用自動掛載或明確載入外掛, 然後建立浮動視窗:
+- 從 [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases) 下載與裝置架構相符的 APK, 不確定架構時選擇 `universal` 通用套件.
+- 安裝 APK 後開啟 AutoJs6, 在外掛管理頁面確認本外掛已被識別並處於啟用狀態.
+- 在指令碼中呼叫 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` 載入外掛, 再呼叫 `imgui.createWindow(...)`; 首次使用需授予 AutoJs6 懸浮視窗權限.
+- 使用 `launchPrivileged` 前請照常在 AutoJs6 內設定並授權 Root 或 Shizuku; 外掛直接重用該宿主狀態, 特權模式不需要懸浮視窗權限.
+
+宿主版本要求: AutoJs6 版本號 (versionCode) 不低於 3853. 外掛支援 `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` 四種架構, 最低系統版本為 Android 7.0 (API 24), 且裝置 GPU/驅動程式須支援 OpenGL ES 3.0.
+
+******
+
+### 快速開始
+
+******
+
+安裝並啟用外掛後, 載入 API, 建立可變參照物件並開啟浮動視窗:
 
 ```js
-plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
-
-var enabled = imgui.bool(true);
-var value = imgui.float(0.5);
+var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
+var enabled = imgui.ref(true);
+var volume = imgui.ref(0.5);
+var themeColor = imgui.ref([0.25, 0.55, 0.90]);
 
 imgui.createWindow(function (ui, overlay) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
     ui.setNextWindowSize(overlay.width, overlay.height, ui.Cond.Always);
     ui.withWindow(
-        "ImGui controls",
+        "ImGui Panel",
         null,
         ui.WindowFlags.NoMove | ui.WindowFlags.NoResize | ui.WindowFlags.NoCollapse,
         function () {
             ui.text("Dear ImGui " + ui.version());
-            ui.checkbox("Enabled", enabled);
-            ui.sliderFloat("Value", value, 0, 1, "%.2f");
+            ui.toggle("Enabled", enabled);
+            ui.sliderFloat("Volume", volume, 0, 1, "%.2f");
+            ui.colorEdit3("Theme", themeColor);
             if (ui.button("Close", 120, 0)) {
                 overlay.close();
             }
@@ -90,46 +115,104 @@ imgui.createWindow(function (ui, overlay) {
     width: 360,
     height: 240,
     fontSize: 16,
+    theme: imgui.Themes.ModernDark,
+    appearance: imgui.Appearance.Rounded,
     fps: 60
 });
 ```
 
-可變控制項會更新由 `imgui.bool`/`imgui.int`/`imgui.float`/`imgui.string` 和 `imgui.floats` 建立的參照物件. `width`/`height` 和 `fontSize` 使用與螢幕密度無關的單位. 拖曳空白區域可移動視窗, 也可傳入 `movable: false` 固定視窗.
+可變控制項支援由 `imgui.ref(value)` 建立的輕量參照或一般 `{ value: ... }` 物件; 原有 `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` 輔助方法維持相容. `inputText` 聚焦後會自動顯示系統輸入法並支援中文組合輸入; 可用 `ime: false` 關閉自動 IME. `width` / `height` 和 `fontSize` 使用與螢幕密度無關的單位. 拖曳空白區域可移動視窗 (`movable: false` 可固定); 雙指縱向滑動支援慣性捲動 (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`), 單指長按模擬右鍵 (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). 如果系統字型無法涵蓋所需字元, 可透過 `fontPath` 指定 TTF 或 OTF 字型檔案.
+
+主題與字型: `setTheme` 接受 `Themes` 的 11 套預設, `setStyleProperties` 可批次設定 `StyleVar`; `createWindow` 也可傳入 `theme` / `appearance` / `style` / `shadow`. `fonts` 陣列可預載 assets (`asset://...`) 或檔案字型, 並以 `pushFont` / `withFont` 切換. 外掛會自動合併內建 CJK 備援與圖示子集, 可用 `Icons` / `icon(name)` 取得圖示字形.
+
+紋理與自繪: 請在視窗工作階段就緒後呼叫 `createTexture` (通常於渲染回呼首次執行時建立). 傳回物件包含 `width` / `height` 與冪等的 `dispose()` / `close()`; 工作階段關閉時會自動釋放其餘紋理. `image` / `imageButton` 用於顯示紋理, `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` 提供常用繪圖原語. DrawList 座標採用 Surface 像素座標. 可直接傳入 AutoJs6 `images.read(...)` 與螢幕擷取所得的 `Image`.
+
+視窗工作階段: 懸浮窗預設採用 `TouchMode.Auto`, ImGui 根視窗保持可互動, Surface 空白區域則直接觸達下層應用程式; 也可用 `Touchable` 或 `Passthrough` 固定策略. 工作階段支援動態透明度/防擷取/觸控模式、收合為低幀率迷你懸浮球、建立獨立可拖曳 `addButtonEx`、跟隨 `AlwaysAutoResize` 內容、透過 `iniPath` 持久化版面配置, 並以 `on` / `once` / `off` 或 options 回呼訂閱事件. `imgui.launch(...)` 會在目前前景 AutoJs6 Activity 中建立全螢幕 Surface, `launchFloaty(...)` 則明確選擇懸浮窗. 每個指令碼引擎只擁有一個原生渲染工作階段, 但可在同一渲染回呼中用 `begin` / `withWindow` 建立任意多個 ImGui 根視窗; 新建工作階段會關閉舊工作階段.
+
+高階元件會掛接到目前工作階段並在使用者渲染回呼後繪製: `logWindow` 提供等級著色、清除、匯出回呼與自動捲底; `toast` 提供定時定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 回傳 Promise; `statsOverlay` 繪製幀耗時; `dataTable` 提供資料列選取與 CRUD. 五個內建範例 (`widget-overview`、`parameter-panel`、`log-hud`、`data-table-demo`、`theme-gallery`) 可透過 `listExamples` / `getExampleSource` 發現並用 `runExample` 啟動. AutoJs6 6.8 外掛中心尚未使用通用範例中繼資料, 在宿主支援前可直接執行下方呼叫:
+
+```js
+imgui.runExample("widget-overview");
+```
 
 ******
 
-### API 概覽
+### API 總覽
 
 ******
 
-小駝峰方法對應常用 Dear ImGui 操作, 熟悉原始命名的使用者也可使用控制項方法的 PascalCase 別名:
+小駝峰方法對應同名 Dear ImGui 操作, 熟悉原始命名的使用者也可使用 PascalCase 別名 (如 `ui.Button` 等價於 `ui.button`):
 
-- 視窗生命週期: `createWindow`/`closeWindow`/`withWindow`/`withChild`/`withTabBar`/`withTabItem` 和 `withTreeNode`.
-- 控制項: `text`/`button`/`checkbox`/`radioButton`/`sliderFloat`/`sliderInt`/`dragFloat`/`dragInt`/`inputText`/`colorEdit3`/`colorEdit4`/`progressBar`/`combo` 和 `selectable`.
-- 版面配置與狀態: 游標方法/控制項寬度方法/`sameLine`/`separator`/`spacing`/控制項查詢和擷取查詢.
-- 常數: `Cond`/`WindowFlags`/`InputTextFlags`/`SliderFlags`/`TreeNodeFlags`/`SelectableFlags`/`TabBarFlags`/`TabItemFlags` 和 `MouseButton`.
+- 工作階段執行階段: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 以及工作階段級 `on` / `once` / `off` 與對應執行個體方法.
+- 會話與視窗: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` 以及 `isWindowHovered` 等視窗狀態查詢.
+- 文字與控制項: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等.
+- 容器與導覽: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / `withTable` 表格族 / `withListBox` / `withCombo` / `selectable`.
+- 彈窗與選單: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
+- 樣式與版面配置: `styleColorsDark` / `styleColorsLight` / `styleColorsClassic` / `pushStyleColor` / `pushStyleVar` / `setWindowFontScale` / `withGroup` / `withDisabled` / `withId` / `indent` / `sameLine` / `separator` / `spacing` / 游標與捲動控制族.
+- 紋理與自繪: `createTexture` / `destroyTexture` / `image` / `imageButton` / `colorU32`, 以及具備線段/矩形/圓形/三角形/文字/折線/貝茲曲線/影像原語的 `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`.
+- 查詢與輸入: `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate` 等狀態查詢, `setKeyboardFocusHere` 主動聚焦, 以及 `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput` 輸入原語. `InputTextFlags` 目前公開的所有旗標都會傳遞至 Dear ImGui; 依賴回呼的旗標未公開, `WordWrap` 僅用於多行輸入.
+- 高階元件與範例: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, 以及 `listExamples` / `getExampleSource` / `runExample`; 每個工作階段也提供同名工廠.
+- 可變參照: 輕量 `imgui.ref` (或普通 `{value: x}` 物件), 以及相容的 Java 陣列輔助方法 `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.strings`.
+- 常數: `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, 取值與 Dear ImGui 同名列舉或外掛常數表一一對應.
 
 ******
 
-### 發行記錄
+### 已知限制
 
 ******
 
-# v1.0.0
+- 同一指令碼引擎同一時刻僅支援一個原生渲染工作階段; 多面板情境應在該工作階段內建立多個 ImGui 根視窗. 新建懸浮窗或 Activity 工作階段會關閉舊工作階段.
+- `imgui.launch` 需要目前存在處於 resumed 狀態的 AutoJs6 Activity; 指令碼需要脫離前景 Activity 持續渲染時請使用 `launchFloaty`.
+- v1.9 特權模式固定全螢幕且只支援指標: 暫無 IME/按鍵、宿主層透明度/防擷取、收合、獨立 Android 按鈕或動態旋轉重建. Direct input 不使用 `EVIOCGRAB`, OEM SurfaceControl/SELinux 原則仍可能拒絕啟動; 能力探測不會執行 `su` 或要求 Shizuku 授權.
 
-###### 2026/08/29
+******
 
-* `新增` 全域 `imgui` 物件, 支援自動掛載和明確呼叫 `plugins.load`
-* `新增` 由 Dear ImGui 1.92.9 渲染的透明浮動視窗, 支援設定尺寸/影格率/字型和空白區域拖曳
-* `新增` 立即模式視窗/版面配置/文字/輸入/選擇/顏色/進度/樹狀節點/分頁/主題和示範 API
-* `新增` 布林/整數/浮點數/字串和顏色可變參照, 用於保存具狀態控制項的資料
-* `新增` 外掛資訊/使用說明/README 和 CHANGELOG 的十種語言本地化
-* `相依性` 附加 Common Plugin API, 用於外掛探索中繼資料
-* `相依性` 附加 Kotlin 標準函式庫與 Parcelize 執行階段版本 2.2.21
-* `相依性` 附加 Apache Commons Compress 1.28.0 與 XZ for Java 1.10, 用於建置工具
-* `相依性` 附加 JUnit 版本 4.13.2, 用於外掛合約測試
+### 發行歷史
 
-##### 更多發行記錄可參閱
+******
+
+#### v1.9.0
+
+###### 2026/08/30
+
+* `新增` 新增可選擇的 `launchPrivileged` / `WindowMode.Privileged` 後端, 明確支援 `auto`、`shizuku`、`root` 啟動策略與即時 `Session.getBackendInfo()` 診斷
+* `新增` 新增純反射宿主介接器, 直接重用 AutoJs6 RootMode、`RootUtils` / `ProcessShell` 及已授權的 `WrappedShizuku` UserService, 不另引入第二套權限管理
+* `新增` 新增已驗證 Binder Surface v2 協定: UID 0/2000 特權子行程持有 SurfaceControl 圖層, 僅將 Surface 交給現有完整宿主渲染器
+* `新增` 將特權 Type A/Type B `/dev/input` 讀取器接入一般有界 ImGui 輸入佇列, 明確採用非獨占觀察策略, 並由 `Passthrough` 控制回呼
+* `修復` 選用 Android 29+ 的權威 `IContentProvider.call` 多載, API 31+ 外部 Provider 會合現在可保留真正的 Broker authority
+* `修復` 特權 `app_process` 子行程改用可退出 Looper, 消除正常清理時誤報的 `Main thread not allowed to quit`
+* `修復` Broker 一般綁定加入 AutoJs6 外掛權限, endpoint 註冊改為單次, 並保留 UID、工作階段擁有者、常數時間 token 與 Binder death 多重檢查
+* `優化` 後端能力與 TypeScript 升級至 schema v2, 涵蓋宿主 Root/Shizuku 狀態、Binder 傳輸、256-bit token 邊界、渲染行程位置與 direct-input 路由策略
+* `優化` 在 API 28 Magisk root 與 API 31 Shizuku 13.5 驗證真實 AutoJs6 宿主鏈: UID 0/2000 圖層、現有 JS 門面渲染、Type A/Type B 輸入探索、截圖及無殘留關閉全部通過
+
+#### v1.8.0
+
+###### 2026/08/30
+
+* `新增` 新增 `moreTouch` 視窗/浮動按鈕選項及工作階段、全域 `setMoreTouch`, 統一控制 `FLAG_SPLIT_TOUCH`, 已有手指按住螢幕時仍可獨立觸發浮窗按鈕
+* `新增` 新增 `BackendStatus` 與 `getBackendCapabilities`, 以型別化結構回報正式視窗後端、split-touch、特權行程、direct input、Docking 與 Multi-Viewport 狀態
+* `新增` 完成實驗性獨立 `app_process` 特權渲染垂直切片: SurfaceControl 圖層 → Surface → EGL ES 3 → Dear ImGui, 並提供 256-bit token 驗證的本機 socket 畫面協定
+* `新增` 實作 `/dev/input` 16/24-byte 事件解碼、Type A/Type B 多點追蹤、旋轉座標映射及有界畫面起始輸入佇列
+* `修復` Activity 與懸浮窗 split-touch 旗標現可動態切換; 關閉工作階段時會確定還原宿主原始旗標, 既有獨立按鈕也會同步更新
+* `修復` 特權協定會拒絕錯誤 magic/版本、過長或截斷資料及未驗證用戶端, 並於逾時、斷線或關閉後清理輸入執行緒、EGL、SurfaceControl 與行程
+* `優化` 已在 API 28 root 實機驗證 UID 2000 → UID 0 socket 畫面、獨立 ImGui 圖層及 `/dev/input/event6` down/move/up, 並在 API 28/35 實機通過三項 connected 測試
+* `優化` 新增特權後端與 Docking/Multi-Viewport 架構文件、協定/evdev 單元測試及建置安全清單; P6 保持明確 experimental, 暫不可由一般腳本選用
+
+#### v1.7.0
+
+###### 2026/08/30
+
+* `新增` 發布完整 `types/imgui.d.ts`, 涵蓋全部 214 個可呼叫 API、36 組常數、工作階段、高階元件、DrawList 及全域/外掛/模組進入點, 並由嚴格 TypeScript 冒煙契約守護
+* `新增` 內建範例擴充為五個可直接執行的腳本: 控制項總覽、參數調整面板、日誌 HUD、表格 Demo 與主題藝廊
+* `新增` 新增 Android 真實 Surface 儀器化渲染測試, 涵蓋初始化、建幀、關鍵控制項、渲染、PixelCopy 截圖語意基線與關閉
+* `新增` 新增 GitHub Actions PR 驗證與簽署 `v*` 發布自動化, 包含簽章複驗和 APK 成品上傳
+* `新增` 新增含校驗和的 Dear ImGui 上游快照及安全更新器, 支援不可變 tag/commit、封存校驗、dry-run 與白名單解包
+* `修復` 觸控、IME、按鍵與滾輪事件現進入有界無鎖 FIFO 佇列並在幀首消費; 生命週期替換佇列可阻止延遲事件進入新的原生工作階段
+* `修復` 幀排程改為絕對截止時間補償, 降低工作耗時與計時延遲的累積漂移, 並在遲到或收合幀後確定性重設
+* `優化` 公開並強制執行 `Limits`: 文字輸入 64 KiB、選擇項目 512 個、輸入事件佇列 2,048 筆, 同時記錄可設定化結論與安全依據
+* `優化` 建置驗證擴充至交叉核對執行期 API、別名、常數、TypeScript 宣告、範例、輸入佇列約束及全部 vendored 上游雜湊
+
+##### 更多發行歷史可參閱
 
 * [CHANGELOG.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/assets/doc/CHANGELOG-zh-Hant-TW.md)
 
@@ -149,11 +232,17 @@ imgui.createWindow(function (ui, overlay) {
 .\gradlew.bat :app:appendDigestToReleasedFiles
 ```
 
+驗證原生原始碼清單/JNI 宣告一致性/單元測試與 ABI 分包完整性:
+
+```powershell
+.\gradlew.bat :app:verifyImGuiDebugApks
+```
+
 建置參數來自 `version.properties`, 目前最低 SDK 為 24, 目標 SDK 為 36.
 
 ******
 
-### 資源結構
+### 專案結構
 
 ******
 
@@ -161,11 +250,15 @@ imgui.createWindow(function (ui, overlay) {
 .readme/lang_*.json
 .changelog/lang_*.json
 .python/generate_markdown.py
+app/src/main/assets/plugin/index.js
+app/src/main/assets/examples/widget-overview.js
+app/src/main/cpp/ImGuiBridge.cpp
 app/src/main/res/values-*/strings.xml
 app/src/main/res/raw-*/plugin_instruction.md
+Roadmap.md
 ```
 
-`strings.xml` 提供外掛描述本地化, `plugin_instruction.md` 提供宿主顯示的外掛使用說明. README 與 CHANGELOG 由 `.python/generate_markdown.py` 根據 JSON 來源檔案產生.
+`index.js` 是指令碼引擎側的 `imgui` 模組, `ImGuiBridge.cpp` 是 Dear ImGui 的 JNI 橋接. `strings.xml` 提供外掛描述本地化, `plugin_instruction.md` 提供宿主側展示的外掛使用說明. README 與 CHANGELOG 由 `.python/generate_markdown.py` 根據 JSON 來源檔案產生, 修改文件時請編輯 JSON 來源檔案而非產生的產物.
 
 ******
 
@@ -175,3 +268,4 @@ app/src/main/res/raw-*/plugin_instruction.md
 
 - AutoJs6 專案: https://github.com/SuperMonster003/AutoJs6
 - Dear ImGui 官方專案: https://github.com/ocornut/imgui
+- 能力擴充路線圖 (Roadmap): https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "defaultExample": "widget-overview",
+  "examples": [
+    {
+      "id": "widget-overview",
+      "title": "Widget Overview",
+      "asset": "examples/widget-overview.js",
+      "runner": "imgui.runExample"
+    },
+    {
+      "id": "parameter-panel",
+      "title": "Parameter Panel",
+      "asset": "examples/parameter-panel.js",
+      "runner": "imgui.runExample"
+    },
+    {
+      "id": "log-hud",
+      "title": "Log HUD",
+      "asset": "examples/log-hud.js",
+      "runner": "imgui.runExample"
+    },
+    {
+      "id": "data-table-demo",
+      "title": "Data Table Demo",
+      "asset": "examples/data-table-demo.js",
+      "runner": "imgui.runExample"
+    },
+    {
+      "id": "theme-gallery",
+      "title": "Theme Gallery",
+      "asset": "examples/theme-gallery.js",
+      "runner": "imgui.runExample"
+    }
+  ]
+}

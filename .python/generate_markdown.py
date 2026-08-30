@@ -89,7 +89,7 @@ def load_languages():
     return languages, changelogs
 
 
-def format_changelog_items(changelog, limit=None):
+def format_changelog_items(changelog, limit=None, heading="#"):
     values = changelog["values"]
     data = changelog["data"]
     chunks = []
@@ -97,7 +97,7 @@ def format_changelog_items(changelog, limit=None):
         if limit is not None and index >= limit:
             break
         lines = [
-            f"# {version_name}",
+            f"{heading} {version_name}",
             "",
             f"###### {item['released_date']}",
             "",
@@ -128,7 +128,11 @@ def build_readme_values(code, languages, changelogs):
     content["placeholder_ul_languages_all_supported"] = build_language_list(code, languages)
     content["placeholder_features"] = bullet_list(content["features"])
     content["placeholder_api_groups"] = bullet_list(content["api_groups"])
-    content["placeholder_latest_release_history"] = format_changelog_items(changelogs[code], limit=3).rstrip()
+    content["placeholder_install_steps"] = bullet_list(content["install_steps"])
+    content["placeholder_limitations"] = bullet_list(content["limitations"])
+    content["placeholder_latest_release_history"] = format_changelog_items(
+        changelogs[code], limit=3, heading="####"
+    ).rstrip()
     content["placeholder_read_more_in_changelog_md"] = markdown_link(
         "CHANGELOG.md",
         f"{content['repo_url']}/blob/master/app/src/main/assets/doc/CHANGELOG-{code}.md",

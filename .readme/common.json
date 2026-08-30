@@ -2,5 +2,7 @@
   "repo_url": "https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui",
   "autojs6_url": "https://github.com/SuperMonster003/AutoJs6",
   "dear_imgui_url": "https://github.com/ocornut/imgui",
-  "plugin_package": "io.github.supermonster003.autojs6.plugin.imgui"
+  "roadmap_url": "https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md",
+  "plugin_package": "io.github.supermonster003.autojs6.plugin.imgui",
+  "dear_imgui_version": "1.92.9"
 }
