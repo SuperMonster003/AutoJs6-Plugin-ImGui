@@ -276,8 +276,12 @@ tasks {
                 if (!source.isFile) {
                     return@mapNotNull "$path=missing"
                 }
+                val canonicalBytes = source.readText(Charsets.UTF_8)
+                    .replace("\r\n", "\n")
+                    .replace("\r", "\n")
+                    .toByteArray(Charsets.UTF_8)
                 val digest = MessageDigest.getInstance("SHA-256")
-                    .digest(source.readBytes())
+                    .digest(canonicalBytes)
                     .joinToString("") { byte -> "%02X".format(byte.toInt() and 0xFF) }
                 if (digest == expectedHash) null else "$path=$digest"
             }

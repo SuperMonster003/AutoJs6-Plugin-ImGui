@@ -8,8 +8,10 @@
 
 This directory contains the Dear ImGui core plus the Android and OpenGL 3 backends required by the plugin. The source files are copied without local modifications.
 
-`UPSTREAM.sha256` records every vendored file. Run the repository updater in check mode to prove that
-the directory still matches the recorded upstream snapshot:
+`UPSTREAM.sha256` records every vendored file using SHA-256 after normalizing CRLF and CR text line endings
+to LF. This keeps verification identical across Windows and Unix checkouts; the downloaded archive digest
+is still calculated from its exact raw bytes. Run the repository updater in check mode to prove that the
+directory still matches the recorded upstream snapshot:
 
 ```shell
 python tools/update_imgui_upstream.py --check

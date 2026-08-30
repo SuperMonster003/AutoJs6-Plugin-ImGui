@@ -48,6 +48,12 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_source(path: Path) -> str:
+    """Hash vendored text with platform-independent line endings."""
+    canonical_bytes = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(canonical_bytes).hexdigest()
+
+
 def read_manifest() -> dict[str, str]:
     entries: dict[str, str] = {}
     for line_number, line in enumerate(MANIFEST_PATH.read_text(encoding="utf-8").splitlines(), 1):
@@ -70,7 +76,7 @@ def verify_current_snapshot() -> None:
     mismatches: list[str] = []
     for relative_path in SOURCE_FILES:
         source = UPSTREAM_ROOT / relative_path
-        actual = sha256(source) if source.is_file() else "missing"
+        actual = sha256_source(source) if source.is_file() else "missing"
         if actual != manifest[relative_path]:
             mismatches.append(f"{relative_path}: expected {manifest[relative_path]}, got {actual}")
     if mismatches:
@@ -127,12 +133,12 @@ def changed_files(snapshot: Path) -> list[str]:
         relative_path
         for relative_path in SOURCE_FILES
         if not (UPSTREAM_ROOT / relative_path).is_file()
-        or sha256(snapshot / relative_path) != sha256(UPSTREAM_ROOT / relative_path)
+        or sha256_source(snapshot / relative_path) != sha256_source(UPSTREAM_ROOT / relative_path)
     ]
 
 
 def write_manifest() -> None:
-    lines = [f"{sha256(UPSTREAM_ROOT / path)}  {path}" for path in sorted(SOURCE_FILES)]
+    lines = [f"{sha256_source(UPSTREAM_ROOT / path)}  {path}" for path in sorted(SOURCE_FILES)]
     MANIFEST_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 
