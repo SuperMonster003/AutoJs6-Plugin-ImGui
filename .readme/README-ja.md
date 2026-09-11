@@ -171,6 +171,12 @@ lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイ�
 
 ******
 
+#### v1.9.1
+
+###### 2026/09/11
+
+* `改善` 64 ビットのネイティブライブラリの 16 KB ページアラインメントをビルド時に検証, manifest 契約の検査と JSON レポートに対応
+
 #### v1.9.0
 
 ###### 2026/08/30
@@ -197,20 +203,6 @@ lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイ�
 * `修正` 特権プロトコルは不正な magic/version、過大・切断 payload、未認証クライアントを拒否し、timeout/切断/終了後に input、EGL、SurfaceControl、プロセスを清掃
 * `改善` API 28 root 実機で UID 2000 → UID 0 socket フレーム、独立 ImGui レイヤー、`/dev/input/event6` の down/move/up を検証し、API 28/35 実機でも connected テスト 3 件を通過
 * `改善` 特権バックエンドおよび Docking/Multi-Viewport の設計記録、protocol/evdev 単体テスト、ビルド安全チェックを追加; P6 は明示的に experimental のまま
-
-#### v1.7.0
-
-###### 2026/08/30
-
-* `機能` 214 個の呼び出し可能 API、36 定数グループ、セッション、コンポーネント、DrawList、グローバル/プラグイン/モジュール入口を網羅する完全な `types/imgui.d.ts` を公開し、strict TypeScript スモーク契約で検証
-* `機能` 内蔵ライブラリを直接実行できる 5 例へ拡張: ウィジェット概要、パラメーターパネル、ログ HUD、データテーブルデモ、テーマギャラリー
-* `機能` 実 Surface 上で初期化、フレーム構築、コントロール、描画、PixelCopy の意味的スクリーンショット基準、終了を確認する Android 計装テストを追加
-* `機能` GitHub Actions の PR 検証と署名付き `v*` リリース自動化を追加し、署名再検証と APK 成果物公開に対応
-* `機能` チェックサム付き Dear ImGui 上流スナップショットと、不変 tag/commit、アーカイブ検証、dry-run、ホワイトリスト展開に対応する安全な更新ツールを追加
-* `修正` タッチ、IME、キー、ホイールイベントを有界ロックフリー FIFO キューへ投入しフレーム開始時に消費; ライフサイクル時のキュー交換で遅延イベントが新しいネイティブセッションへ届くことを防止
-* `修正` フレームスケジューラを絶対期限補正方式に変更し、処理時間とタイマー待ちの累積ドリフトを抑え、遅延または折りたたみフレーム後に確実にリセット
-* `改善` テキスト 64 KiB、選択項目 512 件、入力イベント 2,048 件の `Limits` を公開・強制し、設定可能化の判断と安全上の根拠を文書化
-* `改善` ビルド検証を実行時 API、別名、定数、TypeScript 宣言、サンプル、入力キュー不変条件、vendored 上流ファイル全ハッシュの相互照合へ拡張
 
 ##### その他のリリース履歴
 
@@ -269,3 +261,6 @@ Roadmap.md
 - AutoJs6 プロジェクト: https://github.com/SuperMonster003/AutoJs6
 - Dear ImGui 公式プロジェクト: https://github.com/ocornut/imgui
 - 機能拡張ロードマップ (Roadmap): https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/16kb.md)

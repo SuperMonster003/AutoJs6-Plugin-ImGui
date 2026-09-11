@@ -171,6 +171,12 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 
 ******
 
+#### v1.9.1
+
+###### 2026/09/11
+
+* `Mejora` Verificación de compilación de la alineación de páginas de 16 KB en bibliotecas nativas de 64 bits, con controles del contrato manifest e informes JSON
+
 #### v1.9.0
 
 ###### 2026/08/30
@@ -197,20 +203,6 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 * `Corrección` El protocolo privilegiado rechaza magic/versión incorrectos, cargas truncadas o excesivas y clientes sin autenticar, y limpia entrada, EGL, SurfaceControl y proceso
 * `Mejora` Se validaron frames por socket UID 2000 → UID 0, la capa ImGui independiente y down/move/up de `/dev/input/event6` en un dispositivo root API 28; los tres tests conectados pasan en API 28 y 35
 * `Mejora` Se añadieron documentos de arquitectura del backend privilegiado y Docking/Multi-Viewport, pruebas de protocolo/evdev y controles de build; P6 sigue explícitamente experimental
-
-#### v1.7.0
-
-###### 2026/08/30
-
-* `Función` Publicación de un `types/imgui.d.ts` completo que cubre las 214 API invocables, 36 grupos de constantes, sesiones, componentes, DrawList y entradas global/plugin/módulo, protegido por una prueba TypeScript estricta
-* `Función` Ampliación de la biblioteca a cinco ejemplos ejecutables directamente: resumen de controles, panel de parámetros, HUD de registros, demo de tabla y galería de temas
-* `Función` Nueva prueba instrumentada Android sobre una Surface real que cubre inicialización, construcción de cuadro, controles, renderizado, línea base semántica PixelCopy y cierre
-* `Función` Nueva verificación de PR con GitHub Actions y automatización de versiones `v*` firmadas, con comprobación de firma y publicación de APK
-* `Función` Nuevo snapshot de Dear ImGui con sumas verificadas y actualizador seguro por tag/commit inmutable, con verificación de archivo, dry-run y extracción por lista blanca
-* `Corrección` Los eventos táctiles, IME, teclado y rueda ahora entran en una cola FIFO acotada sin bloqueo consumida al inicio del cuadro; reemplazarla durante el ciclo de vida impide que eventos tardíos lleguen a una nueva sesión nativa
-* `Corrección` La planificación de cuadros ahora compensa plazos absolutos, reduce la deriva acumulada del trabajo y el temporizador y se restablece tras cuadros tardíos o contraídos
-* `Mejora` Publicación y aplicación de `Limits`: 64 KiB de texto, 512 elementos de selección y 2.048 eventos de entrada en cola, con la decisión de configuración y su justificación de seguridad documentadas
-* `Mejora` Verificación de compilación ampliada para cruzar API, alias, constantes, declaraciones TypeScript, ejemplos, invariantes de la cola de entrada y todos los hashes de fuentes vendorizadas
 
 ##### Para consultar más versiones
 
@@ -269,3 +261,6 @@ Roadmap.md
 - Proyecto AutoJs6: https://github.com/SuperMonster003/AutoJs6
 - Proyecto oficial Dear ImGui: https://github.com/ocornut/imgui
 - Hoja de ruta de funciones: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/16kb.md)

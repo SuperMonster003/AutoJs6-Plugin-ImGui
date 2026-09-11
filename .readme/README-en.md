@@ -172,6 +172,12 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 
 ******
 
+#### v1.9.1
+
+###### 2026/09/11
+
+* `Improvement` Build verification of 16 KB page alignment for 64-bit native libraries, including manifest contract checks and JSON reports
+
 #### v1.9.0
 
 ###### 2026/08/30
@@ -198,20 +204,6 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 * `Fix` The privileged protocol rejects bad magic/version, oversized or truncated payloads, and unauthenticated clients, then cleans up input, EGL, SurfaceControl, and the process after timeout, disconnect, or shutdown
 * `Improvement` Verified UID 2000-to-UID 0 socket frames, the independent ImGui layer, and `/dev/input/event6` down/move/up on a rooted API 28 device, while all three connected tests passed on API 28 and API 35 devices
 * `Improvement` Added privileged-backend and Docking/Multi-Viewport architecture records, protocol/evdev unit tests, and build-time safety inventory; P6 remains explicitly experimental and cannot yet be selected by ordinary scripts
-
-#### v1.7.0
-
-###### 2026/08/30
-
-* `Feature` Published a complete `types/imgui.d.ts` for all 214 callable APIs, 36 constant groups, sessions, components, DrawList, and global/plugin/module entry points, guarded by a strict TypeScript smoke contract
-* `Feature` Expanded the bundled library to five directly runnable examples: widget overview, parameter panel, log HUD, data-table demo, and theme gallery
-* `Feature` Added an Android instrumented real-Surface render test covering init, frame construction, controls, rendering, a PixelCopy semantic screenshot baseline, and shutdown
-* `Feature` Added GitHub Actions PR verification and signed `v*` release automation with signature checks and APK artifact publishing
-* `Feature` Added a checksummed Dear ImGui upstream snapshot plus a safe immutable-tag/commit updater with archive verification, dry-run, and whitelisted extraction
-* `Fix` Touch, IME, key, and wheel events now enter a bounded lock-free FIFO queue consumed at frame start; lifecycle queue replacement prevents delayed events from reaching a new native session
-* `Fix` Frame scheduling now compensates against absolute deadlines, reducing cumulative work-plus-timeout drift and resetting cleanly after late or collapsed frames
-* `Improvement` Published and enforced `Limits` for 64 KiB text input, 512 selection items, and 2,048 queued input events, with the configuration decision and safety rationale documented
-* `Improvement` Extended build verification to cross-check runtime APIs, aliases, constants, TypeScript declarations, examples, input-queue invariants, and every vendored upstream hash
 
 ##### For more release history
 
@@ -270,3 +262,6 @@ Roadmap.md
 - AutoJs6 project: https://github.com/SuperMonster003/AutoJs6
 - Dear ImGui official project: https://github.com/ocornut/imgui
 - Capability roadmap: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/16kb.md)

@@ -172,6 +172,12 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.9.1
+
+###### 2026/09/11
+
+* `优化` 构建阶段校验 64 位原生库的 16 KB 页大小对齐, 检查 manifest 契约并输出 JSON 报告
+
 #### v1.9.0
 
 ###### 2026/08/30
@@ -198,20 +204,6 @@ imgui.runExample("widget-overview");
 * `修复` 特权协议拒绝错误 magic/版本、超长或截断载荷与未认证客户端, 并在超时、断连及显式关闭后清理输入线程、EGL、SurfaceControl 与进程
 * `优化` 在 API 28 root 实机验证 UID 2000 → UID 0 socket 帧、独立 ImGui 图层及 `/dev/input/event6` down/move/up, 同时在 API 28/35 实机通过三项 connected 测试
 * `优化` 新增特权后端与 Docking/Multi-Viewport 架构文档、协议/evdev 单测及构建期安全清单; P6 原型保持显式 experimental, 尚不可由普通脚本选择
-
-#### v1.7.0
-
-###### 2026/08/30
-
-* `新增` 发布完整 `types/imgui.d.ts`, 覆盖全部 214 个可调用 API、36 组常量、会话、高层组件、DrawList 及全局/插件/模块入口, 并由严格 TypeScript 冒烟契约守护
-* `新增` 内置示例扩展为五个可直接运行的脚本: 控件总览、参数调节面板、日志 HUD、表格 Demo 与主题画廊
-* `新增` 新增 Android 真实 Surface 仪器化渲染测试, 覆盖初始化、建帧、关键控件、渲染、PixelCopy 截图语义基线与关闭
-* `新增` 新增 GitHub Actions PR 校验与签名 `v*` 发布自动化, 包含签名复验和 APK 产物上传
-* `新增` 新增带校验和的 Dear ImGui 上游快照及安全更新器, 支持不可变 tag/commit、归档校验、dry-run 与白名单解包
-* `修复` 触摸、IME、按键与滚轮事件现进入有界无锁 FIFO 队列并在帧首消费; 生命周期替换队列可阻止延迟事件进入新的原生会话
-* `修复` 帧调度改为绝对截止时间补偿, 降低工作耗时与定时延迟的累积漂移, 并在迟到或收起帧后确定性重置
-* `优化` 公开并强制执行 `Limits`: 文本输入 64 KiB、选择项 512 个、输入事件队列 2,048 条, 同时记录可配置化结论与安全依据
-* `优化` 构建校验扩展至交叉核对运行时 API、别名、常量、TypeScript 声明、示例、输入队列约束及全部 vendored 上游哈希
 
 ##### 更多发行历史可参阅
 
@@ -270,3 +262,6 @@ Roadmap.md
 - AutoJs6 项目: https://github.com/SuperMonster003/AutoJs6
 - Dear ImGui 官方项目: https://github.com/ocornut/imgui
 - 能力扩展路线图 (Roadmap): https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/16kb.md)

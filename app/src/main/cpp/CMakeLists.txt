@@ -52,3 +52,9 @@ target_link_libraries(
     "${JNIGRAPHICS_LIBRARY}"
     "${LOG_LIBRARY}"
 )
+
+# Keep 16 KB alignment explicit when changing toolchains.
+target_link_options(autojs6_imgui PRIVATE
+    "-Wl,-z,max-page-size=16384"
+    "-Wl,-z,common-page-size=16384"
+)

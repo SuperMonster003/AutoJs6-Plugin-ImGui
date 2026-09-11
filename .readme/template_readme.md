@@ -194,3 +194,6 @@ Roadmap.md
 - {{ text_link_autojs6 }}: {{ autojs6_url }}
 - {{ text_link_dear_imgui }}: {{ dear_imgui_url }}
 - {{ text_link_roadmap }}: {{ roadmap_url }}
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/16kb.md)

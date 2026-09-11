@@ -171,6 +171,12 @@ Les méthodes lower camel case correspondent aux opérations Dear ImGui du même
 
 ******
 
+#### v1.9.1
+
+###### 2026/09/11
+
+* `Amélioration` Vérification à la compilation de l'alignement des pages de 16 KB des bibliothèques natives 64 bits, avec contrôle du contrat manifest et rapports JSON
+
 #### v1.9.0
 
 ###### 2026/08/30
@@ -197,20 +203,6 @@ Les méthodes lower camel case correspondent aux opérations Dear ImGui du même
 * `Correctif` Le protocole privilégié rejette magic/version invalides, charges tronquées ou surdimensionnées et clients non authentifiés, puis nettoie entrée, EGL, SurfaceControl et processus
 * `Amélioration` Validation sur appareil root API 28 des images socket UID 2000 → UID 0, de la couche ImGui indépendante et des événements down/move/up de `/dev/input/event6`; trois tests connectés passent aussi sur API 28 et 35
 * `Amélioration` Ajout des dossiers d'architecture du backend privilégié et Docking/Multi-Viewport, de tests protocole/evdev et de garde-fous de build; P6 reste explicitement expérimental
-
-#### v1.7.0
-
-###### 2026/08/30
-
-* `Fonctionnalité` Publication d'un `types/imgui.d.ts` complet couvrant les 214 API appelables, 36 groupes de constantes, sessions, composants, DrawList et points d'entrée globaux/plugin/module, protégé par un test TypeScript strict
-* `Fonctionnalité` Extension de la bibliothèque à cinq exemples directement exécutables : vue d'ensemble des widgets, panneau de paramètres, HUD de journaux, démo de table et galerie de thèmes
-* `Fonctionnalité` Ajout d'un test Android instrumenté sur une vraie Surface couvrant initialisation, construction de trame, contrôles, rendu, référence sémantique PixelCopy et arrêt
-* `Fonctionnalité` Ajout de la vérification PR GitHub Actions et de l'automatisation des versions `v*` signées, avec contrôle de signature et publication des APK
-* `Fonctionnalité` Ajout d'un instantané Dear ImGui vérifié par sommes de contrôle et d'un outil de mise à jour sûr par tag/commit immuable, avec vérification d'archive, dry-run et extraction en liste blanche
-* `Correctif` Les événements tactiles, IME, clavier et molette passent désormais par une file FIFO non bloquante et bornée consommée au début de la trame; son remplacement au cycle de vie empêche les événements retardés d'atteindre une nouvelle session native
-* `Correctif` La planification des trames compense désormais des échéances absolues, réduisant la dérive cumulative du travail et des délais et se réinitialisant après une trame tardive ou réduite
-* `Amélioration` Publication et application de `Limits` : 64 Kio de texte, 512 éléments de sélection et 2 048 événements en file, avec décision de configuration et justification de sécurité documentées
-* `Amélioration` Extension de la vérification de build aux API, alias, constantes, déclarations TypeScript, exemples, invariants de file d'entrée et hachages de toutes les sources amont vendored
 
 ##### Pour consulter davantage de versions
 
@@ -269,3 +261,6 @@ Roadmap.md
 - Projet AutoJs6: https://github.com/SuperMonster003/AutoJs6
 - Projet officiel Dear ImGui: https://github.com/ocornut/imgui
 - Feuille de route des fonctionnalités: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/16kb.md)

@@ -171,6 +171,12 @@ lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며
 
 ******
 
+#### v1.9.1
+
+###### 2026/09/11
+
+* `개선` 64비트 네이티브 라이브러리의 16 KB 페이지 정렬을 빌드 시 검증, manifest 계약 검사 및 JSON 보고서 지원
+
 #### v1.9.0
 
 ###### 2026/08/30
@@ -197,20 +203,6 @@ lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며
 * `수정` 권한 프로토콜이 잘못된 magic/version, 과대·잘린 payload, 미인증 클라이언트를 거부하고 timeout/연결 종료 후 input, EGL, SurfaceControl, 프로세스를 정리
 * `개선` API 28 root 실기기에서 UID 2000 → UID 0 socket 프레임, 독립 ImGui 레이어, `/dev/input/event6` down/move/up을 검증하고 API 28/35 실기기에서 connected 테스트 3개 통과
 * `개선` 권한 백엔드 및 Docking/Multi-Viewport 설계 문서, protocol/evdev 단위 테스트와 빌드 안전 검사를 추가; P6는 명시적으로 experimental 상태 유지
-
-#### v1.7.0
-
-###### 2026/08/30
-
-* `기능` 호출 가능한 API 214개, 상수 그룹 36개, 세션, 컴포넌트, DrawList, 전역/플러그인/모듈 진입점을 모두 다루는 완전한 `types/imgui.d.ts`를 strict TypeScript 스모크 계약과 함께 제공
-* `기능` 내장 라이브러리를 바로 실행할 수 있는 예제 5개로 확장: 위젯 개요, 매개변수 패널, 로그 HUD, 데이터 테이블 데모, 테마 갤러리
-* `기능` 실제 Surface에서 초기화, 프레임 구성, 컨트롤, 렌더링, PixelCopy 의미 기반 스크린샷 기준선, 종료를 검증하는 Android 계측 테스트 추가
-* `기능` GitHub Actions PR 검증과 서명된 `v*` 릴리스 자동화를 추가하고 서명 재검증 및 APK 결과물 게시 지원
-* `기능` 체크섬이 있는 Dear ImGui 업스트림 스냅샷과 불변 tag/commit, 아카이브 검증, dry-run, 허용 목록 추출을 지원하는 안전한 업데이트 도구 추가
-* `수정` 터치, IME, 키, 휠 이벤트가 프레임 시작 시 소비되는 용량 제한 락프리 FIFO 큐에 들어가며, 수명 주기 큐 교체로 지연 이벤트가 새 네이티브 세션에 도달하지 않도록 수정
-* `수정` 프레임 스케줄링을 절대 마감 시각 보정 방식으로 바꿔 작업 시간과 타이머 지연의 누적 드리프트를 줄이고 늦거나 접힌 프레임 뒤에 안정적으로 재설정
-* `개선` 텍스트 64 KiB, 선택 항목 512개, 입력 이벤트 2,048개의 `Limits`를 공개하고 강제하며 구성 가능성 판단과 안전 근거를 문서화
-* `개선` 빌드 검증을 런타임 API, 별칭, 상수, TypeScript 선언, 예제, 입력 큐 불변 조건, 모든 vendored 업스트림 해시의 교차 확인으로 확장
 
 ##### 더 많은 릴리스 기록
 
@@ -269,3 +261,6 @@ Roadmap.md
 - AutoJs6 프로젝트: https://github.com/SuperMonster003/AutoJs6
 - Dear ImGui 공식 프로젝트: https://github.com/ocornut/imgui
 - 기능 확장 로드맵 (Roadmap): https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
+
+
+[16 KB page alignment and build verification](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/16kb.md)
