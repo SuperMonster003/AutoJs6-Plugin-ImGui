@@ -176,6 +176,7 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 ###### 2026/09/13
 
 * `Corrección` La versión y las ABI del centro de complementos coinciden con el APK instalado
+* `Corrección` Las fechas de versión mantienen un formato uniforme en inglés
 * `Mejora` Validación de las versiones, firmas y variantes completas de los APK antes de crear los archivos de descarga
 
 #### v1.9.1

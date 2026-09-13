@@ -11,7 +11,8 @@
         "Validación de las versiones, firmas y variantes completas de los APK antes de crear los archivos de descarga"
       ],
       "fix": [
-        "La versión y las ABI del centro de complementos coinciden con el APK instalado"
+        "La versión y las ABI del centro de complementos coinciden con el APK instalado",
+        "Las fechas de versión mantienen un formato uniforme en inglés"
       ]
     },
     "v1.9.1": {
