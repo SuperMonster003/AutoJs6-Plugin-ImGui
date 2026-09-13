@@ -171,6 +171,13 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.9.2
+
+###### 2026/09/13
+
+* `修復` 外掛中心顯示的版本與 ABI 資訊符合實際安裝的 APK
+* `優化` 發行下載檔案產生前驗證 APK 版本, 簽章與完整變體集合
+
 #### v1.9.1
 
 ###### 2026/09/11
@@ -190,19 +197,6 @@ imgui.runExample("widget-overview");
 * `修復` Broker 一般綁定加入 AutoJs6 外掛權限, endpoint 註冊改為單次, 並保留 UID、工作階段擁有者、常數時間 token 與 Binder death 多重檢查
 * `優化` 後端能力與 TypeScript 升級至 schema v2, 涵蓋宿主 Root/Shizuku 狀態、Binder 傳輸、256-bit token 邊界、渲染行程位置與 direct-input 路由策略
 * `優化` 在 API 28 Magisk root 與 API 31 Shizuku 13.5 驗證真實 AutoJs6 宿主鏈: UID 0/2000 圖層、現有 JS 門面渲染、Type A/Type B 輸入探索、截圖及無殘留關閉全部通過
-
-#### v1.8.0
-
-###### 2026/08/30
-
-* `新增` 新增 `moreTouch` 視窗/浮動按鈕選項及工作階段、全域 `setMoreTouch`, 統一控制 `FLAG_SPLIT_TOUCH`, 已有手指按住螢幕時仍可獨立觸發浮窗按鈕
-* `新增` 新增 `BackendStatus` 與 `getBackendCapabilities`, 以型別化結構回報正式視窗後端、split-touch、特權行程、direct input、Docking 與 Multi-Viewport 狀態
-* `新增` 完成實驗性獨立 `app_process` 特權渲染垂直切片: SurfaceControl 圖層 → Surface → EGL ES 3 → Dear ImGui, 並提供 256-bit token 驗證的本機 socket 畫面協定
-* `新增` 實作 `/dev/input` 16/24-byte 事件解碼、Type A/Type B 多點追蹤、旋轉座標映射及有界畫面起始輸入佇列
-* `修復` Activity 與懸浮窗 split-touch 旗標現可動態切換; 關閉工作階段時會確定還原宿主原始旗標, 既有獨立按鈕也會同步更新
-* `修復` 特權協定會拒絕錯誤 magic/版本、過長或截斷資料及未驗證用戶端, 並於逾時、斷線或關閉後清理輸入執行緒、EGL、SurfaceControl 與行程
-* `優化` 已在 API 28 root 實機驗證 UID 2000 → UID 0 socket 畫面、獨立 ImGui 圖層及 `/dev/input/event6` down/move/up, 並在 API 28/35 實機通過三項 connected 測試
-* `優化` 新增特權後端與 Docking/Multi-Viewport 架構文件、協定/evdev 單元測試及建置安全清單; P6 保持明確 experimental, 暫不可由一般腳本選用
 
 ##### 更多發行歷史可參閱
 

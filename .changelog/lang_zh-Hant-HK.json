@@ -5,6 +5,15 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "依賴",
   "$data": {
+    "v1.9.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "發佈下載檔案產生前校驗 APK 版本, 簽署與完整變體集合"
+      ],
+      "fix": [
+        "外掛中心顯示的版本與 ABI 資訊符合實際安裝的 APK"
+      ]
+    },
     "v1.9.1": {
       "released_date": "2026/09/11",
       "improvement": [

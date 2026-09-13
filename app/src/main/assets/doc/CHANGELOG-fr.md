@@ -4,6 +4,13 @@
 
 ******
 
+# v1.9.2
+
+###### 2026/09/13
+
+* `Correctif` Les informations de version et d'ABI du centre des plugins correspondent à l'APK installé
+* `Amélioration` Validation des versions, signatures et variantes complètes des APK avant la création des fichiers à télécharger
+
 # v1.9.1
 
 ###### 2026/09/11

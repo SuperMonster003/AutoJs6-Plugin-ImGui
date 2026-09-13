@@ -39,7 +39,7 @@ final class PluginRuntimeInfo {
         info.setId(ImGuiPluginContract.PLUGIN_ID);
         info.setEngine(ImGuiPluginContract.ENGINE);
         info.setVariant(ImGuiPluginContract.VARIANT);
-        info.setSupportedAbis(ImGuiPluginContract.supportedAbis());
+        info.setSupportedAbis(org.autojs.plugin.runtime.InstalledPackageIdentity.supportedAbis(appContext));
         Bundle capabilities = new Bundle();
         capabilities.putLong(
             PluginCapabilityKeys.REQUIRES_HOST_VERSION,

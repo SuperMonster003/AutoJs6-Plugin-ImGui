@@ -171,6 +171,13 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 
 ******
 
+#### v1.9.2
+
+###### 2026/09/13
+
+* `Corrección` La versión y las ABI del centro de complementos coinciden con el APK instalado
+* `Mejora` Validación de las versiones, firmas y variantes completas de los APK antes de crear los archivos de descarga
+
 #### v1.9.1
 
 ###### 2026/09/11
@@ -190,19 +197,6 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 * `Corrección` Protegido el enlace normal del Broker con el permiso de plugin de AutoJs6 y registro único del endpoint, además de las comprobaciones de UID, propietario, token en tiempo constante y muerte de Binder
 * `Mejora` Capacidades del backend y TypeScript actualizados al schema v2 con estado Root/Shizuku del host, transporte Binder, límite de token de 256 bits, ubicación del renderizador y política direct-input
 * `Mejora` Verificada la cadena real del host AutoJs6 en API 28 con Magisk root y API 31 con Shizuku 13.5: capas UID 0/2000, renderizado de la fachada JS existente, entrada Type A/Type B, capturas y cierre sin procesos huérfanos
-
-#### v1.8.0
-
-###### 2026/08/30
-
-* `Función` Se añadieron opciones `moreTouch` para ventanas/botones flotantes y `setMoreTouch` de sesión/global, controlando `FLAG_SPLIT_TOUCH` de forma uniforme
-* `Función` Se añadieron `BackendStatus` y `getBackendCapabilities` con estados tipados para el backend de ventana, split-touch, proceso privilegiado, entrada directa, Docking y Multi-Viewport
-* `Función` Se creó un corte vertical experimental en un `app_process` independiente: capa SurfaceControl → Surface → EGL ES 3 → Dear ImGui, con protocolo de frames por socket local autenticado mediante token de 256 bits
-* `Función` Se implementó decodificación `/dev/input` de 16/24 bytes, seguimiento multitáctil Type A/Type B, mapeo con rotación y una cola acotada consumida al inicio del frame
-* `Corrección` Los flags split-touch de Activity/overlay ahora cambian en ejecución; el cierre restaura los flags originales del host y sincroniza los botones existentes
-* `Corrección` El protocolo privilegiado rechaza magic/versión incorrectos, cargas truncadas o excesivas y clientes sin autenticar, y limpia entrada, EGL, SurfaceControl y proceso
-* `Mejora` Se validaron frames por socket UID 2000 → UID 0, la capa ImGui independiente y down/move/up de `/dev/input/event6` en un dispositivo root API 28; los tres tests conectados pasan en API 28 y 35
-* `Mejora` Se añadieron documentos de arquitectura del backend privilegiado y Docking/Multi-Viewport, pruebas de protocolo/evdev y controles de build; P6 sigue explícitamente experimental
 
 ##### Para consultar más versiones
 

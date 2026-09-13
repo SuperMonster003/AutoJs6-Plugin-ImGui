@@ -172,6 +172,13 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 
 ******
 
+#### v1.9.2
+
+###### 2026/09/13
+
+* `Fix` Plugin center version and ABI information matches the installed plugin APK
+* `Improvement` Validate release APK versions, signing and the complete variant set before creating download artifacts
+
 #### v1.9.1
 
 ###### 2026/09/11
@@ -191,19 +198,6 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 * `Fix` Restricted normal Broker binding with the AutoJs6 plugin permission, made endpoint registration one-shot, and retained UID, owner, constant-time token, and Binder-death checks
 * `Improvement` Upgraded backend capabilities and TypeScript to schema v2, including the host Root/Shizuku state, Binder transport, 256-bit token boundary, renderer location, and direct-input routing policy
 * `Improvement` Verified the real AutoJs6 host chain on API 28 Magisk root and API 31 Shizuku 13.5: UID 0/2000 Surface creation, existing JS facade rendering, Type A/Type B input discovery, screenshots, and orphan-free close all passed
-
-#### v1.8.0
-
-###### 2026/08/30
-
-* `Feature` Added `moreTouch` window/floating-button options plus session/global `setMoreTouch`, consistently controlling `FLAG_SPLIT_TOUCH` so a button can receive a new finger while another remains down
-* `Feature` Added `BackendStatus` and `getBackendCapabilities` with typed status for the production window backend, split touch, privileged process, direct input, Docking, and Multi-Viewport
-* `Feature` Built an experimental independent `app_process` renderer vertical slice from SurfaceControl layer through Surface, EGL ES 3, and Dear ImGui, with a 256-bit-token authenticated local-socket frame protocol
-* `Feature` Implemented 16/24-byte `/dev/input` event decoding, Type A/Type B multitouch tracking, rotation-aware coordinate mapping, and bounded frame-start input handoff
-* `Fix` Activity and overlay split-touch flags can now be changed at runtime; closing restores the host's original flags and existing independent buttons update with the session
-* `Fix` The privileged protocol rejects bad magic/version, oversized or truncated payloads, and unauthenticated clients, then cleans up input, EGL, SurfaceControl, and the process after timeout, disconnect, or shutdown
-* `Improvement` Verified UID 2000-to-UID 0 socket frames, the independent ImGui layer, and `/dev/input/event6` down/move/up on a rooted API 28 device, while all three connected tests passed on API 28 and API 35 devices
-* `Improvement` Added privileged-backend and Docking/Multi-Viewport architecture records, protocol/evdev unit tests, and build-time safety inventory; P6 remains explicitly experimental and cannot yet be selected by ordinary scripts
 
 ##### For more release history
 

@@ -171,6 +171,13 @@ lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며
 
 ******
 
+#### v1.9.2
+
+###### 2026/09/13
+
+* `수정` 플러그인 센터의 버전과 ABI 정보가 설치된 APK와 일치
+* `개선` 다운로드 파일 생성 전에 릴리스 APK의 버전, 서명 및 전체 변형 구성을 검증
+
 #### v1.9.1
 
 ###### 2026/09/11
@@ -190,19 +197,6 @@ lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며
 * `수정` Broker 일반 바인딩에 AutoJs6 플러그인 권한을 적용하고 endpoint 등록을 1회로 제한하면서 UID·소유자·상수 시간 token·Binder death 검증 유지
 * `개선` 백엔드 기능과 TypeScript를 schema v2로 갱신하여 호스트 Root/Shizuku 상태, Binder 전송, 256-bit token 경계, 렌더러 위치 및 direct-input 정책 공개
 * `개선` API 28 Magisk root 및 API 31 Shizuku 13.5의 실제 AutoJs6 호스트 경로에서 UID 0/2000 레이어, 기존 JS API 렌더링, Type A/Type B 입력 감지, 스크린샷과 잔여 프로세스 없는 종료를 검증
-
-#### v1.8.0
-
-###### 2026/08/30
-
-* `기능` 창/플로팅 버튼용 `moreTouch` 옵션과 세션/전역 `setMoreTouch`를 추가하여 `FLAG_SPLIT_TOUCH`를 일관되게 제어
-* `기능` `BackendStatus`와 `getBackendCapabilities`를 추가하여 운영 창 백엔드, split-touch, 권한 프로세스, direct input, Docking, Multi-Viewport 상태를 타입과 함께 공개
-* `기능` 독립 `app_process`의 실험적 권한 렌더링 수직 경로 구현: SurfaceControl 레이어 → Surface → EGL ES 3 → Dear ImGui, 256-bit token 인증 로컬 socket 프레임 프로토콜 지원
-* `기능` `/dev/input` 16/24-byte 디코딩, Type A/Type B 멀티터치 추적, 회전 좌표 매핑 및 프레임 시작 시 소비하는 제한 입력 큐 구현
-* `수정` Activity/overlay split-touch 플래그를 런타임에 변경하고 종료 시 호스트 원본 플래그를 확정적으로 복원하며 기존 버튼도 동기화
-* `수정` 권한 프로토콜이 잘못된 magic/version, 과대·잘린 payload, 미인증 클라이언트를 거부하고 timeout/연결 종료 후 input, EGL, SurfaceControl, 프로세스를 정리
-* `개선` API 28 root 실기기에서 UID 2000 → UID 0 socket 프레임, 독립 ImGui 레이어, `/dev/input/event6` down/move/up을 검증하고 API 28/35 실기기에서 connected 테스트 3개 통과
-* `개선` 권한 백엔드 및 Docking/Multi-Viewport 설계 문서, protocol/evdev 단위 테스트와 빌드 안전 검사를 추가; P6는 명시적으로 experimental 상태 유지
 
 ##### 더 많은 릴리스 기록
 
