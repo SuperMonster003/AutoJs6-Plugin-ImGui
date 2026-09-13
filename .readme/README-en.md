@@ -177,6 +177,7 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 ###### 2026/09/13
 
 * `Fix` Plugin center version and ABI information matches the installed plugin APK
+* `Fix` Version dates use a consistent English format
 * `Improvement` Validate release APK versions, signing and the complete variant set before creating download artifacts
 
 #### v1.9.1
