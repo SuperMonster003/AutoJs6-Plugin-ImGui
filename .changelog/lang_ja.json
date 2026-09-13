@@ -5,6 +5,15 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.9.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "ダウンロード用ファイルの作成前に, リリース APK のバージョン, 署名, バリアントの完全性を検証"
+      ],
+      "fix": [
+        "プラグインセンターのバージョンと ABI 情報がインストール済み APK と一致"
+      ]
+    },
     "v1.9.1": {
       "released_date": "2026/09/11",
       "improvement": [

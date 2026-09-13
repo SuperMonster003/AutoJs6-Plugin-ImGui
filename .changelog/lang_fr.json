@@ -5,6 +5,15 @@
   "changelog_label_improvement": "Amélioration",
   "changelog_label_dependency": "Dépendance",
   "$data": {
+    "v1.9.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "Validation des versions, signatures et variantes complètes des APK avant la création des fichiers à télécharger"
+      ],
+      "fix": [
+        "Les informations de version et d'ABI du centre des plugins correspondent à l'APK installé"
+      ]
+    },
     "v1.9.1": {
       "released_date": "2026/09/11",
       "improvement": [

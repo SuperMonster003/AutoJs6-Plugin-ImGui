@@ -5,6 +5,15 @@
   "changelog_label_improvement": "개선",
   "changelog_label_dependency": "의존성",
   "$data": {
+    "v1.9.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "다운로드 파일 생성 전에 릴리스 APK의 버전, 서명 및 전체 변형 구성을 검증"
+      ],
+      "fix": [
+        "플러그인 센터의 버전과 ABI 정보가 설치된 APK와 일치"
+      ]
+    },
     "v1.9.1": {
       "released_date": "2026/09/11",
       "improvement": [

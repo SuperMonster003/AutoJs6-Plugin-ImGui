@@ -171,6 +171,13 @@ Les méthodes lower camel case correspondent aux opérations Dear ImGui du même
 
 ******
 
+#### v1.9.2
+
+###### 2026/09/13
+
+* `Correctif` Les informations de version et d'ABI du centre des plugins correspondent à l'APK installé
+* `Amélioration` Validation des versions, signatures et variantes complètes des APK avant la création des fichiers à télécharger
+
 #### v1.9.1
 
 ###### 2026/09/11
@@ -190,19 +197,6 @@ Les méthodes lower camel case correspondent aux opérations Dear ImGui du même
 * `Correctif` Protection de la liaison Broker par la permission plugin AutoJs6 et enregistrement unique de l'endpoint, en plus des contrôles UID, propriétaire, token en temps constant et mort Binder
 * `Amélioration` Passage des capacités backend et de TypeScript au schema v2 : état Root/Shizuku hôte, transport Binder, frontière token 256 bits, emplacement du rendu et stratégie direct-input
 * `Amélioration` Validation de la chaîne hôte AutoJs6 réelle sur API 28 avec Magisk root et API 31 avec Shizuku 13.5 : calques UID 0/2000, rendu de l'API JS existante, entrées Type A/Type B, captures et fermeture sans processus résiduel
-
-#### v1.8.0
-
-###### 2026/08/30
-
-* `Fonctionnalité` Ajout des options `moreTouch` pour fenêtres/boutons flottants et de `setMoreTouch` au niveau session/global, avec contrôle cohérent de `FLAG_SPLIT_TOUCH`
-* `Fonctionnalité` Ajout de `BackendStatus` et `getBackendCapabilities`, avec états typés du backend de fenêtre, du split-touch, du processus privilégié, de l'entrée directe, de Docking et de Multi-Viewport
-* `Fonctionnalité` Réalisation d'une tranche verticale expérimentale dans un `app_process` indépendant: couche SurfaceControl → Surface → EGL ES 3 → Dear ImGui, pilotée par un protocole socket local authentifié par jeton 256 bits
-* `Fonctionnalité` Implémentation du décodage `/dev/input` sur 16/24 octets, du suivi multitactile Type A/Type B, de la rotation des coordonnées et d'une file bornée consommée au début de l'image
-* `Correctif` Les indicateurs split-touch Activity/overlay sont modifiables à l'exécution; la fermeture restaure les indicateurs d'origine de l'hôte et synchronise les boutons existants
-* `Correctif` Le protocole privilégié rejette magic/version invalides, charges tronquées ou surdimensionnées et clients non authentifiés, puis nettoie entrée, EGL, SurfaceControl et processus
-* `Amélioration` Validation sur appareil root API 28 des images socket UID 2000 → UID 0, de la couche ImGui indépendante et des événements down/move/up de `/dev/input/event6`; trois tests connectés passent aussi sur API 28 et 35
-* `Amélioration` Ajout des dossiers d'architecture du backend privilégié et Docking/Multi-Viewport, de tests protocole/evdev et de garde-fous de build; P6 reste explicitement expérimental
 
 ##### Pour consulter davantage de versions
 

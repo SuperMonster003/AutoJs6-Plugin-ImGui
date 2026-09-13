@@ -35,3 +35,12 @@ output-metadata.json
 /releases/
 /sign.properties
 /*dependencies_tree.txt
+
+# Local signing, migration scratch files and validated release archives.
+/sign.properties
+/local.properties
+*.jks
+*.keystore
+*.pre-platform-versions.bak
+/releases/
+**/__pycache__/

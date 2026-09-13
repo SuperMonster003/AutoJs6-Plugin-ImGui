@@ -647,30 +647,7 @@ tasks {
         }
     }
 
-    register<Sync>("appendDigestToReleasedFiles") {
-        group = "distribution"
-        description = "Copies release APKs and appends a CRC32 digest to each filename"
-        dependsOn("assembleRelease")
 
-        val extension = utils.FILE_EXTENSION_APK
-        val sourceDirectory = layout.buildDirectory.dir("outputs/apk/$buildTypeRelease")
-        val destinationDirectory = file("${buildTypeRelease}s")
-
-        from(sourceDirectory) {
-            include("**/*.$extension")
-        }
-        into(destinationDirectory)
-        includeEmptyDirs = false
-        duplicatesStrategy = DuplicatesStrategy.FAIL
-
-        eachFile {
-            val digest = utils.digestCRC32(file)
-            val digestedName = "${name.removeSuffix(".$extension")}-$digest.$extension"
-            relativePath = RelativePath(true, digestedName)
-        }
-
-        doLast {
-            println("Destination: $destinationDirectory")
-        }
-    }
 }
+
+apply(from = rootProject.file("gradle/release-archive.gradle"))

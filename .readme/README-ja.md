@@ -171,6 +171,13 @@ lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイ�
 
 ******
 
+#### v1.9.2
+
+###### 2026/09/13
+
+* `修正` プラグインセンターのバージョンと ABI 情報がインストール済み APK と一致
+* `改善` ダウンロード用ファイルの作成前に, リリース APK のバージョン, 署名, バリアントの完全性を検証
+
 #### v1.9.1
 
 ###### 2026/09/11
@@ -190,19 +197,6 @@ lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイ�
 * `修正` Broker の通常バインドを AutoJs6 プラグイン権限で保護し、endpoint 登録を一度だけに制限しつつ UID・所有者・定時間 token・Binder death 検証を維持
 * `改善` バックエンド能力と TypeScript を schema v2 へ更新し、ホスト Root/Shizuku 状態、Binder 転送、256-bit token 境界、レンダラー位置、direct-input 方針を公開
 * `改善` API 28 Magisk root と API 31 Shizuku 13.5 の実際の AutoJs6 ホスト経路で、UID 0/2000 レイヤー、既存 JS API 描画、Type A/Type B 入力検出、スクリーンショット、残留なし終了を検証
-
-#### v1.8.0
-
-###### 2026/08/30
-
-* `機能` ウィンドウ/フローティングボタン用 `moreTouch` とセッション/グローバル `setMoreTouch` を追加し、`FLAG_SPLIT_TOUCH` を一貫して制御
-* `機能` `BackendStatus` と `getBackendCapabilities` を追加し、本番ウィンドウ、split-touch、特権プロセス、direct input、Docking、Multi-Viewport の状態を型付きで公開
-* `機能` 独立 `app_process` による実験的な特権レンダリング垂直スライスを実装: SurfaceControl レイヤー → Surface → EGL ES 3 → Dear ImGui、256-bit token 認証のローカル socket フレームプロトコルに対応
-* `機能` `/dev/input` の 16/24-byte デコード、Type A/Type B マルチタッチ追跡、回転座標変換、フレーム先頭で消費する有界入力キューを実装
-* `修正` Activity/overlay の split-touch フラグを実行時に変更可能にし、終了時にホストの元フラグを確実に復元、既存ボタンも同期
-* `修正` 特権プロトコルは不正な magic/version、過大・切断 payload、未認証クライアントを拒否し、timeout/切断/終了後に input、EGL、SurfaceControl、プロセスを清掃
-* `改善` API 28 root 実機で UID 2000 → UID 0 socket フレーム、独立 ImGui レイヤー、`/dev/input/event6` の down/move/up を検証し、API 28/35 実機でも connected テスト 3 件を通過
-* `改善` 特権バックエンドおよび Docking/Multi-Viewport の設計記録、protocol/evdev 単体テスト、ビルド安全チェックを追加; P6 は明示的に experimental のまま
 
 ##### その他のリリース履歴
 

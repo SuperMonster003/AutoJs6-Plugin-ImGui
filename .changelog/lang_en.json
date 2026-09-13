@@ -5,6 +5,15 @@
   "changelog_label_improvement": "Improvement",
   "changelog_label_dependency": "Dependency",
   "$data": {
+    "v1.9.2": {
+      "released_date": "2026/09/13",
+      "improvement": [
+        "Validate release APK versions, signing and the complete variant set before creating download artifacts"
+      ],
+      "fix": [
+        "Plugin center version and ABI information matches the installed plugin APK"
+      ]
+    },
     "v1.9.1": {
       "released_date": "2026/09/11",
       "improvement": [
