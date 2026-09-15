@@ -171,6 +171,12 @@ lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイ�
 
 ******
 
+#### v1.9.3
+
+###### 2026/09/15
+
+* `改善` compileSdk と targetSdk を 37 (Android 17) に引き上げ, プラグインの動作は新しいターゲットの影響を受けない
+
 #### v1.9.2
 
 ###### 2026/09/13
@@ -184,20 +190,6 @@ lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイ�
 ###### 2026/09/11
 
 * `改善` 64 ビットのネイティブライブラリの 16 KB ページアラインメントをビルド時に検証, manifest 契約の検査と JSON レポートに対応
-
-#### v1.9.0
-
-###### 2026/08/30
-
-* `機能` 選択可能な `launchPrivileged` / `WindowMode.Privileged` バックエンドを追加し、`auto`・`shizuku`・`root` の明示的な起動方針と `Session.getBackendInfo()` のライブ診断に対応
-* `機能` AutoJs6 の RootMode、`RootUtils` / `ProcessShell`、認可済み `WrappedShizuku` UserService を再利用するリフレクション専用ホストアダプターを追加
-* `機能` 認証付き Binder Surface v2 プロトコルを追加: UID 0/2000 の特権子プロセスが SurfaceControl レイヤーを保持し、Surface だけを既存の完全なホストレンダラーへ転送
-* `機能` 特権 Type A/Type B `/dev/input` リーダーを通常の有界 ImGui 入力キューへ接続し、非排他的な観測方針と `Passthrough` によるコールバック制御を実装
-* `修正` Android 29+ の正式な `IContentProvider.call` オーバーロードを選択し、API 31+ の外部 Provider ランデブーで実際の Broker authority を保持
-* `修正` `app_process` 子プロセスを終了可能な Looper に変更し、正常なクリーンアップ時の誤った `Main thread not allowed to quit` を解消
-* `修正` Broker の通常バインドを AutoJs6 プラグイン権限で保護し、endpoint 登録を一度だけに制限しつつ UID・所有者・定時間 token・Binder death 検証を維持
-* `改善` バックエンド能力と TypeScript を schema v2 へ更新し、ホスト Root/Shizuku 状態、Binder 転送、256-bit token 境界、レンダラー位置、direct-input 方針を公開
-* `改善` API 28 Magisk root と API 31 Shizuku 13.5 の実際の AutoJs6 ホスト経路で、UID 0/2000 レイヤー、既存 JS API 描画、Type A/Type B 入力検出、スクリーンショット、残留なし終了を検証
 
 ##### その他のリリース履歴
 

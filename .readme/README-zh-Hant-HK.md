@@ -171,6 +171,12 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.9.3
+
+###### 2026/09/15
+
+* `優化` 將 compileSdk 與 targetSdk 提升到 37 (Android 17), 插件行為不受新目標版本影響
+
 #### v1.9.2
 
 ###### 2026/09/13
@@ -184,20 +190,6 @@ imgui.runExample("widget-overview");
 ###### 2026/09/11
 
 * `優化` 建置階段校驗 64 位原生程式庫的 16 KB 頁面大小對齊, 檢查 manifest 契約並輸出 JSON 報告
-
-#### v1.9.0
-
-###### 2026/08/30
-
-* `新增` 新增可選擇的 `launchPrivileged` / `WindowMode.Privileged` 後端, 明確支援 `auto`、`shizuku`、`root` 啟動策略及即時 `Session.getBackendInfo()` 診斷
-* `新增` 新增純反射宿主適配器, 直接重用 AutoJs6 RootMode、`RootUtils` / `ProcessShell` 及已授權的 `WrappedShizuku` UserService, 毋須引入第二套權限管理
-* `新增` 新增已鑑權 Binder Surface v2 協議: UID 0/2000 特權子程序持有 SurfaceControl 圖層, 僅把 Surface 交給現有完整宿主渲染器
-* `新增` 把特權 Type A/Type B `/dev/input` 讀取器接入一般有界 ImGui 輸入佇列, 明確採用非獨佔觀察策略, 並由 `Passthrough` 控制回調
-* `修復` 選用 Android 29+ 的權威 `IContentProvider.call` overload, API 31+ 外部 Provider 會合現可保留真正 Broker authority
-* `修復` 特權 `app_process` 子程序改用可退出 Looper, 消除正常清理時錯誤出現的 `Main thread not allowed to quit`
-* `修復` Broker 一般綁定加入 AutoJs6 插件權限, endpoint 註冊改為單次, 並保留 UID、會話擁有者、常量時間 token 及 Binder death 多重檢查
-* `優化` 後端能力及 TypeScript 升級至 schema v2, 涵蓋宿主 Root/Shizuku 狀態、Binder 傳輸、256-bit token 邊界、渲染程序位置及 direct-input 路由策略
-* `優化` 於 API 28 Magisk root 及 API 31 Shizuku 13.5 驗證真實 AutoJs6 宿主鏈: UID 0/2000 圖層、現有 JS 門面渲染、Type A/Type B 輸入探索、截圖及無殘留關閉全部通過
 
 ##### 更多發行歷史可參閱
 

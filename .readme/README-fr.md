@@ -171,6 +171,12 @@ Les méthodes lower camel case correspondent aux opérations Dear ImGui du même
 
 ******
 
+#### v1.9.3
+
+###### 2026/09/15
+
+* `Amélioration` compileSdk et targetSdk passent à 37 (Android 17) ; le comportement du plugin ne dépend pas de la nouvelle cible
+
 #### v1.9.2
 
 ###### 2026/09/13
@@ -184,20 +190,6 @@ Les méthodes lower camel case correspondent aux opérations Dear ImGui du même
 ###### 2026/09/11
 
 * `Amélioration` Vérification à la compilation de l'alignement des pages de 16 KB des bibliothèques natives 64 bits, avec contrôle du contrat manifest et rapports JSON
-
-#### v1.9.0
-
-###### 2026/08/30
-
-* `Fonctionnalité` Ajout du backend sélectionnable `launchPrivileged` / `WindowMode.Privileged`, avec politiques explicites `auto`, `shizuku` et `root` et diagnostics directs via `Session.getBackendInfo()`
-* `Fonctionnalité` Ajout d'un adaptateur hôte uniquement par réflexion qui réutilise RootMode, `RootUtils` / `ProcessShell` et le UserService `WrappedShizuku` déjà autorisé par AutoJs6
-* `Fonctionnalité` Ajout du protocole Binder Surface v2 authentifié : un processus privilégié UID 0/2000 conserve le calque SurfaceControl et ne transfère que sa Surface au moteur hôte complet existant
-* `Fonctionnalité` Connexion du lecteur privilégié Type A/Type B `/dev/input` à la file d'entrée ImGui bornée, avec politique d'observation non exclusive et contrôle du rappel par `Passthrough`
-* `Correctif` Sélection de la surcharge `IContentProvider.call` faisant autorité sur Android 29+, afin que le rendez-vous Provider externe API 31+ conserve la véritable authority du Broker
-* `Correctif` Utilisation d'un Looper quittable dans l'enfant `app_process`, supprimant la fausse erreur `Main thread not allowed to quit` pendant un nettoyage réussi
-* `Correctif` Protection de la liaison Broker par la permission plugin AutoJs6 et enregistrement unique de l'endpoint, en plus des contrôles UID, propriétaire, token en temps constant et mort Binder
-* `Amélioration` Passage des capacités backend et de TypeScript au schema v2 : état Root/Shizuku hôte, transport Binder, frontière token 256 bits, emplacement du rendu et stratégie direct-input
-* `Amélioration` Validation de la chaîne hôte AutoJs6 réelle sur API 28 avec Magisk root et API 31 avec Shizuku 13.5 : calques UID 0/2000, rendu de l'API JS existante, entrées Type A/Type B, captures et fermeture sans processus résiduel
 
 ##### Pour consulter davantage de versions
 

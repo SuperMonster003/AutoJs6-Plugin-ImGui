@@ -171,6 +171,12 @@ lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며
 
 ******
 
+#### v1.9.3
+
+###### 2026/09/15
+
+* `개선` compileSdk 와 targetSdk 를 37 (Android 17) 로 올리며, 플러그인 동작은 새 대상 버전의 영향을 받지 않음
+
 #### v1.9.2
 
 ###### 2026/09/13
@@ -184,20 +190,6 @@ lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며
 ###### 2026/09/11
 
 * `개선` 64비트 네이티브 라이브러리의 16 KB 페이지 정렬을 빌드 시 검증, manifest 계약 검사 및 JSON 보고서 지원
-
-#### v1.9.0
-
-###### 2026/08/30
-
-* `기능` 선택 가능한 `launchPrivileged` / `WindowMode.Privileged` 백엔드를 추가하고 명시적 `auto`·`shizuku`·`root` 실행 정책 및 `Session.getBackendInfo()` 실시간 진단을 지원
-* `기능` AutoJs6 RootMode, `RootUtils` / `ProcessShell`, 이미 승인된 `WrappedShizuku` UserService를 재사용하는 리플렉션 전용 호스트 어댑터 추가
-* `기능` 인증된 Binder Surface v2 프로토콜 추가: UID 0/2000 권한 자식 프로세스가 SurfaceControl 레이어를 소유하고 Surface만 기존의 완전한 호스트 렌더러로 전달
-* `기능` 권한 Type A/Type B `/dev/input` 리더를 일반 제한형 ImGui 입력 큐에 연결하고 비독점 관찰 정책과 `Passthrough` 콜백 제어를 구현
-* `수정` Android 29+의 권위 있는 `IContentProvider.call` 오버로드를 선택하여 API 31+ 외부 Provider 랑데부에서 실제 Broker authority를 보존
-* `수정` `app_process` 자식이 종료 가능한 Looper를 사용하도록 변경하여 정상 정리 중의 잘못된 `Main thread not allowed to quit` 오류 제거
-* `수정` Broker 일반 바인딩에 AutoJs6 플러그인 권한을 적용하고 endpoint 등록을 1회로 제한하면서 UID·소유자·상수 시간 token·Binder death 검증 유지
-* `개선` 백엔드 기능과 TypeScript를 schema v2로 갱신하여 호스트 Root/Shizuku 상태, Binder 전송, 256-bit token 경계, 렌더러 위치 및 direct-input 정책 공개
-* `개선` API 28 Magisk root 및 API 31 Shizuku 13.5의 실제 AutoJs6 호스트 경로에서 UID 0/2000 레이어, 기존 JS API 렌더링, Type A/Type B 입력 감지, 스크린샷과 잔여 프로세스 없는 종료를 검증
 
 ##### 더 많은 릴리스 기록
 

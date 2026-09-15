@@ -172,6 +172,12 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 
 ******
 
+#### v1.9.3
+
+###### 2026/09/15
+
+* `Improvement` Raise compileSdk and targetSdk to 37 (Android 17); the plugin's behavior does not depend on the new target
+
 #### v1.9.2
 
 ###### 2026/09/13
@@ -185,20 +191,6 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 ###### 2026/09/11
 
 * `Improvement` Build verification of 16 KB page alignment for 64-bit native libraries, including manifest contract checks and JSON reports
-
-#### v1.9.0
-
-###### 2026/08/30
-
-* `Feature` Added the selectable `launchPrivileged` / `WindowMode.Privileged` backend, with explicit `auto`, `shizuku`, and `root` launcher policies and live `Session.getBackendInfo()` diagnostics
-* `Feature` Added a reflection-only host adapter that reuses AutoJs6 RootMode, `RootUtils` / `ProcessShell`, and the already-authorized `WrappedShizuku` UserService instead of introducing a second privilege manager
-* `Feature` Added authenticated Binder Surface protocol v2: a privileged UID 0/2000 child owns the SurfaceControl layer and transfers only its Surface to the existing complete host renderer
-* `Feature` Connected the privileged Type A/Type B `/dev/input` reader to the normal bounded ImGui input queue with an explicit non-grabbing observation policy and `Passthrough` callback control
-* `Fix` Selected the authoritative Android 29+ `IContentProvider.call` overload so API 31+ external-provider rendezvous preserves the real Broker authority
-* `Fix` Changed the raw `app_process` child to a quit-enabled Looper, eliminating the false `Main thread not allowed to quit` error during otherwise successful cleanup
-* `Fix` Restricted normal Broker binding with the AutoJs6 plugin permission, made endpoint registration one-shot, and retained UID, owner, constant-time token, and Binder-death checks
-* `Improvement` Upgraded backend capabilities and TypeScript to schema v2, including the host Root/Shizuku state, Binder transport, 256-bit token boundary, renderer location, and direct-input routing policy
-* `Improvement` Verified the real AutoJs6 host chain on API 28 Magisk root and API 31 Shizuku 13.5: UID 0/2000 Surface creation, existing JS facade rendering, Type A/Type B input discovery, screenshots, and orphan-free close all passed
 
 ##### For more release history
 

@@ -171,6 +171,12 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.9.3
+
+###### 2026/09/15
+
+* `تحسين` رفع compileSdk و targetSdk إلى 37 (Android 17)؛ لا يعتمد سلوك المكون الإضافي على الهدف الجديد
+
 #### v1.9.2
 
 ###### 2026/09/13
@@ -184,20 +190,6 @@ imgui.runExample("widget-overview");
 ###### 2026/09/11
 
 * `تحسين` التحقق أثناء البناء من محاذاة صفحات 16 KB للمكتبات الأصلية ذات 64 بت, مع فحص عقد manifest وتقارير JSON
-
-#### v1.9.0
-
-###### 2026/08/30
-
-* `ميزة` إضافة الواجهة الخلفية القابلة للاختيار `launchPrivileged` / `WindowMode.Privileged` مع سياسات تشغيل صريحة `auto` و`shizuku` و`root` وتشخيص مباشر عبر `Session.getBackendInfo()`
-* `ميزة` إضافة محوّل مضيف يعتمد الانعكاس فقط ويعيد استخدام RootMode و`RootUtils` / `ProcessShell` وخدمة `WrappedShizuku` المصرّح بها مسبقاً في AutoJs6
-* `ميزة` إضافة بروتوكول Binder Surface v2 موثّق: تحتفظ عملية امتياز UID 0/2000 بطبقة SurfaceControl وتنقل Surface فقط إلى عارض المضيف الكامل الموجود
-* `ميزة` ربط قارئ `/dev/input` ذي الامتياز من Type A/Type B بطابور إدخال ImGui المحدود مع سياسة مراقبة غير حصرية وتحكم `Passthrough` في الاستدعاء
-* `إصلاح` اختيار التحميل الزائد الموثوق لـ `IContentProvider.call` في Android 29+ كي يحتفظ لقاء Provider الخارجي في API 31+ بعنوان Broker الحقيقي
-* `إصلاح` استخدام Looper قابل للإنهاء في عملية `app_process` الفرعية وإزالة خطأ `Main thread not allowed to quit` الزائف أثناء التنظيف الناجح
-* `إصلاح` حماية الربط العادي للـ Broker بإذن إضافة AutoJs6 وجعل تسجيل endpoint لمرة واحدة مع إبقاء فحوص UID والمالك وtoken ثابت الزمن وBinder death
-* `تحسين` ترقية قدرات الواجهة الخلفية وTypeScript إلى schema v2 لتشمل حالة Root/Shizuku للمضيف ونقل Binder وحدود token ‏256-bit وموقع العارض وسياسة direct-input
-* `تحسين` التحقق من سلسلة مضيف AutoJs6 الحقيقية على API 28 مع Magisk root وAPI 31 مع Shizuku 13.5: طبقات UID 0/2000 وعرض واجهة JS الحالية وإدخال Type A/Type B ولقطات الشاشة والإغلاق بلا عمليات متروكة
 
 ##### لمزيد من سجل الإصدارات
 

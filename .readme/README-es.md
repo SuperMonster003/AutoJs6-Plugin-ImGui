@@ -171,6 +171,12 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 
 ******
 
+#### v1.9.3
+
+###### 2026/09/15
+
+* `Mejora` compileSdk y targetSdk suben a 37 (Android 17); el comportamiento del plugin no depende del nuevo objetivo
+
 #### v1.9.2
 
 ###### 2026/09/13
@@ -184,20 +190,6 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 ###### 2026/09/11
 
 * `Mejora` Verificación de compilación de la alineación de páginas de 16 KB en bibliotecas nativas de 64 bits, con controles del contrato manifest e informes JSON
-
-#### v1.9.0
-
-###### 2026/08/30
-
-* `Función` Añadido el backend seleccionable `launchPrivileged` / `WindowMode.Privileged`, con políticas explícitas `auto`, `shizuku` y `root` y diagnósticos en vivo mediante `Session.getBackendInfo()`
-* `Función` Añadido un adaptador de host solo por reflexión que reutiliza RootMode, `RootUtils` / `ProcessShell` y el UserService `WrappedShizuku` ya autorizado por AutoJs6
-* `Función` Añadido el protocolo Binder Surface v2 autenticado: un proceso privilegiado UID 0/2000 conserva la capa SurfaceControl y transfiere únicamente su Surface al renderizador completo existente del host
-* `Función` Conectado el lector privilegiado Type A/Type B de `/dev/input` a la cola acotada de ImGui, con política de observación no exclusiva y control de callbacks mediante `Passthrough`
-* `Corrección` Seleccionada la sobrecarga autoritativa de `IContentProvider.call` en Android 29+, conservando la authority real del Broker en el encuentro con Provider externo de API 31+
-* `Corrección` El hijo `app_process` ahora usa un Looper que puede finalizar, eliminando el falso error `Main thread not allowed to quit` durante una limpieza correcta
-* `Corrección` Protegido el enlace normal del Broker con el permiso de plugin de AutoJs6 y registro único del endpoint, además de las comprobaciones de UID, propietario, token en tiempo constante y muerte de Binder
-* `Mejora` Capacidades del backend y TypeScript actualizados al schema v2 con estado Root/Shizuku del host, transporte Binder, límite de token de 256 bits, ubicación del renderizador y política direct-input
-* `Mejora` Verificada la cadena real del host AutoJs6 en API 28 con Magisk root y API 31 con Shizuku 13.5: capas UID 0/2000, renderizado de la fachada JS existente, entrada Type A/Type B, capturas y cierre sin procesos huérfanos
 
 ##### Para consultar más versiones
 
