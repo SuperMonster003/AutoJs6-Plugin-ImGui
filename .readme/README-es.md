@@ -173,8 +173,9 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 
 #### v1.9.3
 
-###### 2026/09/15
+###### 2026/09/19
 
+* `Corrección` Advertencias de lectura de SDK XML v4 con AGP 9.1 y comprobaciones de alineación nativa de APK activadas por error al ensamblar pruebas unitarias JVM, mediante los plugins de compilación compartidos 1.8.3
 * `Mejora` compileSdk y targetSdk suben a 37 (Android 17); el comportamiento del plugin no depende del nuevo objetivo
 
 #### v1.9.2
