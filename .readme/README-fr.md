@@ -171,6 +171,12 @@ Les méthodes lower camel case correspondent aux opérations Dear ImGui du même
 
 ******
 
+#### v1.9.4
+
+###### 2026/10/04
+
+* `Amélioration` Les icônes du centre de plugins utilisent les tailles, positions, images claires et sombres et fonds circulaires réglés dans Icon Studio, avec les sources et paramètres permettant de les reproduire
+
 #### v1.9.3
 
 ###### 2026/09/19
@@ -185,12 +191,6 @@ Les méthodes lower camel case correspondent aux opérations Dear ImGui du même
 * `Correctif` Les informations de version et d'ABI du centre des plugins correspondent à l'APK installé
 * `Correctif` Les dates de version utilisent un format anglais uniforme
 * `Amélioration` Validation des versions, signatures et variantes complètes des APK avant la création des fichiers à télécharger
-
-#### v1.9.1
-
-###### 2026/09/11
-
-* `Amélioration` Vérification à la compilation de l'alignement des pages de 16 KB des bibliothèques natives 64 bits, avec contrôle du contrat manifest et rapports JSON
 
 ##### Pour consulter davantage de versions
 
