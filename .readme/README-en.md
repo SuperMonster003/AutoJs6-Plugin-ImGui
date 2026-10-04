@@ -172,6 +172,12 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 
 ******
 
+#### v1.9.4
+
+###### 2026/10/04
+
+* `Improvement` Plugin Center icons use the sizes, positions, light and dark artwork, and circular backgrounds adjusted in Icon Studio, retaining reproducible sources and parameters
+
 #### v1.9.3
 
 ###### 2026/09/19
@@ -186,12 +192,6 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 * `Fix` Plugin center version and ABI information matches the installed plugin APK
 * `Fix` Version dates use a consistent English format
 * `Improvement` Validate release APK versions, signing and the complete variant set before creating download artifacts
-
-#### v1.9.1
-
-###### 2026/09/11
-
-* `Improvement` Build verification of 16 KB page alignment for 64-bit native libraries, including manifest contract checks and JSON reports
 
 ##### For more release history
 
