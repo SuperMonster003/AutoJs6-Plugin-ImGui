@@ -1,0 +1,2566 @@
+From 4ca15bcdc63f257ec8c58de32cfc7242d7f489f6 Mon Sep 17 00:00:00 2001
+From: SuperMonster003 <wu2du2mo2gu0@gmail.com>
+Date: Thu, 29 Oct 2026 22:54:19 +0800
+Subject: [PATCH 0/7] R8 render thread prototype, base 9c1b366 (evaluation only, not merged)
+
+Base commit: 9c1b366 (docs(roadmap): complete R0 with the v1.11.0 release, plugin v1.11.0).
+This series is the R8 render thread prototype evaluated in docs/FRAME-LOOP.md ("Independent render
+thread evaluation (2026-11)"). It is kept for reference and is not part of any release.
+
+Apply on a scratch branch (the cover letter has no diff and is dropped):
+
+    git switch -c r8-render-thread 9c1b366
+    git am --empty=drop docs/prototypes/render-thread.patch
+
+- 1: probe, native frame statistics and touch event times (also the baseline build).
+- 2, 4: prototype, createWindow({renderThread: "off" | "snapshot" | "replay"}).
+- 3 to 7: tools/device_r8_render_thread.py, the device measurement script.
+
+SuperMonster003 (7):
+  probe: frame statistics and touch event times for the R8 render thread
+    evaluation
+  R8 prototype: snapshot and replay render thread modes (createWindow
+    renderThread option)
+  R8: device measurement script (frame time, touch latency, sleep
+    freeze, threads, memory)
+  R8 prototype: select the render thread mode before init takes
+    ownership; script uses dp window sizes and the callback api for the
+    probe
+  test(r8): wait for the first frame before calibration
+  test(r8): table shows the median of repeated runs
+  test(r8): table reports sleep latency p95 and the render thread count
+
+ app/src/main/assets/plugin/index.js           |  41 +-
+ app/src/main/cpp/ImGuiBridge.cpp              | 992 +++++++++++++++++-
+ .../autojs6/plugin/imgui/ImGuiInputQueue.java |  15 +-
+ .../autojs6/plugin/imgui/ImGuiNative.java     |  12 +
+ .../plugin/imgui/ImGuiPluginConnection.java   |  41 +-
+ tools/device_r8_render_thread.py              | 576 ++++++++++
+ 6 files changed, 1629 insertions(+), 48 deletions(-)
+ create mode 100644 tools/device_r8_render_thread.py
+
+
+base-commit: 9c1b366b1aa86e1297e166e999b16aff8c3e40c1
+-- 
+2.45.1.windows.1
+
+From 401ec66bb08e8ff8330b568bad5be3dc90991f99 Mon Sep 17 00:00:00 2001
+From: SuperMonster003 <30370009+SuperMonster003@users.noreply.github.com>
+Date: Thu, 29 Oct 2026 22:16:56 +0800
+Subject: [PATCH 1/7] probe: frame statistics and touch event times for the R8
+ render thread evaluation
+
+---
+ app/src/main/assets/plugin/index.js           |  39 ++++-
+ app/src/main/cpp/ImGuiBridge.cpp              | 136 ++++++++++++++++++
+ .../autojs6/plugin/imgui/ImGuiInputQueue.java |  15 +-
+ .../autojs6/plugin/imgui/ImGuiNative.java     |   9 ++
+ .../plugin/imgui/ImGuiPluginConnection.java   |  22 ++-
+ 5 files changed, 216 insertions(+), 5 deletions(-)
+
+diff --git a/app/src/main/assets/plugin/index.js b/app/src/main/assets/plugin/index.js
+index 60a8bc9..3d58ff8 100644
+--- a/app/src/main/assets/plugin/index.js
++++ b/app/src/main/assets/plugin/index.js
+@@ -5814,6 +5814,17 @@ module.exports = function (bridge) {
+             }
+         }
+ 
++        // R8 probe: the MotionEvent time in the CLOCK_MONOTONIC base, for the touch-to-present latency.
++        function touchTimeNanos(event) {
++            try {
++                return typeof event.getEventTimeNanos === "function"
++                    ? Number(event.getEventTimeNanos())
++                    : Number(event.getEventTime()) * 1e6;
++            } catch (ignored) {
++                return 0;
++            }
++        }
++
+         surfaceView.setOnTouchListener(function (view, event) {
+             if (!session.ready || session.closed || api._activeSession !== session) {
+                 return false;
+@@ -5841,7 +5852,7 @@ module.exports = function (bridge) {
+                 longPressTriggered = false;
+                 wheelVelocity = 0;
+                 pressedMouseButton = api.MouseButton.Left;
+-                bridge.touchEvent(0, eventX, eventY, pressedMouseButton);
++                bridge.touchEvent(0, eventX, eventY, pressedMouseButton, touchTimeNanos(event));
+                 scheduleLongPress();
+                 return true;
+             }
+@@ -5904,7 +5915,7 @@ module.exports = function (bridge) {
+                         clamp(originY + Math.round(movedY), 0, Math.max(0, displayHeight - session.height))
+                     );
+                 } else {
+-                    bridge.touchEvent(2, eventX, eventY, Math.max(0, pressedMouseButton));
++                    bridge.touchEvent(2, eventX, eventY, Math.max(0, pressedMouseButton), touchTimeNanos(event));
+                 }
+                 return true;
+             }
+@@ -5917,7 +5928,8 @@ module.exports = function (bridge) {
+                         action === MotionEvent.ACTION_UP ? 1 : 3,
+                         eventX,
+                         eventY,
+-                        pressedMouseButton
++                        pressedMouseButton,
++                        touchTimeNanos(event)
+                     );
+                     pressedMouseButton = -1;
+                 }
+@@ -6055,6 +6067,27 @@ module.exports = function (bridge) {
+         return session;
+     };
+ 
++    // R8 probe: frame statistics since the previous reset, in milliseconds (see ImGuiBridge.cpp FrameStatistics).
++    api._renderStats = function (reset) {
++        var flat = bridge.getFrameStats(Boolean(reset));
++        var names = ["buildMs", "submitMs", "renderMs", "presentMs", "inputLatencyMs"];
++        var result = {};
++        var offset = names.length;
++        for (var index = 0; index < names.length; index++) {
++            var count = Number(flat[index]);
++            var values = new Array(count);
++            for (var valueIndex = 0; valueIndex < count; valueIndex++) {
++                values[valueIndex] = Number(flat[offset + valueIndex]);
++            }
++            result[names[index]] = values;
++            offset += count;
++        }
++        return result;
++    };
++    api._lastReleaseEventNanos = function () {
++        return Number(bridge.lastReleaseEventNanos());
++    };
++
+     api.closeWindow = function () {
+         if (api._activeSession) {
+             api._activeSession.close();
+diff --git a/app/src/main/cpp/ImGuiBridge.cpp b/app/src/main/cpp/ImGuiBridge.cpp
+index a6920bc..62ca5c8 100644
+--- a/app/src/main/cpp/ImGuiBridge.cpp
++++ b/app/src/main/cpp/ImGuiBridge.cpp
+@@ -11,10 +11,13 @@
+ 
+ #include <algorithm>
+ #include <array>
++#include <atomic>
+ #include <cmath>
+ #include <cstdint>
+ #include <cstring>
++#include <ctime>
+ #include <limits>
++#include <mutex>
+ #include <string>
+ #include <string_view>
+ #include <unordered_map>
+@@ -80,6 +83,58 @@ struct RendererState {
+ RendererState gState;
+ uint64_t gNextTextureHandle = 1U;
+ 
++// R8 render thread evaluation probe: frame statistics of whichever thread presents the frames.
++// Series (milliseconds): build = nativeNewFrame entry -> nativeRender entry (the render callback),
++// submit = nativeRender entry -> return, render = render start -> eglSwapBuffers return on the presenting
++// thread, present = eglSwapBuffers return relative to the last reset, inputLatency = present of the frame
++// that consumed a touch -> the touch's MotionEvent time.
++constexpr size_t kMaxStatSamples = 20000U;
++
++int64_t MonotonicNanos() {
++    timespec now{};
++    clock_gettime(CLOCK_MONOTONIC, &now);
++    return static_cast<int64_t>(now.tv_sec) * 1000000000LL + static_cast<int64_t>(now.tv_nsec);
++}
++
++struct FrameStatistics {
++    std::mutex mutex;
++    int64_t originNs = MonotonicNanos();
++    std::vector<double> buildMs;
++    std::vector<double> submitMs;
++    std::vector<double> renderMs;
++    std::vector<double> presentMs;
++    std::vector<double> inputLatencyMs;
++};
++
++FrameStatistics gStats;
++std::atomic<int64_t> gLastReleaseEventNs{0};
++// Touch times consumed into Dear ImGui IO for the frame being built (script thread, under NATIVE_LOCK).
++std::vector<int64_t> gFrameInputNs;
++int64_t gFrameStartNs = 0;
++
++void AddSample(std::vector<double>& series, double value) {
++    if (series.size() < kMaxStatSamples) {
++        series.push_back(value);
++    }
++}
++
++void RecordBuild(double buildMs, double submitMs) {
++    std::lock_guard<std::mutex> lock(gStats.mutex);
++    AddSample(gStats.buildMs, buildMs);
++    AddSample(gStats.submitMs, submitMs);
++}
++
++void RecordPresent(int64_t renderStartNs, int64_t presentNs, const std::vector<int64_t>& inputNs) {
++    std::lock_guard<std::mutex> lock(gStats.mutex);
++    AddSample(gStats.renderMs, static_cast<double>(presentNs - renderStartNs) / 1.0e6);
++    AddSample(gStats.presentMs, static_cast<double>(presentNs - gStats.originNs) / 1.0e6);
++    for (const int64_t eventNs : inputNs) {
++        if (eventNs > 0 && eventNs <= presentNs) {
++            AddSample(gStats.inputLatencyMs, static_cast<double>(presentNs - eventNs) / 1.0e6);
++        }
++    }
++}
++
+ void ThrowJavaException(JNIEnv* env, const char* className, const char* message) {
+     jclass exceptionClass = env->FindClass(className);
+     if (exceptionClass != nullptr) {
+@@ -1337,9 +1392,11 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeNewFrame(
+     JNIEnv*,
+     jclass
+ ) {
++    const int64_t frameStartNs = MonotonicNanos();
+     if (!gState.ready || gState.frameActive || !EnsureCurrent()) {
+         return JNI_FALSE;
+     }
++    gFrameStartNs = frameStartNs;
+     ImGui_ImplOpenGL3_NewFrame();
+     ImGui_ImplAndroid_NewFrame();
+     ImGui::NewFrame();
+@@ -1376,6 +1433,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeRender(
+         return JNI_FALSE;
+     }
+ 
++    const int64_t renderStartNs = MonotonicNanos();
+     ImGui::Render();
+     UpdateWindowMetadata();
+     gState.frameActive = false;
+@@ -1402,6 +1460,15 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeRender(
+         LOG_ERROR("eglSwapBuffers failed: 0x%x", eglGetError());
+     }
+     ReleaseCurrent();
++    if (swapped) {
++        const int64_t presentNs = MonotonicNanos();
++        RecordBuild(
++            static_cast<double>(renderStartNs - gFrameStartNs) / 1.0e6,
++            static_cast<double>(presentNs - renderStartNs) / 1.0e6
++        );
++        RecordPresent(renderStartNs, presentNs, gFrameInputNs);
++        gFrameInputNs.clear();
++    }
+     return swapped ? JNI_TRUE : JNI_FALSE;
+ }
+ 
+@@ -1438,6 +1505,75 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeGetInterac
+     return result;
+ }
+ 
++extern "C" JNIEXPORT void JNICALL
++Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTouchEvent(
++    JNIEnv*, jclass, jint action, jfloat x, jfloat y, jint mouseButton
++);
++
++extern "C" JNIEXPORT void JNICALL
++Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTouchEventTimed(
++    JNIEnv* env,
++    jclass type,
++    jint action,
++    jfloat x,
++    jfloat y,
++    jint mouseButton,
++    jlong eventTimeNanos
++) {
++    if (!gState.ready || ImGui::GetCurrentContext() == nullptr) {
++        return;
++    }
++    Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTouchEvent(
++        env, type, action, x, y, mouseButton
++    );
++    if (eventTimeNanos > 0) {
++        gFrameInputNs.push_back(static_cast<int64_t>(eventTimeNanos));
++        if (action == 1) {
++            gLastReleaseEventNs.store(static_cast<int64_t>(eventTimeNanos));
++        }
++    }
++}
++
++extern "C" JNIEXPORT jdoubleArray JNICALL
++Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeGetFrameStats(
++    JNIEnv* env,
++    jclass,
++    jboolean reset
++) {
++    std::lock_guard<std::mutex> lock(gStats.mutex);
++    const std::array<const std::vector<double>*, 5> series = {
++        &gStats.buildMs, &gStats.submitMs, &gStats.renderMs, &gStats.presentMs, &gStats.inputLatencyMs,
++    };
++    std::vector<double> flat;
++    for (const auto* values : series) {
++        flat.push_back(static_cast<double>(values->size()));
++    }
++    for (const auto* values : series) {
++        flat.insert(flat.end(), values->begin(), values->end());
++    }
++    if (reset) {
++        gStats.buildMs.clear();
++        gStats.submitMs.clear();
++        gStats.renderMs.clear();
++        gStats.presentMs.clear();
++        gStats.inputLatencyMs.clear();
++        gStats.originNs = MonotonicNanos();
++    }
++    jdoubleArray result = env->NewDoubleArray(static_cast<jsize>(flat.size()));
++    if (result != nullptr) {
++        env->SetDoubleArrayRegion(result, 0, static_cast<jsize>(flat.size()), flat.data());
++    }
++    return result;
++}
++
++extern "C" JNIEXPORT jlong JNICALL
++Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeGetLastReleaseEventNanos(
++    JNIEnv*,
++    jclass
++) {
++    return static_cast<jlong>(gLastReleaseEventNs.load());
++}
++
+ extern "C" JNIEXPORT void JNICALL
+ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTouchEvent(
+     JNIEnv*,
+diff --git a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiInputQueue.java b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiInputQueue.java
+index 3e88405..5145ba3 100644
+--- a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiInputQueue.java
++++ b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiInputQueue.java
+@@ -16,6 +16,11 @@ final class ImGuiInputQueue {
+     interface Sink {
+         void touch(int action, float x, float y, int mouseButton);
+ 
++        /** A touch with its MotionEvent time (CLOCK_MONOTONIC nanoseconds, 0 when unknown); R8 latency probe. */
++        default void touch(int action, float x, float y, int mouseButton, long eventTimeNanos) {
++            touch(action, x, y, mouseButton);
++        }
++
+         void characters(String text);
+ 
+         void key(int key, boolean down);
+@@ -48,7 +53,15 @@ final class ImGuiInputQueue {
+     }
+ 
+     void offerTouch(int action, float x, float y, int mouseButton) {
+-        offer(sink -> sink.touch(action, x, y, mouseButton));
++        offerTouch(action, x, y, mouseButton, 0L);
++    }
++
++    void offerTouch(int action, float x, float y, int mouseButton, long eventTimeNanos) {
++        if (eventTimeNanos <= 0L) {
++            offer(sink -> sink.touch(action, x, y, mouseButton));
++        } else {
++            offer(sink -> sink.touch(action, x, y, mouseButton, eventTimeNanos));
++        }
+     }
+ 
+     void offerCharacters(String text) {
+diff --git a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiNative.java b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiNative.java
+index 32105fd..505c385 100644
+--- a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiNative.java
++++ b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiNative.java
+@@ -63,6 +63,15 @@ final class ImGuiNative {
+ 
+     static native void nativeTouchEvent(int action, float x, float y, int mouseButton);
+ 
++    /** R8 probe: a touch that also records its event time for the touch-to-present latency. */
++    static native void nativeTouchEventTimed(int action, float x, float y, int mouseButton, long eventTimeNanos);
++
++    /** R8 probe: counts of five series followed by their values (see ImGuiBridge.cpp FrameStatistics). */
++    static native double[] nativeGetFrameStats(boolean reset);
++
++    /** R8 probe: event time (CLOCK_MONOTONIC ns) of the last touch release consumed by Dear ImGui, 0 if none. */
++    static native long nativeGetLastReleaseEventNanos();
++
+     static native long[] nativeCreateTexture(Bitmap bitmap, int flags);
+ 
+     static native boolean nativeDestroyTexture(long handle);
+diff --git a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java
+index d9bac20..f6962ae 100644
+--- a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java
++++ b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java
+@@ -55,6 +55,11 @@ public final class ImGuiPluginConnection implements ServiceConnection {
+             ImGuiNative.nativeTouchEvent(action, x, y, mouseButton);
+         }
+ 
++        @Override
++        public void touch(int action, float x, float y, int mouseButton, long eventTimeNanos) {
++            ImGuiNative.nativeTouchEventTimed(action, x, y, mouseButton, eventTimeNanos);
++        }
++
+         @Override
+         public void characters(String text) {
+             ImGuiNative.nativeAddInputCharacters(text);
+@@ -365,12 +370,27 @@ public final class ImGuiPluginConnection implements ServiceConnection {
+     }
+ 
+     public void touchEvent(int action, float x, float y, int mouseButton) {
++        touchEvent(action, x, y, mouseButton, 0L);
++    }
++
++    /** R8 probe: eventTimeNanos is the MotionEvent time in the CLOCK_MONOTONIC base (0 when unknown). */
++    public void touchEvent(int action, float x, float y, int mouseButton, long eventTimeNanos) {
+         ImGuiInputQueue queue = inputQueue;
+         if (isOwner()) {
+-            queue.offerTouch(action, x, y, mouseButton);
++            queue.offerTouch(action, x, y, mouseButton, eventTimeNanos);
+         }
+     }
+ 
++    /** R8 probe: frame statistics since the previous reset (see ImGuiNative.nativeGetFrameStats). */
++    public double[] getFrameStats(boolean reset) {
++        return ImGuiNative.nativeGetFrameStats(reset);
++    }
++
++    /** R8 probe: event time of the last touch release consumed by Dear ImGui. */
++    public long lastReleaseEventNanos() {
++        return ImGuiNative.nativeGetLastReleaseEventNanos();
++    }
++
+     public long[] createTexture(Object source, int flags) {
+         ResolvedBitmap resolved = resolveTextureBitmap(source, 0);
+         try {
+-- 
+2.45.1.windows.1
+
+
+From c01e4cd77a884423a033d7e6f7883c43eeb05977 Mon Sep 17 00:00:00 2001
+From: SuperMonster003 <wu2du2mo2gu0@gmail.com>
+Date: Thu, 29 Oct 2026 22:32:57 +0800
+Subject: [PATCH 2/7] R8 prototype: snapshot and replay render thread modes
+ (createWindow renderThread option)
+
+---
+ app/src/main/assets/plugin/index.js           |   2 +
+ app/src/main/cpp/ImGuiBridge.cpp              | 856 +++++++++++++++++-
+ .../autojs6/plugin/imgui/ImGuiNative.java     |   3 +
+ .../plugin/imgui/ImGuiPluginConnection.java   |  19 +
+ 4 files changed, 837 insertions(+), 43 deletions(-)
+
+diff --git a/app/src/main/assets/plugin/index.js b/app/src/main/assets/plugin/index.js
+index 3d58ff8..9f033d5 100644
+--- a/app/src/main/assets/plugin/index.js
++++ b/app/src/main/assets/plugin/index.js
+@@ -4168,6 +4168,7 @@ module.exports = function (bridge) {
+             );
+         var debug = options.debug === true;
+         var fps = clamp(integer(options.fps, 60), 15, 120);
++        var renderThreadMode = options.renderThread == null ? "off" : String(options.renderThread);
+         var frameDelay = Math.max(1, Math.round(1000 / fps));
+         var collapsedFps = clamp(integer(options.collapsedFps, 5), 1, 15);
+         var collapsedFrameDelay = Math.max(1, Math.round(1000 / collapsedFps));
+@@ -5536,6 +5537,7 @@ module.exports = function (bridge) {
+                 } else if (session._nativeInitialized && bridge.isReady()) {
+                     session.ready = true;
+                 } else {
++                    bridge.setRenderThreadMode(renderThreadMode, fps);
+                     session.ready = Boolean(bridge.init(
+                         nativeSurface, density, fontPath, fontSize, iniPath,
+                         stringArray(additionalFontPaths), floatArray(additionalFontSizes)
+diff --git a/app/src/main/cpp/ImGuiBridge.cpp b/app/src/main/cpp/ImGuiBridge.cpp
+index 62ca5c8..f11e1aa 100644
+--- a/app/src/main/cpp/ImGuiBridge.cpp
++++ b/app/src/main/cpp/ImGuiBridge.cpp
+@@ -12,14 +12,19 @@
+ #include <algorithm>
+ #include <array>
+ #include <atomic>
++#include <chrono>
+ #include <cmath>
++#include <condition_variable>
+ #include <cstdint>
+ #include <cstring>
+ #include <ctime>
+ #include <limits>
++#include <memory>
+ #include <mutex>
++#include <pthread.h>
+ #include <string>
+ #include <string_view>
++#include <thread>
+ #include <unordered_map>
+ #include <vector>
+ 
+@@ -135,6 +140,115 @@ void RecordPresent(int64_t renderStartNs, int64_t presentNs, const std::vector<i
+     }
+ }
+ 
++// R8 prototype: an independent render thread, selected by createWindow({renderThread}) before init and started by the
++// first frame (after the UI thread has applied the initial style).
++// - snapshot: the script thread builds the frame as before, but on a pbuffer context that shares objects with the
++//   window context; after ImGui::Render it uploads textures, copies ImDrawData into a latest-wins mailbox and returns.
++//   The render thread owns the window surface and draws the newest copy.
++// - replay: the script thread only records a subset of widget calls; the render thread runs Dear ImGui itself at fps
++//   with live input, executes the newest recording and hands widget results (clicks, edited values) to the next
++//   script frame.
++constexpr int kRenderThreadOff = 0;
++constexpr int kRenderThreadSnapshot = 1;
++constexpr int kRenderThreadReplay = 2;
++
++struct DrawSnapshot {
++    ImDrawData data;
++    ImVector<ImDrawList*> lists;
++    std::vector<GLuint> deleteTextures;
++    std::vector<int64_t> inputNs;
++    GLsync fence = nullptr;
++};
++
++enum ReplayOpKind {
++    kOpSetNextWindowPos,
++    kOpSetNextWindowSize,
++    kOpBegin,
++    kOpEnd,
++    kOpText,
++    kOpButton,
++    kOpCheckbox,
++    kOpSliderFloat,
++    kOpSameLine,
++    kOpSeparator,
++};
++
++struct ReplayOp {
++    ReplayOpKind kind = kOpText;
++    std::string label;
++    std::string key;
++    std::string format;
++    std::array<float, 4> values{};
++    int flags = 0;
++    bool checked = false;
++};
++
++struct ReplayProgram {
++    uint64_t serial = 0U;
++    std::vector<ReplayOp> ops;
++};
++
++// Widget results shared by both threads (under RenderThreadState::mutex). A value edited on the render thread is
++// "dirty" until a script frame reads it; recordings up to staleThrough still carry the old value and are not applied.
++struct ReplayWidget {
++    bool known = false;
++    bool dirty = false;
++    uint64_t staleThrough = 0U;
++    int pendingClicks = 0;
++    bool visible = true;
++    bool checked = false;
++    float value = 0.0F;
++};
++
++struct ReplayInput {
++    int action = 0;
++    float x = 0.0F;
++    float y = 0.0F;
++    int button = 0;
++    int64_t timeNs = 0;
++};
++
++struct RenderThreadState {
++    int mode = kRenderThreadOff;
++    int fps = 60;
++    std::thread thread;
++    std::mutex mutex;
++    std::condition_variable wake;
++    bool stop = false;
++    // snapshot
++    EGLContext buildContext = EGL_NO_CONTEXT;
++    EGLSurface buildSurface = EGL_NO_SURFACE;
++    std::array<DrawSnapshot, 3> slots;
++    int pendingSlot = -1;
++    int renderingSlot = -1;
++    // replay: recording state is owned by the script thread, the rest is under mutex
++    bool recording = false;
++    uint64_t recordSerial = 0U;
++    std::vector<ReplayOp> recordOps;
++    std::vector<std::string> recordWindows;
++    std::shared_ptr<const ReplayProgram> program;
++    uint64_t publishedSerial = 0U;
++    std::unordered_map<std::string, ReplayWidget> widgets;
++    std::vector<ReplayInput> inputs;
++    // queries answered from the last replayed frame (under gMetadataMutex)
++    bool anyItemHovered = false;
++    bool anyItemActive = false;
++    bool wantCaptureMouse = false;
++    bool wantTextInput = false;
++    ImVec2 mousePos{};
++};
++
++RenderThreadState gRender;
++// Set by nativeSetRenderThreadMode (under NATIVE_LOCK) and applied by the next nativeInit.
++int gRequestedRenderThreadMode = kRenderThreadOff;
++int gRequestedRenderThreadFps = 60;
++// Guards the window metadata, which the replay render thread writes while the script and UI threads read it.
++std::mutex gMetadataMutex;
++
++void StartRenderThread();
++void StopRenderThread();
++void ReleaseRenderThreadResources();
++
+ void ThrowJavaException(JNIEnv* env, const char* className, const char* message) {
+     jclass exceptionClass = env->FindClass(className);
+     if (exceptionClass != nullptr) {
+@@ -272,20 +386,29 @@ jstring Utf8ToJString(JNIEnv* env, std::string_view value) {
+ }
+ 
+ bool EnsureCurrent() {
+-    if (!gState.ready ||
++    // R8: the replay render thread keeps the window context current; the snapshot script thread builds on its
++    // pbuffer context.
++    if (gRender.mode == kRenderThreadReplay ||
++        !gState.ready ||
+         gState.display == EGL_NO_DISPLAY ||
+         gState.surface == EGL_NO_SURFACE ||
+         gState.context == EGL_NO_CONTEXT
+     ) {
+         return false;
+     }
++    const bool snapshot = gRender.mode == kRenderThreadSnapshot;
++    EGLContext context = snapshot ? gRender.buildContext : gState.context;
++    EGLSurface surface = snapshot ? gRender.buildSurface : gState.surface;
++    if (context == EGL_NO_CONTEXT || surface == EGL_NO_SURFACE) {
++        return false;
++    }
+     if (eglGetCurrentDisplay() == gState.display &&
+-        eglGetCurrentContext() == gState.context &&
+-        eglGetCurrentSurface(EGL_DRAW) == gState.surface
++        eglGetCurrentContext() == context &&
++        eglGetCurrentSurface(EGL_DRAW) == surface
+     ) {
+         return true;
+     }
+-    if (eglMakeCurrent(gState.display, gState.surface, gState.surface, gState.context) != EGL_TRUE) {
++    if (eglMakeCurrent(gState.display, surface, surface, context) != EGL_TRUE) {
+         LOG_ERROR("eglMakeCurrent failed: 0x%x", eglGetError());
+         return false;
+     }
+@@ -299,10 +422,17 @@ void ReleaseCurrent() {
+ }
+ 
+ bool IsRendererContextCurrent() {
+-    return gState.display != EGL_NO_DISPLAY &&
+-        gState.surface != EGL_NO_SURFACE &&
++    if (gState.display == EGL_NO_DISPLAY || eglGetCurrentDisplay() != gState.display) {
++        return false;
++    }
++    if (gRender.buildContext != EGL_NO_CONTEXT &&
++        eglGetCurrentContext() == gRender.buildContext &&
++        eglGetCurrentSurface(EGL_DRAW) == gRender.buildSurface
++    ) {
++        return true;
++    }
++    return gState.surface != EGL_NO_SURFACE &&
+         gState.context != EGL_NO_CONTEXT &&
+-        eglGetCurrentDisplay() == gState.display &&
+         eglGetCurrentContext() == gState.context &&
+         eglGetCurrentSurface(EGL_DRAW) == gState.surface;
+ }
+@@ -346,6 +476,7 @@ void DestroyPendingTextures() {
+ }
+ 
+ void ShutdownRenderer() {
++    StopRenderThread();
+     gState.ready = false;
+     gState.suspended = false;
+     gState.frameActive = false;
+@@ -388,6 +519,7 @@ void ShutdownRenderer() {
+             ImGui::SaveIniSettingsToDisk(gState.iniPath.c_str());
+         }
+         DestroyAllTextures();
++        ReleaseRenderThreadResources();
+         if (gState.rendererBackendInitialized) {
+             ImGui_ImplOpenGL3_Shutdown();
+         }
+@@ -402,6 +534,12 @@ void ShutdownRenderer() {
+ 
+     if (gState.display != EGL_NO_DISPLAY) {
+         eglMakeCurrent(gState.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++        if (gRender.buildContext != EGL_NO_CONTEXT) {
++            eglDestroyContext(gState.display, gRender.buildContext);
++        }
++        if (gRender.buildSurface != EGL_NO_SURFACE) {
++            eglDestroySurface(gState.display, gRender.buildSurface);
++        }
+         if (gState.context != EGL_NO_CONTEXT) {
+             eglDestroyContext(gState.display, gState.context);
+         }
+@@ -414,6 +552,8 @@ void ShutdownRenderer() {
+         ANativeWindow_release(gState.window);
+     }
+     gState = RendererState{};
++    gRender.buildContext = EGL_NO_CONTEXT;
++    gRender.buildSurface = EGL_NO_SURFACE;
+ }
+ 
+ bool CreateWindowSurface(ANativeWindow* window) {
+@@ -442,8 +582,9 @@ bool InitializeEgl(ANativeWindow* window) {
+         return false;
+     }
+ 
+-    constexpr EGLint configAttributes[] = {
+-        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
++    // R8: the snapshot build context renders to a pbuffer, so its config must support both surface types.
++    const EGLint configAttributes[] = {
++        EGL_SURFACE_TYPE, gRender.mode == kRenderThreadSnapshot ? EGL_WINDOW_BIT | EGL_PBUFFER_BIT : EGL_WINDOW_BIT,
+         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+         EGL_RED_SIZE, 8,
+         EGL_GREEN_SIZE, 8,
+@@ -497,6 +638,8 @@ bool DetachWindowSurface() {
+     ) {
+         return false;
+     }
++    // R8: the render thread releases the window context when it stops; the next frame after attach restarts it.
++    StopRenderThread();
+     gState.ready = false;
+     if (gState.platformBackendInitialized) {
+         ImGui_ImplAndroid_Shutdown();
+@@ -512,6 +655,7 @@ bool DetachWindowSurface() {
+         gState.window = nullptr;
+     }
+     gState.suspended = true;
++    std::lock_guard<std::mutex> lock(gMetadataMutex);
+     gState.hasAutoResizeBounds = false;
+     gState.interactiveWindowRects.clear();
+     return true;
+@@ -751,6 +895,10 @@ void ResetStyle(int colorPreset) {
+ }
+ 
+ bool RequireFrame(JNIEnv* env) {
++    if (gRender.mode == kRenderThreadReplay && gRender.recording) {
++        ThrowIllegalState(env, "This ImGui call is not supported by the R8 replay render thread prototype");
++        return false;
++    }
+     if (!gState.ready || !gState.frameActive || ImGui::GetCurrentContext() == nullptr) {
+         ThrowIllegalState(env, "ImGui widgets may only be used inside a createWindow render callback");
+         return false;
+@@ -1066,6 +1214,7 @@ bool CopyBitmapToRgba(
+ }
+ 
+ void UpdateWindowMetadata() {
++    std::lock_guard<std::mutex> lock(gMetadataMutex);
+     gState.hasAutoResizeBounds = false;
+     gState.autoResizeBounds = {};
+     gState.interactiveWindowRects.clear();
+@@ -1140,6 +1289,433 @@ PlotSamples ResolvePlotSamples(jsize length, jint valuesOffset, jint stride) {
+     };
+ }
+ 
++void ApplyTouch(int action, float x, float y, int button) {
++    ImGuiIO& io = ImGui::GetIO();
++    io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
++    io.AddMousePosEvent(x, y);
++    if (button < 0 || button >= ImGuiMouseButton_COUNT) {
++        return;
++    }
++    if (action == 0) {
++        io.AddMouseButtonEvent(button, true);
++    } else if (action == 1) {
++        io.AddMouseButtonEvent(button, false);
++    } else if (action == 3) {
++        io.AddMouseButtonEvent(button, false);
++        gState.cancelledMouseButtons |= 1U << static_cast<unsigned int>(button);
++    }
++}
++
++void ApplyCancelledMouseButtons() {
++    if (gState.cancelledMouseButtons == 0U) {
++        return;
++    }
++    ImGuiIO& io = ImGui::GetIO();
++    ImGuiContext& context = *GImGui;
++    for (int button = 0; button < ImGuiMouseButton_COUNT; ++button) {
++        const unsigned int mask = 1U << static_cast<unsigned int>(button);
++        if ((gState.cancelledMouseButtons & mask) == 0U) {
++            continue;
++        }
++        io.MouseClicked[button] = false;
++        io.MouseReleased[button] = false;
++        if (context.ActiveIdMouseButton == button) {
++            ImGui::ClearActiveID();
++        }
++        if (!io.MouseDown[button]) {
++            gState.cancelledMouseButtons &= ~mask;
++        }
++    }
++}
++
++// ---- R8 render thread prototype ----
++
++template <typename T>
++void CopyImVector(ImVector<T>& target, const ImVector<T>& source) {
++    target.resize(source.Size);
++    if (source.Size > 0) {
++        std::memcpy(target.Data, source.Data, static_cast<size_t>(source.size_in_bytes()));
++    }
++}
++
++// Copies the draw lists into pooled lists of the snapshot and resolves every texture reference to its GL name, so the
++// render thread never reads ImTextureData that the script thread is updating.
++void CopyDrawData(const ImDrawData& source, DrawSnapshot& target) {
++    while (target.lists.Size < source.CmdListsCount) {
++        target.lists.push_back(IM_NEW(ImDrawList)(nullptr));
++    }
++    ImDrawData& data = target.data;
++    data.Valid = source.Valid;
++    data.CmdListsCount = source.CmdListsCount;
++    data.TotalIdxCount = source.TotalIdxCount;
++    data.TotalVtxCount = source.TotalVtxCount;
++    data.DisplayPos = source.DisplayPos;
++    data.DisplaySize = source.DisplaySize;
++    data.FramebufferScale = source.FramebufferScale;
++    data.OwnerViewport = nullptr;
++    data.Textures = nullptr;
++    data.CmdLists.resize(source.CmdListsCount);
++    for (int index = 0; index < source.CmdListsCount; ++index) {
++        const ImDrawList* from = source.CmdLists[index];
++        ImDrawList* to = target.lists[index];
++        CopyImVector(to->CmdBuffer, from->CmdBuffer);
++        CopyImVector(to->IdxBuffer, from->IdxBuffer);
++        CopyImVector(to->VtxBuffer, from->VtxBuffer);
++        to->Flags = from->Flags;
++        for (ImDrawCmd& command : to->CmdBuffer) {
++            command.TexRef = ImTextureRef(command.GetTexID());
++        }
++        data.CmdLists[index] = to;
++    }
++}
++
++void CollectPendingTextureDeletes(std::vector<GLuint>& output) {
++    for (auto iterator = gState.textures.begin(); iterator != gState.textures.end();) {
++        if (!iterator->second.pendingDelete) {
++            ++iterator;
++            continue;
++        }
++        if (iterator->second.glId != 0U) {
++            output.push_back(iterator->second.glId);
++        }
++        iterator = gState.textures.erase(iterator);
++    }
++}
++
++// Draws on the render thread (window context current) and presents; records the render and input statistics.
++void PresentDrawData(ImDrawData* drawData, int64_t renderStartNs, const std::vector<int64_t>& inputNs) {
++    EGLint width = 0;
++    EGLint height = 0;
++    eglQuerySurface(gState.display, gState.surface, EGL_WIDTH, &width);
++    eglQuerySurface(gState.display, gState.surface, EGL_HEIGHT, &height);
++    if (width <= 0 || height <= 0) {
++        return;
++    }
++    glViewport(0, 0, width, height);
++    glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
++    glClear(GL_COLOR_BUFFER_BIT);
++    ImGui_ImplOpenGL3_RenderDrawData(drawData);
++    if (eglSwapBuffers(gState.display, gState.surface) != EGL_TRUE) {
++        LOG_ERROR("Render thread eglSwapBuffers failed: 0x%x", eglGetError());
++        return;
++    }
++    RecordPresent(renderStartNs, MonotonicNanos(), inputNs);
++}
++
++void RenderSnapshotLoop() {
++    while (true) {
++        int slotIndex = -1;
++        {
++            std::unique_lock<std::mutex> lock(gRender.mutex);
++            gRender.wake.wait(lock, [] { return gRender.stop || gRender.pendingSlot >= 0; });
++            if (gRender.stop) {
++                return;
++            }
++            slotIndex = gRender.pendingSlot;
++            gRender.pendingSlot = -1;
++            gRender.renderingSlot = slotIndex;
++        }
++        DrawSnapshot& slot = gRender.slots[static_cast<size_t>(slotIndex)];
++        const int64_t renderStartNs = MonotonicNanos();
++        if (slot.fence != nullptr) {
++            glWaitSync(slot.fence, 0, GL_TIMEOUT_IGNORED);
++            glDeleteSync(slot.fence);
++            slot.fence = nullptr;
++        }
++        PresentDrawData(&slot.data, renderStartNs, slot.inputNs);
++        if (!slot.deleteTextures.empty()) {
++            glDeleteTextures(static_cast<GLsizei>(slot.deleteTextures.size()), slot.deleteTextures.data());
++            slot.deleteTextures.clear();
++        }
++        slot.inputNs.clear();
++        std::lock_guard<std::mutex> lock(gRender.mutex);
++        gRender.renderingSlot = -1;
++    }
++}
++
++// Called with gRender.mutex held: the value the render thread shows is the recorded one unless the user edited it and
++// the script has not read the edit yet.
++ReplayWidget& ResolveReplayWidget(const ReplayOp& op, uint64_t serial) {
++    ReplayWidget& widget = gRender.widgets[op.key];
++    if (!widget.known || (!widget.dirty && serial > widget.staleThrough)) {
++        widget.known = true;
++        widget.checked = op.checked;
++        widget.value = op.values[0];
++    }
++    return widget;
++}
++
++void MarkReplayWidgetEdited(ReplayWidget& widget) {
++    widget.dirty = true;
++    widget.staleThrough = std::max(widget.staleThrough, gRender.publishedSerial);
++}
++
++void ExecuteReplayProgram(const ReplayProgram& program) {
++    int depth = 0;
++    for (const ReplayOp& op : program.ops) {
++        switch (op.kind) {
++            case kOpSetNextWindowPos:
++                ImGui::SetNextWindowPos(
++                    ImVec2(op.values[0], op.values[1]),
++                    static_cast<ImGuiCond>(op.flags),
++                    ImVec2(op.values[2], op.values[3])
++                );
++                break;
++            case kOpSetNextWindowSize:
++                ImGui::SetNextWindowSize(ImVec2(op.values[0], op.values[1]), static_cast<ImGuiCond>(op.flags));
++                break;
++            case kOpBegin: {
++                const bool visible = ImGui::Begin(op.label.c_str(), nullptr, static_cast<ImGuiWindowFlags>(op.flags));
++                ++depth;
++                std::lock_guard<std::mutex> lock(gRender.mutex);
++                gRender.widgets[op.key].visible = visible;
++                break;
++            }
++            case kOpEnd:
++                if (depth > 0) {
++                    ImGui::End();
++                    --depth;
++                }
++                break;
++            case kOpText:
++                ImGui::TextUnformatted(op.label.c_str());
++                break;
++            case kOpButton:
++                if (ImGui::Button(op.label.c_str(), ImVec2(op.values[0], op.values[1]))) {
++                    std::lock_guard<std::mutex> lock(gRender.mutex);
++                    gRender.widgets[op.key].pendingClicks += 1;
++                }
++                break;
++            case kOpCheckbox: {
++                bool checked = false;
++                {
++                    std::lock_guard<std::mutex> lock(gRender.mutex);
++                    checked = ResolveReplayWidget(op, program.serial).checked;
++                }
++                if (ImGui::Checkbox(op.label.c_str(), &checked)) {
++                    std::lock_guard<std::mutex> lock(gRender.mutex);
++                    ReplayWidget& widget = gRender.widgets[op.key];
++                    widget.checked = checked;
++                    MarkReplayWidgetEdited(widget);
++                }
++                break;
++            }
++            case kOpSliderFloat: {
++                float value = 0.0F;
++                {
++                    std::lock_guard<std::mutex> lock(gRender.mutex);
++                    value = ResolveReplayWidget(op, program.serial).value;
++                }
++                if (ImGui::SliderFloat(
++                        op.label.c_str(),
++                        &value,
++                        op.values[1],
++                        op.values[2],
++                        op.format.empty() ? "%.3f" : op.format.c_str(),
++                        static_cast<ImGuiSliderFlags>(op.flags)
++                    )
++                ) {
++                    std::lock_guard<std::mutex> lock(gRender.mutex);
++                    ReplayWidget& widget = gRender.widgets[op.key];
++                    widget.value = value;
++                    MarkReplayWidgetEdited(widget);
++                }
++                break;
++            }
++            case kOpSameLine:
++                ImGui::SameLine(op.values[0], op.values[1]);
++                break;
++            case kOpSeparator:
++                ImGui::Separator();
++                break;
++        }
++    }
++    while (depth-- > 0) {
++        ImGui::End();
++    }
++}
++
++void RenderReplayLoop() {
++    const auto interval = std::chrono::nanoseconds(1000000000LL / std::max(1, gRender.fps));
++    auto deadline = std::chrono::steady_clock::now();
++    std::vector<ReplayInput> inputs;
++    std::vector<int64_t> inputNs;
++    while (true) {
++        std::shared_ptr<const ReplayProgram> program;
++        {
++            std::unique_lock<std::mutex> lock(gRender.mutex);
++            if (gRender.wake.wait_until(lock, deadline, [] { return gRender.stop; })) {
++                return;
++            }
++            inputs.swap(gRender.inputs);
++            program = gRender.program;
++        }
++        const auto now = std::chrono::steady_clock::now();
++        deadline += interval;
++        if (deadline < now) {
++            deadline = now + interval;
++        }
++        const int64_t renderStartNs = MonotonicNanos();
++        inputNs.clear();
++        for (const ReplayInput& input : inputs) {
++            ApplyTouch(input.action, input.x, input.y, input.button);
++            if (input.timeNs > 0) {
++                inputNs.push_back(input.timeNs);
++            }
++        }
++        inputs.clear();
++        ImGui_ImplOpenGL3_NewFrame();
++        ImGui_ImplAndroid_NewFrame();
++        ImGui::NewFrame();
++        ApplyCancelledMouseButtons();
++        if (program != nullptr) {
++            ExecuteReplayProgram(*program);
++        }
++        ImGui::Render();
++        UpdateWindowMetadata();
++        {
++            std::lock_guard<std::mutex> lock(gMetadataMutex);
++            const ImGuiIO& io = ImGui::GetIO();
++            gRender.anyItemHovered = ImGui::IsAnyItemHovered();
++            gRender.anyItemActive = ImGui::IsAnyItemActive();
++            gRender.wantCaptureMouse = io.WantCaptureMouse;
++            gRender.wantTextInput = io.WantTextInput;
++            gRender.mousePos = io.MousePos;
++        }
++        PresentDrawData(ImGui::GetDrawData(), renderStartNs, inputNs);
++    }
++}
++
++void RenderThreadMain() {
++    pthread_setname_np(pthread_self(), "ImGuiRender");
++    if (eglMakeCurrent(gState.display, gState.surface, gState.surface, gState.context) != EGL_TRUE) {
++        LOG_ERROR("Render thread eglMakeCurrent failed: 0x%x", eglGetError());
++        return;
++    }
++    if (gRender.mode == kRenderThreadSnapshot) {
++        RenderSnapshotLoop();
++    } else {
++        RenderReplayLoop();
++    }
++    eglMakeCurrent(gState.display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++}
++
++void StartRenderThread() {
++    if (gRender.mode == kRenderThreadOff || gRender.thread.joinable() || !gState.ready ||
++        gState.surface == EGL_NO_SURFACE
++    ) {
++        return;
++    }
++    {
++        std::lock_guard<std::mutex> lock(gRender.mutex);
++        gRender.stop = false;
++    }
++    gRender.thread = std::thread(RenderThreadMain);
++}
++
++void StopRenderThread() {
++    if (!gRender.thread.joinable()) {
++        return;
++    }
++    {
++        std::lock_guard<std::mutex> lock(gRender.mutex);
++        gRender.stop = true;
++    }
++    gRender.wake.notify_all();
++    gRender.thread.join();
++    std::lock_guard<std::mutex> lock(gRender.mutex);
++    gRender.stop = false;
++}
++
++// After the render thread stopped, with a context of the share group current: frees the snapshot pool and the replay
++// state. The build context itself is destroyed with the window context.
++void ReleaseRenderThreadResources() {
++    const bool current = IsRendererContextCurrent();
++    for (DrawSnapshot& slot : gRender.slots) {
++        if (slot.fence != nullptr && current) {
++            glDeleteSync(slot.fence);
++        }
++        slot.fence = nullptr;
++        if (!slot.deleteTextures.empty() && current) {
++            glDeleteTextures(static_cast<GLsizei>(slot.deleteTextures.size()), slot.deleteTextures.data());
++        }
++        slot.deleteTextures.clear();
++        slot.inputNs.clear();
++        for (ImDrawList* list : slot.lists) {
++            IM_DELETE(list);
++        }
++        slot.lists.clear();
++        slot.data.CmdLists.clear();
++        slot.data.CmdListsCount = 0;
++    }
++    std::lock_guard<std::mutex> lock(gRender.mutex);
++    gRender.pendingSlot = -1;
++    gRender.renderingSlot = -1;
++    gRender.recording = false;
++    gRender.recordSerial = 0U;
++    gRender.recordOps.clear();
++    gRender.recordWindows.clear();
++    gRender.program.reset();
++    gRender.publishedSerial = 0U;
++    gRender.widgets.clear();
++    gRender.inputs.clear();
++}
++
++bool CreateBuildContext() {
++    constexpr EGLint pbufferAttributes[] = {
++        EGL_WIDTH, 1,
++        EGL_HEIGHT, 1,
++        EGL_NONE,
++    };
++    constexpr EGLint contextAttributes[] = {
++        EGL_CONTEXT_CLIENT_VERSION, 3,
++        EGL_NONE,
++    };
++    gRender.buildSurface = eglCreatePbufferSurface(gState.display, gState.config, pbufferAttributes);
++    if (gRender.buildSurface == EGL_NO_SURFACE) {
++        LOG_ERROR("Build pbuffer creation failed: 0x%x", eglGetError());
++        return false;
++    }
++    gRender.buildContext = eglCreateContext(gState.display, gState.config, gState.context, contextAttributes);
++    if (gRender.buildContext == EGL_NO_CONTEXT) {
++        LOG_ERROR("Build context creation failed: 0x%x", eglGetError());
++        return false;
++    }
++    return true;
++}
++
++// Recording helpers of the replay mode (script thread).
++bool IsReplayRecording() {
++    return gRender.mode == kRenderThreadReplay && gRender.recording;
++}
++
++std::string ReplayKey(const char* kind, const std::string& label) {
++    std::string key = gRender.recordWindows.empty() ? std::string() : gRender.recordWindows.back();
++    key.push_back(static_cast<char>(31));
++    key.append(kind);
++    key.push_back(static_cast<char>(31));
++    key.append(label);
++    return key;
++}
++
++ReplayOp& RecordReplayOp(ReplayOpKind kind, std::string label) {
++    gRender.recordOps.emplace_back();
++    ReplayOp& op = gRender.recordOps.back();
++    op.kind = kind;
++    op.label = std::move(label);
++    return op;
++}
++
++// Called with gRender.mutex held: takes an edit made on the render thread; the recording in progress carries it.
++bool ConsumeReplayEdit(ReplayWidget& widget) {
++    if (!widget.dirty) {
++        return false;
++    }
++    widget.dirty = false;
++    widget.staleThrough = std::max(widget.staleThrough, gRender.recordSerial - 1U);
++    return true;
++}
++
+ }  // namespace
+ 
+ bool gImGuiAssertReporting = false;
+@@ -1174,6 +1750,8 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeInit(
+     jfloatArray additionalFontSizes
+ ) {
+     ShutdownRenderer();
++    gRender.mode = gRequestedRenderThreadMode;
++    gRender.fps = gRequestedRenderThreadFps;
+     if (surface == nullptr) {
+         ThrowIllegalArgument(env, "Surface must not be null");
+         return JNI_FALSE;
+@@ -1340,11 +1918,26 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeInit(
+     glDisable(GL_DEPTH_TEST);
+     glDisable(GL_CULL_FACE);
+     glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
+-    gState.ready = true;
+     ReleaseCurrent();
++    if (gRender.mode == kRenderThreadSnapshot && !CreateBuildContext()) {
++        ShutdownRenderer();
++        return JNI_FALSE;
++    }
++    gState.ready = true;
+     return JNI_TRUE;
+ }
+ 
++extern "C" JNIEXPORT void JNICALL
++Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetRenderThreadMode(
++    JNIEnv*,
++    jclass,
++    jint mode,
++    jint fps
++) {
++    gRequestedRenderThreadMode = std::clamp(static_cast<int>(mode), kRenderThreadOff, kRenderThreadReplay);
++    gRequestedRenderThreadFps = std::clamp(static_cast<int>(fps), 1, 120);
++}
++
+ extern "C" JNIEXPORT void JNICALL
+ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeShutdown(
+     JNIEnv*,
+@@ -1393,6 +1986,21 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeNewFrame(
+     jclass
+ ) {
+     const int64_t frameStartNs = MonotonicNanos();
++    if (gRender.mode != kRenderThreadOff && gState.ready && !gState.suspended) {
++        StartRenderThread();
++    }
++    if (gRender.mode == kRenderThreadReplay) {
++        // R8 replay: the script frame only records; the render thread owns the Dear ImGui context.
++        if (!gState.ready || gRender.recording) {
++            return JNI_FALSE;
++        }
++        gFrameStartNs = frameStartNs;
++        gRender.recording = true;
++        gRender.recordSerial = gRender.publishedSerial + 1U;
++        gRender.recordOps.clear();
++        gRender.recordWindows.clear();
++        return JNI_TRUE;
++    }
+     if (!gState.ready || gState.frameActive || !EnsureCurrent()) {
+         return JNI_FALSE;
+     }
+@@ -1400,24 +2008,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeNewFrame(
+     ImGui_ImplOpenGL3_NewFrame();
+     ImGui_ImplAndroid_NewFrame();
+     ImGui::NewFrame();
+-    if (gState.cancelledMouseButtons != 0U) {
+-        ImGuiIO& io = ImGui::GetIO();
+-        ImGuiContext& context = *GImGui;
+-        for (int button = 0; button < ImGuiMouseButton_COUNT; ++button) {
+-            const unsigned int mask = 1U << static_cast<unsigned int>(button);
+-            if ((gState.cancelledMouseButtons & mask) == 0U) {
+-                continue;
+-            }
+-            io.MouseClicked[button] = false;
+-            io.MouseReleased[button] = false;
+-            if (context.ActiveIdMouseButton == button) {
+-                ImGui::ClearActiveID();
+-            }
+-            if (!io.MouseDown[button]) {
+-                gState.cancelledMouseButtons &= ~mask;
+-            }
+-        }
+-    }
++    ApplyCancelledMouseButtons();
+     gState.frameActive = true;
+     return JNI_TRUE;
+ }
+@@ -1427,6 +2018,26 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeRender(
+     JNIEnv*,
+     jclass
+ ) {
++    if (gRender.mode == kRenderThreadReplay) {
++        if (!gRender.recording) {
++            return JNI_FALSE;
++        }
++        const int64_t publishStartNs = MonotonicNanos();
++        auto program = std::make_shared<ReplayProgram>();
++        program->serial = gRender.recordSerial;
++        program->ops.swap(gRender.recordOps);
++        gRender.recording = false;
++        {
++            std::lock_guard<std::mutex> lock(gRender.mutex);
++            gRender.program = std::move(program);
++            gRender.publishedSerial = gRender.recordSerial;
++        }
++        RecordBuild(
++            static_cast<double>(publishStartNs - gFrameStartNs) / 1.0e6,
++            static_cast<double>(MonotonicNanos() - publishStartNs) / 1.0e6
++        );
++        return JNI_TRUE;
++    }
+     if (!gState.ready || !gState.frameActive || !EnsureCurrent()) {
+         gState.frameActive = false;
+         ReleaseCurrent();
+@@ -1440,6 +2051,59 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeRender(
+     gState.debugMessagesInPreviousFrame.swap(gState.debugMessagesInFrame);
+     gState.debugMessagesInFrame.clear();
+ 
++    if (gRender.mode == kRenderThreadSnapshot) {
++        // R8 snapshot: upload textures here, hand a copy of the draw data to the render thread and return.
++        ImDrawData* drawData = ImGui::GetDrawData();
++        if (drawData->Textures != nullptr) {
++            for (ImTextureData* texture : *drawData->Textures) {
++                if (texture->Status != ImTextureStatus_OK) {
++                    ImGui_ImplOpenGL3_UpdateTexture(texture);
++                }
++            }
++        }
++        int slotIndex = 0;
++        {
++            std::lock_guard<std::mutex> lock(gRender.mutex);
++            while (slotIndex == gRender.pendingSlot || slotIndex == gRender.renderingSlot) {
++                ++slotIndex;
++            }
++        }
++        DrawSnapshot& slot = gRender.slots[static_cast<size_t>(slotIndex)];
++        CopyDrawData(*drawData, slot);
++        slot.inputNs.swap(gFrameInputNs);
++        gFrameInputNs.clear();
++        CollectPendingTextureDeletes(slot.deleteTextures);
++        slot.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
++        glFlush();
++        {
++            std::lock_guard<std::mutex> lock(gRender.mutex);
++            if (gRender.pendingSlot >= 0) {
++                // The render thread skipped that copy: its input times and texture deletes move to the new one.
++                DrawSnapshot& dropped = gRender.slots[static_cast<size_t>(gRender.pendingSlot)];
++                slot.inputNs.insert(slot.inputNs.end(), dropped.inputNs.begin(), dropped.inputNs.end());
++                slot.deleteTextures.insert(
++                    slot.deleteTextures.end(),
++                    dropped.deleteTextures.begin(),
++                    dropped.deleteTextures.end()
++                );
++                dropped.inputNs.clear();
++                dropped.deleteTextures.clear();
++                if (dropped.fence != nullptr) {
++                    glDeleteSync(dropped.fence);
++                    dropped.fence = nullptr;
++                }
++            }
++            gRender.pendingSlot = slotIndex;
++        }
++        gRender.wake.notify_one();
++        ReleaseCurrent();
++        RecordBuild(
++            static_cast<double>(renderStartNs - gFrameStartNs) / 1.0e6,
++            static_cast<double>(MonotonicNanos() - renderStartNs) / 1.0e6
++        );
++        return JNI_TRUE;
++    }
++
+     EGLint width = 0;
+     EGLint height = 0;
+     eglQuerySurface(gState.display, gState.surface, EGL_WIDTH, &width);
+@@ -1477,6 +2141,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeGetAutoRes
+     JNIEnv* env,
+     jclass
+ ) {
++    std::lock_guard<std::mutex> lock(gMetadataMutex);
+     if (!gState.hasAutoResizeBounds) {
+         return nullptr;
+     }
+@@ -1492,6 +2157,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeGetInterac
+     JNIEnv* env,
+     jclass
+ ) {
++    std::lock_guard<std::mutex> lock(gMetadataMutex);
+     const jsize length = static_cast<jsize>(gState.interactiveWindowRects.size());
+     jfloatArray result = env->NewFloatArray(length);
+     if (result != nullptr && length > 0) {
+@@ -1523,6 +2189,17 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTouchEvent
+     if (!gState.ready || ImGui::GetCurrentContext() == nullptr) {
+         return;
+     }
++    if (gRender.mode == kRenderThreadReplay) {
++        // R8 replay: the UI thread hands the touch straight to the render thread.
++        if (action == 1 && eventTimeNanos > 0) {
++            gLastReleaseEventNs.store(static_cast<int64_t>(eventTimeNanos));
++        }
++        std::lock_guard<std::mutex> lock(gRender.mutex);
++        gRender.inputs.push_back(ReplayInput{
++            static_cast<int>(action), x, y, static_cast<int>(mouseButton), static_cast<int64_t>(eventTimeNanos)
++        });
++        return;
++    }
+     Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTouchEvent(
+         env, type, action, x, y, mouseButton
+     );
+@@ -1586,21 +2263,13 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTouchEvent
+     if (!gState.ready || ImGui::GetCurrentContext() == nullptr) {
+         return;
+     }
+-    ImGuiIO& io = ImGui::GetIO();
+-    io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
+-    io.AddMousePosEvent(x, y);
+-    const int button = static_cast<int>(mouseButton);
+-    if (button < 0 || button >= ImGuiMouseButton_COUNT) {
++    if (gRender.mode == kRenderThreadReplay) {
++        Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTouchEventTimed(
++            nullptr, nullptr, action, x, y, mouseButton, 0
++        );
+         return;
+     }
+-    if (action == 0) {
+-        io.AddMouseButtonEvent(button, true);
+-    } else if (action == 1) {
+-        io.AddMouseButtonEvent(button, false);
+-    } else if (action == 3) {
+-        io.AddMouseButtonEvent(button, false);
+-        gState.cancelledMouseButtons |= 1U << static_cast<unsigned int>(button);
+-    }
++    ApplyTouch(static_cast<int>(action), x, y, static_cast<int>(mouseButton));
+ }
+ 
+ extern "C" JNIEXPORT jlongArray JNICALL
+@@ -2115,6 +2784,12 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetNextWin
+     jfloat pivotX,
+     jfloat pivotY
+ ) {
++    if (IsReplayRecording()) {
++        ReplayOp& op = RecordReplayOp(kOpSetNextWindowPos, {});
++        op.values = {x, y, pivotX, pivotY};
++        op.flags = condition;
++        return;
++    }
+     if (!RequireFrame(env)) return;
+     ImGui::SetNextWindowPos(
+         ImVec2(x, y),
+@@ -2131,6 +2806,12 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetNextWin
+     jfloat height,
+     jint condition
+ ) {
++    if (IsReplayRecording()) {
++        ReplayOp& op = RecordReplayOp(kOpSetNextWindowSize, {});
++        op.values = {width, height, 0.0F, 0.0F};
++        op.flags = condition;
++        return;
++    }
+     if (!RequireFrame(env)) return;
+     ImGui::SetNextWindowSize(ImVec2(width, height), static_cast<ImGuiCond>(condition));
+ }
+@@ -2179,6 +2860,17 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeBegin(
+     jbooleanArray open,
+     jint flags
+ ) {
++    if (IsReplayRecording()) {
++        std::string label = JStringToUtf8(env, name);
++        if (label.empty()) label = "ImGui";
++        ReplayOp& op = RecordReplayOp(kOpBegin, label);
++        op.key = ReplayKey("begin", label);
++        op.flags = flags;
++        gRender.recordWindows.push_back(label);
++        std::lock_guard<std::mutex> lock(gRender.mutex);
++        const auto found = gRender.widgets.find(op.key);
++        return found == gRender.widgets.end() || found->second.visible ? JNI_TRUE : JNI_FALSE;
++    }
+     if (!RequireFrame(env)) return JNI_FALSE;
+     bool openValue = true;
+     bool hasOpen = false;
+@@ -2198,6 +2890,11 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeEnd(
+     JNIEnv* env,
+     jclass
+ ) {
++    if (IsReplayRecording()) {
++        if (!gRender.recordWindows.empty()) gRender.recordWindows.pop_back();
++        RecordReplayOp(kOpEnd, {});
++        return;
++    }
+     if (!RequireFrame(env)) return;
+     ImGui::End();
+ }
+@@ -2305,6 +3002,10 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeText(
+     jclass,
+     jstring text
+ ) {
++    if (IsReplayRecording()) {
++        RecordReplayOp(kOpText, JStringToUtf8(env, text));
++        return;
++    }
+     if (!RequireFrame(env)) return;
+     const std::string value = JStringToUtf8(env, text);
+     ImGui::TextUnformatted(value.c_str());
+@@ -2344,6 +3045,17 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeButton(
+     jfloat width,
+     jfloat height
+ ) {
++    if (IsReplayRecording()) {
++        std::string value = JStringToUtf8(env, label);
++        ReplayOp& op = RecordReplayOp(kOpButton, value);
++        op.key = ReplayKey("button", value);
++        op.values = {width, height, 0.0F, 0.0F};
++        std::lock_guard<std::mutex> lock(gRender.mutex);
++        const auto found = gRender.widgets.find(op.key);
++        if (found == gRender.widgets.end() || found->second.pendingClicks <= 0) return JNI_FALSE;
++        found->second.pendingClicks -= 1;
++        return JNI_TRUE;
++    }
+     if (!RequireFrame(env)) return JNI_FALSE;
+     const std::string value = JStringToUtf8(env, label);
+     return ImGui::Button(value.c_str(), ImVec2(width, height)) ? JNI_TRUE : JNI_FALSE;
+@@ -2367,7 +3079,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeCheckbox(
+     jstring label,
+     jbooleanArray value
+ ) {
+-    if (!RequireFrame(env)) return JNI_FALSE;
++    if (!IsReplayRecording() && !RequireFrame(env)) return JNI_FALSE;
+     bool checked = false;
+     bool present = false;
+     if (!ReadOptionalBoolean(env, value, checked, present) || !present) {
+@@ -2375,6 +3087,20 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeCheckbox(
+         return JNI_FALSE;
+     }
+     const std::string text = JStringToUtf8(env, label);
++    if (IsReplayRecording()) {
++        ReplayOp& op = RecordReplayOp(kOpCheckbox, text);
++        op.key = ReplayKey("checkbox", text);
++        bool edited = false;
++        {
++            std::lock_guard<std::mutex> lock(gRender.mutex);
++            ReplayWidget& widget = gRender.widgets[op.key];
++            edited = ConsumeReplayEdit(widget);
++            if (edited) checked = widget.checked;
++        }
++        op.checked = checked;
++        WriteOptionalBoolean(env, value, true, checked);
++        return edited ? JNI_TRUE : JNI_FALSE;
++    }
+     const bool changed = ImGui::Checkbox(text.c_str(), &checked);
+     WriteOptionalBoolean(env, value, true, checked);
+     return changed ? JNI_TRUE : JNI_FALSE;
+@@ -2409,12 +3135,28 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSliderFloa
+     jstring format,
+     jint flags
+ ) {
+-    if (!RequireFrame(env)) return JNI_FALSE;
++    if (!IsReplayRecording() && !RequireFrame(env)) return JNI_FALSE;
+     if (!ValidateArrayLength(env, value, 1, "Float reference must contain at least one value")) return JNI_FALSE;
+     jfloat* data = env->GetFloatArrayElements(value, nullptr);
+     if (data == nullptr) return JNI_FALSE;
+     const std::string text = JStringToUtf8(env, label);
+     const std::string formatText = JStringToUtf8(env, format);
++    if (IsReplayRecording()) {
++        ReplayOp& op = RecordReplayOp(kOpSliderFloat, text);
++        op.key = ReplayKey("slider", text);
++        op.format = formatText;
++        op.flags = flags;
++        bool edited = false;
++        {
++            std::lock_guard<std::mutex> lock(gRender.mutex);
++            ReplayWidget& widget = gRender.widgets[op.key];
++            edited = ConsumeReplayEdit(widget);
++            if (edited) data[0] = widget.value;
++        }
++        op.values = {data[0], min, max, 0.0F};
++        env->ReleaseFloatArrayElements(value, data, 0);
++        return edited ? JNI_TRUE : JNI_FALSE;
++    }
+     const bool changed = ImGui::SliderFloat(
+         text.c_str(),
+         data,
+@@ -2762,6 +3504,10 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSameLine(
+     jfloat offsetFromStartX,
+     jfloat spacing
+ ) {
++    if (IsReplayRecording()) {
++        RecordReplayOp(kOpSameLine, {}).values = {offsetFromStartX, spacing, 0.0F, 0.0F};
++        return;
++    }
+     if (!RequireFrame(env)) return;
+     ImGui::SameLine(offsetFromStartX, spacing);
+ }
+@@ -2771,6 +3517,10 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSeparator(
+     JNIEnv* env,
+     jclass
+ ) {
++    if (IsReplayRecording()) {
++        RecordReplayOp(kOpSeparator, {});
++        return;
++    }
+     if (!RequireFrame(env)) return;
+     ImGui::Separator();
+ }
+@@ -2861,6 +3611,10 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeWantCaptur
+     jclass
+ ) {
+     if (!RequireContext(env)) return JNI_FALSE;
++    if (gRender.mode == kRenderThreadReplay) {
++        std::lock_guard<std::mutex> lock(gMetadataMutex);
++        return gRender.wantCaptureMouse ? JNI_TRUE : JNI_FALSE;
++    }
+     return ImGui::GetIO().WantCaptureMouse ? JNI_TRUE : JNI_FALSE;
+ }
+ 
+@@ -2870,6 +3624,10 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeIsAnyItemH
+     jclass
+ ) {
+     if (!RequireContext(env)) return JNI_FALSE;
++    if (gRender.mode == kRenderThreadReplay) {
++        std::lock_guard<std::mutex> lock(gMetadataMutex);
++        return gRender.anyItemHovered ? JNI_TRUE : JNI_FALSE;
++    }
+     return ImGui::IsAnyItemHovered() ? JNI_TRUE : JNI_FALSE;
+ }
+ 
+@@ -2879,6 +3637,10 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeIsAnyItemA
+     jclass
+ ) {
+     if (!RequireContext(env)) return JNI_FALSE;
++    if (gRender.mode == kRenderThreadReplay) {
++        std::lock_guard<std::mutex> lock(gMetadataMutex);
++        return gRender.anyItemActive ? JNI_TRUE : JNI_FALSE;
++    }
+     return ImGui::IsAnyItemActive() ? JNI_TRUE : JNI_FALSE;
+ }
+ 
+@@ -4321,6 +5083,10 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeGetMousePo
+     jclass
+ ) {
+     if (!RequireContext(env)) return nullptr;
++    if (gRender.mode == kRenderThreadReplay) {
++        std::lock_guard<std::mutex> lock(gMetadataMutex);
++        return NewFloatPair(env, gRender.mousePos);
++    }
+     return NewFloatPair(env, ImGui::GetMousePos());
+ }
+ 
+@@ -4523,5 +5289,9 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeWantTextIn
+     jclass
+ ) {
+     if (!RequireContext(env)) return JNI_FALSE;
++    if (gRender.mode == kRenderThreadReplay) {
++        std::lock_guard<std::mutex> lock(gMetadataMutex);
++        return gRender.wantTextInput ? JNI_TRUE : JNI_FALSE;
++    }
+     return ImGui::GetIO().WantTextInput ? JNI_TRUE : JNI_FALSE;
+ }
+diff --git a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiNative.java b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiNative.java
+index 505c385..22b1685 100644
+--- a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiNative.java
++++ b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiNative.java
+@@ -72,6 +72,9 @@ final class ImGuiNative {
+     /** R8 probe: event time (CLOCK_MONOTONIC ns) of the last touch release consumed by Dear ImGui, 0 if none. */
+     static native long nativeGetLastReleaseEventNanos();
+ 
++    /** R8 prototype: 0 = off, 1 = snapshot, 2 = replay; takes effect at the next nativeInit. */
++    static native void nativeSetRenderThreadMode(int mode, int fps);
++
+     static native long[] nativeCreateTexture(Bitmap bitmap, int flags);
+ 
+     static native boolean nativeDestroyTexture(long handle);
+diff --git a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java
+index f6962ae..43cf923 100644
+--- a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java
++++ b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java
+@@ -110,6 +110,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
+     private volatile boolean lastAnyItemActive;
+     private volatile boolean lastWantCaptureMouse;
+     private volatile boolean lastWantTextInput;
++    private volatile int renderThreadMode;
+ 
+     ImGuiPluginConnection(Context hostContext, Context pluginContext, Object runtime) {
+         if (hostContext.getApplicationContext() == null) {
+@@ -375,12 +376,30 @@ public final class ImGuiPluginConnection implements ServiceConnection {
+ 
+     /** R8 probe: eventTimeNanos is the MotionEvent time in the CLOCK_MONOTONIC base (0 when unknown). */
+     public void touchEvent(int action, float x, float y, int mouseButton, long eventTimeNanos) {
++        if (renderThreadMode == 2 && isOwner()) {
++            // R8 replay: the render thread consumes touches itself; the script frame may be busy.
++            ImGuiNative.nativeTouchEventTimed(action, x, y, mouseButton, eventTimeNanos);
++            return;
++        }
+         ImGuiInputQueue queue = inputQueue;
+         if (isOwner()) {
+             queue.offerTouch(action, x, y, mouseButton, eventTimeNanos);
+         }
+     }
+ 
++    /** R8 prototype: selects the render thread mode ("off", "snapshot" or "replay") of the next init. */
++    public void setRenderThreadMode(String mode, int fps) {
++        int value = "snapshot".equals(mode) ? 1 : "replay".equals(mode) ? 2 : 0;
++        NATIVE_LOCK.lock();
++        try {
++            requireOwner();
++            ImGuiNative.nativeSetRenderThreadMode(value, fps);
++            renderThreadMode = value;
++        } finally {
++            NATIVE_LOCK.unlock();
++        }
++    }
++
+     /** R8 probe: frame statistics since the previous reset (see ImGuiNative.nativeGetFrameStats). */
+     public double[] getFrameStats(boolean reset) {
+         return ImGuiNative.nativeGetFrameStats(reset);
+-- 
+2.45.1.windows.1
+
+
+From 22433001fda9ec2ec400e418fd596a3e77ff6878 Mon Sep 17 00:00:00 2001
+From: SuperMonster003 <wu2du2mo2gu0@gmail.com>
+Date: Thu, 29 Oct 2026 22:36:23 +0800
+Subject: [PATCH 3/7] R8: device measurement script (frame time, touch latency,
+ sleep freeze, threads, memory)
+
+---
+ tools/device_r8_render_thread.py | 555 +++++++++++++++++++++++++++++++
+ 1 file changed, 555 insertions(+)
+ create mode 100644 tools/device_r8_render_thread.py
+
+diff --git a/tools/device_r8_render_thread.py b/tools/device_r8_render_thread.py
+new file mode 100644
+index 0000000..e8605e4
+--- /dev/null
++++ b/tools/device_r8_render_thread.py
+@@ -0,0 +1,555 @@
++#!/usr/bin/env python3
++"""Measures the frame loop of the ImGui plugin for the R8 render thread evaluation (prototype vs current code).
++
++Usage:
++  py -3.12 -I tools/device_r8_render_thread.py -s SERIAL --label LABEL --modes off,snapshot,replay --out DIR
++  py -3.12 -I tools/device_r8_render_thread.py --table DIR
++
++Needs AutoJs6 with the global `imgui`, the plugin build under test (the R8 probe or prototype commit) installed,
++enabled and trusted, and the overlay permission for AutoJs6. For each mode it pushes one script, runs it through
++RunIntentActivity and drives the touches with `adb shell input`; the script waits for an acknowledgement file before
++it ends each touch phase. The same script and window run for every mode:
++
++- calibration: a window with renderThread "off" maps the screen to the surface (one swipe on a blank area) and records
++  the button and slider positions;
++- light / heavy: 5 s of a small window, then of the same window with 300 more text lines;
++- touch: 3 swipes on the slider and 5 taps on the button; latency touch-to-present (native) and touch-to-script
++  (the frame where button() returned true);
++- freeze: the render callback sleeps 500 ms once per second while the slider is swiped for about 4 s;
++- threads and memory (PSS, graphics, native heap) before the window, while it is open and after it closed.
++
++Prints PASS / FAIL for the functional checks and the measured values only; the raw JSON of each run and a summary go
++to --out. --table prints a Markdown comparison of every summary in a directory.
++"""
++
++from __future__ import annotations
++
++import argparse
++import json
++import pathlib
++import subprocess
++import sys
++import time
++
++DEVICE_DIR = "/sdcard/Download/aj6-imgui-r8"
++RUN_ACTIVITY = "org.autojs.autojs.external.open.RunIntentActivity"
++PACKAGE = "org.autojs.autojs6"
++MARK = "AJ6R8"
++LOG_TAIL = 5000
++
++# Window geometry in pixels; the button and the slider are measured by the calibration window.
++WINDOW_X = 60
++WINDOW_Y = 500
++WINDOW_W = 1200
++WINDOW_H = 1300
++BUTTON_H = 140
++
++SCRIPT = r"""
++var MARK = 'AJ6R8';
++var MODE = '__MODE__';
++var DIR = '__DIR__';
++var X = __X__, Y = __Y__, W = __W__, H = __H__, BUTTON_H = __BUTTON_H__;
++var FLAGS = imgui.WindowFlags.NoTitleBar | imgui.WindowFlags.NoResize | imgui.WindowFlags.NoMove |
++    imgui.WindowFlags.NoCollapse | imgui.WindowFlags.NoSavedSettings;
++var result = {mode: MODE, phases: {}, samples: {}, errors: []};
++var state = {heavy: false, sleepFrames: false, lastSleepNs: 0, sleeps: [], clicks: [], frames: 0, edits: 0,
++    value: {value: 20}, layout: null, mouse: null, replayRejects: null};
++
++function log(text) { console.log(MARK + ' ' + text); }
++function nowNs() { return Number(java.lang.System.nanoTime()); }
++
++function renderThreads() {
++    var names = new java.io.File('/proc/self/task').list();
++    var render = 0;
++    for (var i = 0; i < names.length; i++) {
++        try {
++            var reader = new java.io.BufferedReader(new java.io.FileReader('/proc/self/task/' + names[i] + '/comm'));
++            var name = String(reader.readLine());
++            reader.close();
++            if (name === 'ImGuiRender') render++;
++        } catch (ignored) {}
++    }
++    return {total: names.length, render: render};
++}
++
++function sample(name) {
++    java.lang.Runtime.getRuntime().gc();
++    var info = new android.os.Debug.MemoryInfo();
++    android.os.Debug.getMemoryInfo(info);
++    var threads = renderThreads();
++    result.samples[name] = {
++        threads: threads.total,
++        renderThreads: threads.render,
++        pssKb: Number(info.getTotalPss()),
++        graphicsKb: Number(info.getMemoryStat('summary.graphics')),
++        nativeKb: Number(info.getMemoryStat('summary.native-heap'))
++    };
++}
++
++function awaitAck(phase, done) {
++    var path = DIR + '/ack-' + phase;
++    log('await ' + phase);
++    var timer = setInterval(function () {
++        if (files.exists(path)) {
++            clearInterval(timer);
++            done();
++        }
++    }, 50);
++}
++
++function windowOptions(mode) {
++    return {x: X, y: Y, width: W, height: H, fps: 60, movable: false, renderThread: mode};
++}
++
++function draw(ui, record) {
++    ui.setNextWindowPos(0, 0);
++    ui.setNextWindowSize(W, H);
++    if (ui.begin('R8', null, FLAGS)) {
++        ui.text('R8 ' + MODE + ' frame ' + state.frames + ' clicks ' + state.clicks.length);
++        var button = record ? ui.getCursorPos() : null;
++        if (ui.button('Tap', W - 60, BUTTON_H)) {
++            state.clicks.push((nowNs() - imgui._lastReleaseEventNanos()) / 1e6);
++        }
++        var slider = record ? ui.getCursorPos() : null;
++        if (ui.sliderFloat('Value', state.value, 0, 100, '%.1f')) state.edits++;
++        var after = record ? ui.getCursorPos() : null;
++        if (state.heavy) {
++            for (var i = 0; i < 300; i++) ui.text('line ' + i + ' frame ' + state.frames);
++        }
++        if (record) {
++            state.layout = {button: [button[0], button[1]], slider: [slider[0], slider[1]], sliderEnd: after[1]};
++            var mouse = ui.getMousePos();
++            if (mouse[0] > -10000 && mouse[1] > -10000) state.mouse = [mouse[0], mouse[1]];
++        }
++    }
++    ui.end();
++}
++
++function stats(name, startFrames) {
++    var data = imgui._renderStats(true);
++    data.scriptFrames = state.frames - startFrames;
++    result.phases[name] = data;
++}
++
++function calibrate(next) {
++    var session = imgui.createWindow(function (ui) { draw(ui, true); }, windowOptions('off'));
++    setTimeout(function () {
++        awaitAck('calib', function () {
++            setTimeout(function () {
++                var layout = state.layout;
++                var mouse = state.mouse;
++                log('calib mouse=' + (mouse ? mouse.join(',') : 'none') +
++                    ' button=' + (layout ? layout.button.join(',') : 'none') +
++                    ' slider=' + (layout ? layout.slider.join(',') + ',' + layout.sliderEnd : 'none'));
++                session.close();
++                waitClosed(session, function () { setTimeout(next, 1500); });
++            }, 300);
++        });
++    }, 1500);
++}
++
++function waitClosed(session, done) {
++    var timer = setInterval(function () {
++        if (session.closed) {
++            clearInterval(timer);
++            done();
++        }
++    }, 50);
++}
++
++function measure() {
++    sample('before');
++    state.frames = 0;
++    var session = imgui.createWindow(function (ui) {
++        state.frames++;
++        if (MODE === 'replay' && state.frames === 3) {
++            try {
++                ui.getCursorPos();
++                state.replayRejects = false;
++            } catch (e) {
++                state.replayRejects = true;
++            }
++        }
++        draw(ui, false);
++        if (state.sleepFrames) {
++            var start = nowNs();
++            if (start - state.lastSleepNs >= 1e9) {
++                state.lastSleepNs = start;
++                sleep(500);
++                state.sleeps.push([start, nowNs()]);
++            }
++        }
++    }, windowOptions(MODE));
++
++    var steps = [];
++    function run() {
++        var step = steps.shift();
++        if (step) step();
++    }
++    steps.push(function () { setTimeout(function () { sample('open'); imgui._renderStats(true); run(); }, 1500); });
++    steps.push(function () {
++        var frames = state.frames;
++        setTimeout(function () { stats('light', frames); run(); }, 5000);
++    });
++    steps.push(function () {
++        state.heavy = true;
++        imgui._renderStats(true);
++        var frames = state.frames;
++        setTimeout(function () { stats('heavy', frames); state.heavy = false; run(); }, 5000);
++    });
++    steps.push(function () {
++        setTimeout(function () {
++            imgui._renderStats(true);
++            state.clicks = [];
++            state.edits = 0;
++            state.value.value = 20;
++            var frames = state.frames;
++            awaitAck('touch', function () {
++                setTimeout(function () {
++                    stats('touch', frames);
++                    result.phases.touch.clickLatencyMs = state.clicks.slice();
++                    result.phases.touch.sliderValue = state.value.value;
++                    result.phases.touch.edits = state.edits;
++                    run();
++                }, 800);
++            });
++        }, 500);
++    });
++    steps.push(function () {
++        imgui._renderStats(true);
++        var resetNs = nowNs();
++        var frames = state.frames;
++        state.sleeps = [];
++        state.lastSleepNs = 0;
++        state.sleepFrames = true;
++        awaitAck('freeze', function () {
++            state.sleepFrames = false;
++            setTimeout(function () {
++                stats('freeze', frames);
++                result.phases.freeze.sleepsMs = state.sleeps.map(function (s) {
++                    return [(s[0] - resetNs) / 1e6, (s[1] - resetNs) / 1e6];
++                });
++                run();
++            }, 800);
++        });
++    });
++    steps.push(function () {
++        session.close();
++        waitClosed(session, function () {
++            setTimeout(function () {
++                sample('closed');
++                result.replayRejects = state.replayRejects;
++                result.closeReason = String(session.closeReason);
++                files.write(DIR + '/result-' + MODE + '.json', JSON.stringify(result));
++                log('done');
++                exit();
++            }, 1500);
++        });
++    });
++    run();
++}
++
++try {
++    calibrate(measure);
++} catch (e) {
++    log('error ' + String(e).slice(0, 300));
++    exit();
++}
++"""
++
++
++def adb(serial: str, *args: str, check: bool = False) -> subprocess.CompletedProcess[str]:
++    return subprocess.run(["adb", "-s", serial, *args], capture_output=True, text=True, encoding="utf-8",
++                          errors="replace", check=check)
++
++
++def marked_lines(serial: str) -> list[str]:
++    out = adb(serial, "logcat", "-d", "-t", str(LOG_TAIL)).stdout
++    lines = []
++    for line in out.splitlines():
++        if "GlobalConsole: " not in line:
++            continue
++        text = line.split("GlobalConsole: ", 1)[1].rstrip()
++        at = text.find(MARK + " ")
++        if at >= 0:
++            lines.append(text[at + len(MARK) + 1:])
++    return lines
++
++
++def pct(values: list[float], p: float) -> float | None:
++    if not values:
++        return None
++    ordered = sorted(values)
++    k = (len(ordered) - 1) * p / 100.0
++    low = int(k)
++    high = min(low + 1, len(ordered) - 1)
++    return ordered[low] + (ordered[high] - ordered[low]) * (k - low)
++
++
++def intervals(present: list[float]) -> list[float]:
++    return [b - a for a, b in zip(present, present[1:])]
++
++
++class Driver:
++    """Turns the calibration line into screen coordinates and performs the touches of each phase."""
++
++    def __init__(self, serial: str):
++        self.serial = serial
++        self.button = (0, 0)
++        self.slider = (0, 0, 0)
++
++    def calib_target(self) -> tuple[int, int]:
++        return WINDOW_X + WINDOW_W // 2, WINDOW_Y + WINDOW_H - 150
++
++    def swipe(self, x1: int, y1: int, x2: int, y2: int, ms: int) -> None:
++        adb(self.serial, "shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), str(ms))
++
++    def tap(self, x: int, y: int) -> None:
++        adb(self.serial, "shell", "input", "tap", str(x), str(y))
++
++    def calibrate_touch(self) -> None:
++        x, y = self.calib_target()
++        self.swipe(x, y, x + 2, y, 400)
++
++    def apply_calibration(self, line: str) -> bool:
++        fields = dict(part.split("=", 1) for part in line.split()[1:])
++        if "none" in fields.values():
++            return False
++        mx, my = (float(v) for v in fields["mouse"].split(","))
++        bx, by = (float(v) for v in fields["button"].split(","))
++        sx, sy, ey = (float(v) for v in fields["slider"].split(","))
++        tx, ty = self.calib_target()
++        ox, oy = tx - mx, ty - my
++        self.button = (int(ox + bx + (WINDOW_W - 60) / 2), int(oy + by + BUTTON_H / 2))
++        width = int(WINDOW_W * 0.65)
++        self.slider = (int(ox + sx + width * 0.1), int(ox + sx + width * 0.9), int(oy + (sy + ey) / 2 - 4))
++        return True
++
++    def touch_phase(self) -> None:
++        left, right, y = self.slider
++        for index in range(3):
++            if index % 2 == 0:
++                self.swipe(left, y, right, y, 600)
++            else:
++                self.swipe(right, y, left, y, 600)
++            time.sleep(0.3)
++        for _ in range(5):
++            self.tap(*self.button)
++            time.sleep(0.7)
++
++    def freeze_phase(self) -> None:
++        left, right, y = self.slider
++        for index in range(4):
++            if index % 2 == 0:
++                self.swipe(left, y, right, y, 900)
++            else:
++                self.swipe(right, y, left, y, 900)
++
++
++def run_mode(serial: str, mode: str, out: pathlib.Path, label: str, timeout: float) -> dict | None:
++    script = (SCRIPT.replace("__MODE__", mode).replace("__DIR__", DEVICE_DIR)
++              .replace("__X__", str(WINDOW_X)).replace("__Y__", str(WINDOW_Y))
++              .replace("__W__", str(WINDOW_W)).replace("__H__", str(WINDOW_H))
++              .replace("__BUTTON_H__", str(BUTTON_H)))
++    local = out / f"script-{mode}.js"
++    local.write_text(script, encoding="utf-8")
++    remote = DEVICE_DIR + f"/r8-{mode}.js"
++    adb(serial, "shell", "rm", "-rf", DEVICE_DIR)
++    adb(serial, "shell", "mkdir", "-p", DEVICE_DIR, check=True)
++    adb(serial, "push", str(local), remote, check=True)
++    local.unlink()
++    adb(serial, "logcat", "-c")
++    adb(serial, "shell", "am", "start", "-n", PACKAGE + "/" + RUN_ACTIVITY, "-e", "path", remote, check=True)
++    driver = Driver(serial)
++    seen: set[str] = set()
++    deadline = time.time() + timeout
++    while time.time() < deadline:
++        time.sleep(0.3)
++        for line in marked_lines(serial):
++            if line in seen:
++                continue
++            seen.add(line)
++            if line.startswith("error "):
++                print(f"{label}-{mode} script FAIL {line[6:]}")
++                return None
++            if line == "await calib":
++                driver.calibrate_touch()
++                adb(serial, "shell", "touch", DEVICE_DIR + "/ack-calib")
++            elif line.startswith("calib "):
++                ok = driver.apply_calibration(line)
++                print(f"{label}-{mode} calibration {'PASS' if ok else 'FAIL'} button={driver.button} "
++                      f"slider={driver.slider}")
++                if not ok:
++                    return None
++            elif line == "await touch":
++                driver.touch_phase()
++                adb(serial, "shell", "touch", DEVICE_DIR + "/ack-touch")
++            elif line == "await freeze":
++                driver.freeze_phase()
++                adb(serial, "shell", "touch", DEVICE_DIR + "/ack-freeze")
++            elif line == "done":
++                raw = out / f"raw-{label}-{mode}.json"
++                adb(serial, "pull", DEVICE_DIR + f"/result-{mode}.json", str(raw), check=True)
++                adb(serial, "shell", "rm", "-rf", DEVICE_DIR)
++                return json.loads(raw.read_text(encoding="utf-8"))
++    print(f"{label}-{mode} script FAIL timeout after {timeout:.0f} s")
++    adb(serial, "shell", "rm", "-rf", DEVICE_DIR)
++    return None
++
++
++def summarize(raw: dict) -> dict:
++    phases = raw["phases"]
++    samples = raw["samples"]
++    summary: dict = {"mode": raw["mode"]}
++    for name in ("light", "heavy"):
++        data = phases[name]
++        frames = intervals(data["presentMs"])
++        span = (data["presentMs"][-1] - data["presentMs"][0]) / 1000 if len(data["presentMs"]) > 1 else 0
++        summary[name] = {
++            "presentFps": (len(data["presentMs"]) - 1) / span if span > 0 else 0,
++            "frameP50": pct(frames, 50), "frameP95": pct(frames, 95),
++            "buildP50": pct(data["buildMs"], 50), "buildP95": pct(data["buildMs"], 95),
++            "submitP50": pct(data["submitMs"], 50), "submitP95": pct(data["submitMs"], 95),
++            "renderP50": pct(data["renderMs"], 50), "renderP95": pct(data["renderMs"], 95),
++            "scriptFps": data["scriptFrames"] / 5.0,
++        }
++    touch = phases["touch"]
++    summary["touch"] = {
++        "presentP50": pct(touch["inputLatencyMs"], 50), "presentP95": pct(touch["inputLatencyMs"], 95),
++        "clickP50": pct(touch["clickLatencyMs"], 50), "clickP95": pct(touch["clickLatencyMs"], 95),
++        "clicks": len(touch["clickLatencyMs"]), "sliderValue": touch["sliderValue"], "edits": touch["edits"],
++    }
++    freeze = phases["freeze"]
++    present = freeze["presentMs"]
++    inside = sum(1 for p in present for start, end in freeze["sleepsMs"] if start + 20 < p < end - 20)
++    summary["freeze"] = {
++        "sleeps": len(freeze["sleepsMs"]),
++        "presentsInSleeps": inside,
++        "maxGapMs": max(intervals(present)) if len(present) > 1 else None,
++        "inputP50": pct(freeze["inputLatencyMs"], 50), "inputP95": pct(freeze["inputLatencyMs"], 95),
++        "inputMax": max(freeze["inputLatencyMs"]) if freeze["inputLatencyMs"] else None,
++    }
++    before, opened, closed = samples["before"], samples["open"], samples["closed"]
++    summary["resources"] = {
++        "threadsBefore": before["threads"], "threadsOpen": opened["threads"], "threadsClosed": closed["threads"],
++        "renderThreadsOpen": opened["renderThreads"], "renderThreadsClosed": closed["renderThreads"],
++        "pssDeltaKb": opened["pssKb"] - before["pssKb"],
++        "graphicsDeltaKb": opened["graphicsKb"] - before["graphicsKb"],
++        "nativeDeltaKb": opened["nativeKb"] - before["nativeKb"],
++        "pssAfterCloseKb": closed["pssKb"] - before["pssKb"],
++    }
++    summary["replayRejects"] = raw.get("replayRejects")
++    return summary
++
++
++def fmt(value) -> str:
++    if value is None:
++        return "-"
++    if isinstance(value, float):
++        return f"{value:.1f}"
++    return str(value)
++
++
++def report(label: str, summary: dict) -> bool:
++    mode = summary["mode"]
++    name = f"{label}-{mode}"
++    for phase in ("light", "heavy"):
++        s = summary[phase]
++        print(f"{name} {phase} present-fps={fmt(s['presentFps'])} frame-p50={fmt(s['frameP50'])} "
++              f"frame-p95={fmt(s['frameP95'])} build-p50={fmt(s['buildP50'])} build-p95={fmt(s['buildP95'])} "
++              f"submit-p50={fmt(s['submitP50'])} render-p50={fmt(s['renderP50'])} script-fps={fmt(s['scriptFps'])}")
++    t = summary["touch"]
++    print(f"{name} touch-to-present p50={fmt(t['presentP50'])} p95={fmt(t['presentP95'])} "
++          f"touch-to-script p50={fmt(t['clickP50'])} p95={fmt(t['clickP95'])}")
++    f = summary["freeze"]
++    print(f"{name} freeze sleeps={f['sleeps']} presents-in-sleeps={f['presentsInSleeps']} "
++          f"max-gap={fmt(f['maxGapMs'])} input-p50={fmt(f['inputP50'])} input-p95={fmt(f['inputP95'])} "
++          f"input-max={fmt(f['inputMax'])}")
++    r = summary["resources"]
++    print(f"{name} resources threads={r['threadsBefore']}/{r['threadsOpen']}/{r['threadsClosed']} "
++          f"pss-delta-kb={r['pssDeltaKb']} graphics-delta-kb={r['graphicsDeltaKb']} "
++          f"native-delta-kb={r['nativeDeltaKb']} pss-after-close-kb={r['pssAfterCloseKb']}")
++    expected_render = 0 if mode == "off" else 1
++    checks = [
++        ("mode-active", r["renderThreadsOpen"] == expected_render, f"render-threads={r['renderThreadsOpen']}"),
++        ("render-thread-exit", r["renderThreadsClosed"] == 0, f"render-threads={r['renderThreadsClosed']}"),
++        ("clicks", t["clicks"] == 5, f"clicks={t['clicks']}/5"),
++        ("slider-edit", t["sliderValue"] != 20 and t["edits"] > 0,
++         f"value={fmt(float(t['sliderValue']))} edits={t['edits']}"),
++    ]
++    if mode == "replay":
++        checks.append(("replay-rejects", summary["replayRejects"] is True, f"threw={summary['replayRejects']}"))
++    ok = True
++    for check, passed, detail in checks:
++        print(f"{name} {check} {'PASS' if passed else 'FAIL'} {detail}")
++        ok = ok and passed
++    return ok
++
++
++TABLE_ROWS = [
++    ("light: present fps", "light", "presentFps"),
++    ("light: frame interval p50 / p95 (ms)", "light", ("frameP50", "frameP95")),
++    ("light: script build p50 / p95 (ms)", "light", ("buildP50", "buildP95")),
++    ("light: script submit p50 / p95 (ms)", "light", ("submitP50", "submitP95")),
++    ("heavy: present fps", "heavy", "presentFps"),
++    ("heavy: frame interval p50 / p95 (ms)", "heavy", ("frameP50", "frameP95")),
++    ("heavy: script build p50 / p95 (ms)", "heavy", ("buildP50", "buildP95")),
++    ("heavy: script submit p50 / p95 (ms)", "heavy", ("submitP50", "submitP95")),
++    ("touch-to-present p50 / p95 (ms)", "touch", ("presentP50", "presentP95")),
++    ("touch-to-script p50 / p95 (ms)", "touch", ("clickP50", "clickP95")),
++    ("sleep(500): presents inside the sleeps", "freeze", "presentsInSleeps"),
++    ("sleep(500): max present gap (ms)", "freeze", "maxGapMs"),
++    ("sleep(500): touch-to-present p50 / max (ms)", "freeze", ("inputP50", "inputMax")),
++    ("threads before / open / closed", "resources", ("threadsBefore", "threadsOpen", "threadsClosed")),
++    ("PSS delta open (KB)", "resources", "pssDeltaKb"),
++    ("graphics delta open (KB)", "resources", "graphicsDeltaKb"),
++    ("native heap delta open (KB)", "resources", "nativeDeltaKb"),
++]
++
++
++def table(directory: pathlib.Path) -> None:
++    runs = sorted(directory.glob("summary-*.json"))
++    summaries = [(path.stem[len("summary-"):], json.loads(path.read_text(encoding="utf-8"))) for path in runs]
++    print("| metric | " + " | ".join(name for name, _ in summaries) + " |")
++    print("|---|" + "---|" * len(summaries))
++    for title, group, keys in TABLE_ROWS:
++        cells = []
++        for _, summary in summaries:
++            data = summary[group]
++            if isinstance(keys, tuple):
++                cells.append(" / ".join(fmt(data[key]) for key in keys))
++            else:
++                cells.append(fmt(data[keys]))
++        print(f"| {title} | " + " | ".join(cells) + " |")
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    parser.add_argument("-s", "--serial")
++    parser.add_argument("--label", default="run")
++    parser.add_argument("--modes", default="off")
++    parser.add_argument("--out", type=pathlib.Path)
++    parser.add_argument("--timeout", type=float, default=150)
++    parser.add_argument("--table", type=pathlib.Path, help="print the comparison of the summaries in a directory")
++    args = parser.parse_args()
++    if args.table:
++        table(args.table)
++        return 0
++    if not args.serial or not args.out:
++        parser.error("--serial and --out are required for a run")
++    args.out.mkdir(parents=True, exist_ok=True)
++    ok = True
++    for mode in args.modes.split(","):
++        raw = run_mode(args.serial, mode, args.out, args.label, args.timeout)
++        if raw is None:
++            ok = False
++            continue
++        summary = summarize(raw)
++        (args.out / f"summary-{args.label}-{mode}.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
++        ok = report(args.label, summary) and ok
++        time.sleep(2)
++    return 0 if ok else 1
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+-- 
+2.45.1.windows.1
+
+
+From 4bcf22088dd162e1080939e72e0c2f1f409bed58 Mon Sep 17 00:00:00 2001
+From: SuperMonster003 <wu2du2mo2gu0@gmail.com>
+Date: Thu, 29 Oct 2026 22:41:08 +0800
+Subject: [PATCH 4/7] R8 prototype: select the render thread mode before init
+ takes ownership; script uses dp window sizes and the callback api for the
+ probe
+
+---
+ .../plugin/imgui/ImGuiPluginConnection.java   |  2 +-
+ tools/device_r8_render_thread.py              | 20 +++++++++++--------
+ 2 files changed, 13 insertions(+), 9 deletions(-)
+
+diff --git a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java
+index 43cf923..fa0653b 100644
+--- a/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java
++++ b/app/src/main/java/io/github/supermonster003/autojs6/plugin/imgui/ImGuiPluginConnection.java
+@@ -390,9 +390,9 @@ public final class ImGuiPluginConnection implements ServiceConnection {
+     /** R8 prototype: selects the render thread mode ("off", "snapshot" or "replay") of the next init. */
+     public void setRenderThreadMode(String mode, int fps) {
+         int value = "snapshot".equals(mode) ? 1 : "replay".equals(mode) ? 2 : 0;
++        // Called before init, which is what makes this bridge the owner.
+         NATIVE_LOCK.lock();
+         try {
+-            requireOwner();
+             ImGuiNative.nativeSetRenderThreadMode(value, fps);
+             renderThreadMode = value;
+         } finally {
+diff --git a/tools/device_r8_render_thread.py b/tools/device_r8_render_thread.py
+index e8605e4..8ea0fe0 100644
+--- a/tools/device_r8_render_thread.py
++++ b/tools/device_r8_render_thread.py
+@@ -10,7 +10,7 @@ enabled and trusted, and the overlay permission for AutoJs6. For each mode it pu
+ RunIntentActivity and drives the touches with `adb shell input`; the script waits for an acknowledgement file before
+ it ends each touch phase. The same script and window run for every mode:
+ 
+-- calibration: a window with renderThread "off" maps the screen to the surface (one swipe on a blank area) and records
++- calibration: a window with renderThread "off" (sizes in px, passed to createWindow in dp) maps the screen to the surface (one swipe on a blank area) and records
+   the button and slider positions;
+ - light / heavy: 5 s of a small window, then of the same window with 300 more text lines;
+ - touch: 3 swipes on the slider and 5 taps on the button; latency touch-to-present (native) and touch-to-script
+@@ -52,6 +52,9 @@ var X = __X__, Y = __Y__, W = __W__, H = __H__, BUTTON_H = __BUTTON_H__;
+ var FLAGS = imgui.WindowFlags.NoTitleBar | imgui.WindowFlags.NoResize | imgui.WindowFlags.NoMove |
+     imgui.WindowFlags.NoCollapse | imgui.WindowFlags.NoSavedSettings;
+ var result = {mode: MODE, phases: {}, samples: {}, errors: []};
++var DENSITY = Number(context.getResources().getDisplayMetrics().density);
++// The global imgui forwards the public API only; the probe functions are read from the api the render callback gets.
++var probe = null;
+ var state = {heavy: false, sleepFrames: false, lastSleepNs: 0, sleeps: [], clicks: [], frames: 0, edits: 0,
+     value: {value: 20}, layout: null, mouse: null, replayRejects: null};
+ 
+@@ -98,17 +101,18 @@ function awaitAck(phase, done) {
+ }
+ 
+ function windowOptions(mode) {
+-    return {x: X, y: Y, width: W, height: H, fps: 60, movable: false, renderThread: mode};
++    return {x: X, y: Y, width: W / DENSITY, height: H / DENSITY, fps: 60, movable: false, renderThread: mode};
+ }
+ 
+ function draw(ui, record) {
++    probe = ui;
+     ui.setNextWindowPos(0, 0);
+     ui.setNextWindowSize(W, H);
+     if (ui.begin('R8', null, FLAGS)) {
+         ui.text('R8 ' + MODE + ' frame ' + state.frames + ' clicks ' + state.clicks.length);
+         var button = record ? ui.getCursorPos() : null;
+         if (ui.button('Tap', W - 60, BUTTON_H)) {
+-            state.clicks.push((nowNs() - imgui._lastReleaseEventNanos()) / 1e6);
++            state.clicks.push((nowNs() - ui._lastReleaseEventNanos()) / 1e6);
+         }
+         var slider = record ? ui.getCursorPos() : null;
+         if (ui.sliderFloat('Value', state.value, 0, 100, '%.1f')) state.edits++;
+@@ -126,7 +130,7 @@ function draw(ui, record) {
+ }
+ 
+ function stats(name, startFrames) {
+-    var data = imgui._renderStats(true);
++    var data = probe._renderStats(true);
+     data.scriptFrames = state.frames - startFrames;
+     result.phases[name] = data;
+ }
+@@ -186,20 +190,20 @@ function measure() {
+         var step = steps.shift();
+         if (step) step();
+     }
+-    steps.push(function () { setTimeout(function () { sample('open'); imgui._renderStats(true); run(); }, 1500); });
++    steps.push(function () { setTimeout(function () { sample('open'); probe._renderStats(true); run(); }, 1500); });
+     steps.push(function () {
+         var frames = state.frames;
+         setTimeout(function () { stats('light', frames); run(); }, 5000);
+     });
+     steps.push(function () {
+         state.heavy = true;
+-        imgui._renderStats(true);
++        probe._renderStats(true);
+         var frames = state.frames;
+         setTimeout(function () { stats('heavy', frames); state.heavy = false; run(); }, 5000);
+     });
+     steps.push(function () {
+         setTimeout(function () {
+-            imgui._renderStats(true);
++            probe._renderStats(true);
+             state.clicks = [];
+             state.edits = 0;
+             state.value.value = 20;
+@@ -216,7 +220,7 @@ function measure() {
+         }, 500);
+     });
+     steps.push(function () {
+-        imgui._renderStats(true);
++        probe._renderStats(true);
+         var resetNs = nowNs();
+         var frames = state.frames;
+         state.sleeps = [];
+-- 
+2.45.1.windows.1
+
+
+From 73553c00f891f35f3a35c87ce3939598c5a830c5 Mon Sep 17 00:00:00 2001
+From: SuperMonster003 <wu2du2mo2gu0@gmail.com>
+Date: Thu, 29 Oct 2026 22:45:07 +0800
+Subject: [PATCH 5/7] test(r8): wait for the first frame before calibration
+
+---
+ tools/device_r8_render_thread.py | 25 +++++++++++++++++--------
+ 1 file changed, 17 insertions(+), 8 deletions(-)
+
+diff --git a/tools/device_r8_render_thread.py b/tools/device_r8_render_thread.py
+index 8ea0fe0..7812aea 100644
+--- a/tools/device_r8_render_thread.py
++++ b/tools/device_r8_render_thread.py
+@@ -137,8 +137,11 @@ function stats(name, startFrames) {
+ 
+ function calibrate(next) {
+     var session = imgui.createWindow(function (ui) { draw(ui, true); }, windowOptions('off'));
+-    setTimeout(function () {
+-        awaitAck('calib', function () {
++    // The first window after an install loads the plugin: wait for its first frame, then for a stable second.
++    var shown = setInterval(function () {
++        if (state.layout === null) return;
++        clearInterval(shown);
++        setTimeout(function () { awaitAck('calib', function () {
+             setTimeout(function () {
+                 var layout = state.layout;
+                 var mouse = state.mouse;
+@@ -148,8 +151,8 @@ function calibrate(next) {
+                 session.close();
+                 waitClosed(session, function () { setTimeout(next, 1500); });
+             }, 300);
+-        });
+-    }, 1500);
++        }); }, 1000);
++    }, 50);
+ }
+ 
+ function waitClosed(session, done) {
+@@ -301,6 +304,7 @@ class Driver:
+         self.serial = serial
+         self.button = (0, 0)
+         self.slider = (0, 0, 0)
++        self.calibrated = False
+ 
+     def calib_target(self) -> tuple[int, int]:
+         return WINDOW_X + WINDOW_W // 2, WINDOW_Y + WINDOW_H - 150
+@@ -327,6 +331,7 @@ class Driver:
+         self.button = (int(ox + bx + (WINDOW_W - 60) / 2), int(oy + by + BUTTON_H / 2))
+         width = int(WINDOW_W * 0.65)
+         self.slider = (int(ox + sx + width * 0.1), int(ox + sx + width * 0.9), int(oy + (sy + ey) / 2 - 4))
++        self.calibrated = True
+         return True
+ 
+     def touch_phase(self) -> None:
+@@ -383,15 +388,19 @@ def run_mode(serial: str, mode: str, out: pathlib.Path, label: str, timeout: flo
+                 ok = driver.apply_calibration(line)
+                 print(f"{label}-{mode} calibration {'PASS' if ok else 'FAIL'} button={driver.button} "
+                       f"slider={driver.slider}")
+-                if not ok:
+-                    return None
+             elif line == "await touch":
+-                driver.touch_phase()
++                # Without a calibration the phases are acknowledged untouched so the script ends before the next run.
++                if driver.calibrated:
++                    driver.touch_phase()
+                 adb(serial, "shell", "touch", DEVICE_DIR + "/ack-touch")
+             elif line == "await freeze":
+-                driver.freeze_phase()
++                if driver.calibrated:
++                    driver.freeze_phase()
+                 adb(serial, "shell", "touch", DEVICE_DIR + "/ack-freeze")
+             elif line == "done":
++                if not driver.calibrated:
++                    adb(serial, "shell", "rm", "-rf", DEVICE_DIR)
++                    return None
+                 raw = out / f"raw-{label}-{mode}.json"
+                 adb(serial, "pull", DEVICE_DIR + f"/result-{mode}.json", str(raw), check=True)
+                 adb(serial, "shell", "rm", "-rf", DEVICE_DIR)
+-- 
+2.45.1.windows.1
+
+
+From c281bbbaabfc4963192622ac9892c9d38748745e Mon Sep 17 00:00:00 2001
+From: SuperMonster003 <wu2du2mo2gu0@gmail.com>
+Date: Thu, 29 Oct 2026 22:48:20 +0800
+Subject: [PATCH 6/7] test(r8): table shows the median of repeated runs
+
+---
+ tools/device_r8_render_thread.py | 31 +++++++++++++++++++------------
+ 1 file changed, 19 insertions(+), 12 deletions(-)
+
+diff --git a/tools/device_r8_render_thread.py b/tools/device_r8_render_thread.py
+index 7812aea..e30c54a 100644
+--- a/tools/device_r8_render_thread.py
++++ b/tools/device_r8_render_thread.py
+@@ -19,7 +19,8 @@ it ends each touch phase. The same script and window run for every mode:
+ - threads and memory (PSS, graphics, native heap) before the window, while it is open and after it closed.
+ 
+ Prints PASS / FAIL for the functional checks and the measured values only; the raw JSON of each run and a summary go
+-to --out. --table prints a Markdown comparison of every summary in a directory.
++to --out. --table prints a Markdown comparison of every summary in a directory (the median of repeated runs labelled
++LABEL-r1, LABEL-r2, ...).
+ """
+ 
+ from __future__ import annotations
+@@ -27,6 +28,8 @@ from __future__ import annotations
+ import argparse
+ import json
+ import pathlib
++import re
++import statistics
+ import subprocess
+ import sys
+ import time
+@@ -521,18 +524,22 @@ TABLE_ROWS = [
+ 
+ 
+ def table(directory: pathlib.Path) -> None:
+-    runs = sorted(directory.glob("summary-*.json"))
+-    summaries = [(path.stem[len("summary-"):], json.loads(path.read_text(encoding="utf-8"))) for path in runs]
+-    print("| metric | " + " | ".join(name for name, _ in summaries) + " |")
+-    print("|---|" + "---|" * len(summaries))
++    # Repeated runs are labelled LABEL-r1, LABEL-r2, ...; each cell is the median of the runs of one label and mode.
++    groups: dict[str, list[dict]] = {}
++    for path in sorted(directory.glob("summary-*.json")):
++        summary = json.loads(path.read_text(encoding="utf-8"))
++        label = re.sub(r"-r\d+$", "", path.stem[len("summary-"):-len(summary["mode"]) - 1])
++        groups.setdefault(f"{label}-{summary['mode']}", []).append(summary)
++
++    def median(runs: list[dict], group: str, key: str):
++        values = [run[group][key] for run in runs if run[group][key] is not None]
++        return statistics.median(values) if values else None
++
++    print("| metric | " + " | ".join(f"{name} (n={len(runs)})" for name, runs in groups.items()) + " |")
++    print("|---|" + "---|" * len(groups))
+     for title, group, keys in TABLE_ROWS:
+-        cells = []
+-        for _, summary in summaries:
+-            data = summary[group]
+-            if isinstance(keys, tuple):
+-                cells.append(" / ".join(fmt(data[key]) for key in keys))
+-            else:
+-                cells.append(fmt(data[keys]))
++        keys = keys if isinstance(keys, tuple) else (keys,)
++        cells = [" / ".join(fmt(median(runs, group, key)) for key in keys) for runs in groups.values()]
+         print(f"| {title} | " + " | ".join(cells) + " |")
+ 
+ 
+-- 
+2.45.1.windows.1
+
+
+From 4ca15bcdc63f257ec8c58de32cfc7242d7f489f6 Mon Sep 17 00:00:00 2001
+From: SuperMonster003 <wu2du2mo2gu0@gmail.com>
+Date: Thu, 29 Oct 2026 22:52:19 +0800
+Subject: [PATCH 7/7] test(r8): table reports sleep latency p95 and the render
+ thread count
+
+---
+ tools/device_r8_render_thread.py | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/tools/device_r8_render_thread.py b/tools/device_r8_render_thread.py
+index e30c54a..7dfa656 100644
+--- a/tools/device_r8_render_thread.py
++++ b/tools/device_r8_render_thread.py
+@@ -515,8 +515,9 @@ TABLE_ROWS = [
+     ("touch-to-script p50 / p95 (ms)", "touch", ("clickP50", "clickP95")),
+     ("sleep(500): presents inside the sleeps", "freeze", "presentsInSleeps"),
+     ("sleep(500): max present gap (ms)", "freeze", "maxGapMs"),
+-    ("sleep(500): touch-to-present p50 / max (ms)", "freeze", ("inputP50", "inputMax")),
+-    ("threads before / open / closed", "resources", ("threadsBefore", "threadsOpen", "threadsClosed")),
++    ("sleep(500): touch-to-present p95 / max (ms)", "freeze", ("inputP95", "inputMax")),
++    ("ImGuiRender threads open / closed", "resources", ("renderThreadsOpen", "renderThreadsClosed")),
++    ("process threads before / open / closed", "resources", ("threadsBefore", "threadsOpen", "threadsClosed")),
+     ("PSS delta open (KB)", "resources", "pssDeltaKb"),
+     ("graphics delta open (KB)", "resources", "graphicsDeltaKb"),
+     ("native heap delta open (KB)", "resources", "nativeDeltaKb"),
+-- 
+2.45.1.windows.1
+
