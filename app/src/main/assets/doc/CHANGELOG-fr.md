@@ -4,6 +4,20 @@
 
 ******
 
+# v1.11.0
+
+###### 2026/10/29
+
+* `Note` Les méthodes globales qui agissent sur la session de fenêtre active (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) lèvent désormais `imgui.<name>: no active session` quand aucune session n'est active; getComponent renvoyait auparavant null
+* `Note` L'option de tracé offset est dépréciée; utilisez valuesOffset à la place (offset fonctionne toujours)
+* `Fonctionnalité` Événement error des sessions de fenêtre: émis quand la fonction de rendu ou un rappel d'événement lève une exception, avec error, phase (render ou event) et frame; avec un écouteur error la session continue le rendu et le gestionnaire peut la fermer, sans écouteur elle se ferme avec render-error comme avant
+* `Fonctionnalité` Option de fenêtre debug: active la récupération d'erreurs et le journal de débogage de Dear ImGui, signale par console.warn les erreurs d'utilisation comme un Begin / End non apparié et affiche les fenêtres Metrics et Debug Log
+* `Fonctionnalité` Exemple error-handling montrant l'événement error, le mode debug et la recherche des erreurs courantes
+* `Fonctionnalité` docs/ALIASES.md liste tous les alias PascalCase et leurs différences avec les signatures C++ de Dear ImGui
+* `Correctif` Les options valuesOffset et stride de plotLines / plotHistogram n'avaient aucun effet
+* `Amélioration` Les erreurs de la fonction de rendu ou d'un rappel d'événement sont affichées dans la console avec leur pile d'appels, et une même erreur répétée n'est affichée qu'une fois
+* `Amélioration` Le README présente les alias comme "alias des API courantes", explique le modèle à session unique (une nouvelle session ferme la précédente) et l'usage des nouveaux membres, et indique le SDK cible 37
+
 # v1.10.0
 
 ###### 2026/10/29

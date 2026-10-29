@@ -33,9 +33,12 @@ set_source_files_properties(
 target_include_directories(
     autojs6_imgui
     PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
     "${IMGUI_ROOT}"
     "${IMGUI_ROOT}/backends"
 )
+# IM_ASSERT of the plugin: reported in debug mode, never aborting the host process.
+target_compile_definitions(autojs6_imgui PRIVATE IMGUI_USER_CONFIG="ImGuiUserConfig.h")
 
 find_library(ANDROID_LIBRARY android REQUIRED)
 find_library(EGL_LIBRARY EGL REQUIRED)

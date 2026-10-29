@@ -37,6 +37,7 @@ constexpr int kTextureFlagRepeat = 1 << 1;
 constexpr int kTextureFlagMipmaps = 1 << 2;
 constexpr char kBundledCjkFontAsset[] = "fonts/AutoJs6CjkFallback-Regular.otf";
 constexpr char kBundledIconFontAsset[] = "fonts/AutoJs6MaterialIcons-Subset.ttf";
+constexpr size_t kMaxDebugMessages = 64;
 
 #define LOG_ERROR(...) __android_log_print(ANDROID_LOG_ERROR, kLogTag, __VA_ARGS__)
 #define LOG_INFO(...) __android_log_print(ANDROID_LOG_INFO, kLogTag, __VA_ARGS__)
@@ -68,6 +69,12 @@ struct RendererState {
     bool hasAutoResizeBounds = false;
     std::vector<float> interactiveWindowRects;
     unsigned int cancelledMouseButtons = 0U;
+    bool debugMode = false;
+    bool showMetricsWindow = false;
+    bool showDebugLogWindow = false;
+    std::vector<std::string> debugMessages;
+    std::vector<std::string> debugMessagesInFrame;
+    std::vector<std::string> debugMessagesInPreviousFrame;
 };
 
 RendererState gState;
@@ -87,6 +94,31 @@ void ThrowIllegalArgument(JNIEnv* env, const char* message) {
 
 void ThrowIllegalState(JNIEnv* env, const char* message) {
     ThrowJavaException(env, "java/lang/IllegalStateException", message);
+}
+
+// Debug mode: a usage error Dear ImGui recovers from or a failed IM_ASSERT goes to logcat and to the queue the script
+// drains after each frame. A message already reported in this frame or in the previous one is not reported again, so an
+// error repeating every frame appears once until a frame passes without it.
+void QueueDebugMessage(std::string message) {
+    std::vector<std::string>& current = gState.debugMessagesInFrame;
+    const std::vector<std::string>& previous = gState.debugMessagesInPreviousFrame;
+    const bool repeated = std::find(current.begin(), current.end(), message) != current.end() ||
+        std::find(previous.begin(), previous.end(), message) != previous.end();
+    if (!repeated && current.size() < kMaxDebugMessages) {
+        current.push_back(message);
+    }
+    if (repeated) {
+        return;
+    }
+    __android_log_print(ANDROID_LOG_WARN, kLogTag, "%s", message.c_str());
+    if (gState.debugMessages.size() < kMaxDebugMessages) {
+        gState.debugMessages.push_back(std::move(message));
+    }
+}
+
+void OnImGuiError(ImGuiContext* context, void*, const char* message) {
+    const ImGuiWindow* window = context->CurrentWindow;
+    QueueDebugMessage(std::string("In window '") + (window != nullptr ? window->Name : "NULL") + "': " + message);
 }
 
 std::string JStringToUtf8(JNIEnv* env, jstring value) {
@@ -309,6 +341,7 @@ void ShutdownRenderer() {
         }
         ImGui::DestroyContext();
     }
+    gImGuiAssertReporting = false;
     gState.rendererBackendInitialized = false;
     gState.platformBackendInitialized = false;
 
@@ -1035,7 +1068,34 @@ void UpdateWindowMetadata() {
     gState.hasAutoResizeBounds = hasAutoResizeWindow;
 }
 
+struct PlotSamples {
+    int count;
+    int offset;
+    int strideBytes;
+};
+
+// stride counts values (1 = every value): the plot reads values[0], values[stride], ... and starts at sample offset.
+PlotSamples ResolvePlotSamples(jsize length, jint valuesOffset, jint stride) {
+    const int step = std::max(1, static_cast<int>(stride));
+    const int count = (static_cast<int>(length) - 1) / step + 1;
+    return PlotSamples{
+        count,
+        std::clamp(static_cast<int>(valuesOffset), 0, count - 1),
+        step * static_cast<int>(sizeof(float))
+    };
+}
+
 }  // namespace
+
+bool gImGuiAssertReporting = false;
+
+void ReportImGuiAssert(const char* expression, const char* file, int line) {
+    const char* separator = std::strrchr(file, '/');
+    QueueDebugMessage(
+        std::string("Assertion failed: ") + expression + " (" + (separator != nullptr ? separator + 1 : file) + ":" +
+        std::to_string(line) + ")"
+    );
+}
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeVersion(
@@ -1319,6 +1379,8 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeRender(
     ImGui::Render();
     UpdateWindowMetadata();
     gState.frameActive = false;
+    gState.debugMessagesInPreviousFrame.swap(gState.debugMessagesInFrame);
+    gState.debugMessagesInFrame.clear();
 
     EGLint width = 0;
     EGLint height = 0;
@@ -2793,6 +2855,95 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeShowDemoWi
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetDebugMode(
+    JNIEnv* env,
+    jclass,
+    jboolean enabled
+) {
+    if (!RequireContext(env)) return;
+    const bool debug = enabled == JNI_TRUE;
+    ImGuiContext& context = *GImGui;
+    context.IO.ConfigErrorRecoveryEnableDebugLog = debug;
+    context.ErrorCallback = debug ? OnImGuiError : nullptr;
+    context.ErrorCallbackUserData = nullptr;
+    gImGuiAssertReporting = debug;
+    gState.debugMode = debug;
+    gState.showMetricsWindow = debug;
+    gState.showDebugLogWindow = debug;
+    gState.debugMessages.clear();
+}
+
+// Debug mode: the Metrics and Debug Log windows, shown after the render callback until the user closes them. What the
+// callback left open is closed first (and reported), so they are not nested in a window of the script.
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeShowDebugWindows(
+    JNIEnv* env,
+    jclass
+) {
+    if (!RequireFrame(env) || !gState.debugMode) return;
+    ImGui::ErrorRecoveryTryToRecoverState(&GImGui->StackSizesInNewFrame);
+    if (gState.showMetricsWindow) {
+        ImGui::ShowMetricsWindow(&gState.showMetricsWindow);
+    }
+    if (gState.showDebugLogWindow) {
+        ImGui::ShowDebugLogWindow(&gState.showDebugLogWindow);
+    }
+}
+
+// After the render callback threw: closes the windows, tables and pushed styles it left open without reporting them as
+// usage errors (the script reports the exception), so the frame can still be presented.
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeRecoverFrame(
+    JNIEnv*,
+    jclass
+) {
+    if (!gState.ready || !gState.frameActive || ImGui::GetCurrentContext() == nullptr) return;
+    ImGuiContext& context = *GImGui;
+    ImGuiIO& io = context.IO;
+    const bool tooltip = io.ConfigErrorRecoveryEnableTooltip;
+    const bool debugLog = io.ConfigErrorRecoveryEnableDebugLog;
+    const bool assertReporting = gImGuiAssertReporting;
+    const ImGuiErrorCallback callback = context.ErrorCallback;
+    io.ConfigErrorRecoveryEnableTooltip = false;
+    io.ConfigErrorRecoveryEnableDebugLog = false;
+    context.ErrorCallback = nullptr;
+    gImGuiAssertReporting = false;
+    ImGui::ErrorRecoveryTryToRecoverState(&context.StackSizesInNewFrame);
+    io.ConfigErrorRecoveryEnableTooltip = tooltip;
+    io.ConfigErrorRecoveryEnableDebugLog = debugLog;
+    context.ErrorCallback = callback;
+    gImGuiAssertReporting = assertReporting;
+}
+
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTakeDebugMessages(
+    JNIEnv* env,
+    jclass
+) {
+    if (gState.debugMessages.empty()) {
+        return nullptr;
+    }
+    jclass stringClass = env->FindClass("java/lang/String");
+    if (stringClass == nullptr) {
+        return nullptr;
+    }
+    jobjectArray result = env->NewObjectArray(static_cast<jsize>(gState.debugMessages.size()), stringClass, nullptr);
+    env->DeleteLocalRef(stringClass);
+    if (result == nullptr) {
+        return nullptr;
+    }
+    for (size_t index = 0; index < gState.debugMessages.size(); ++index) {
+        jstring message = Utf8ToJString(env, gState.debugMessages[index]);
+        if (message != nullptr) {
+            env->SetObjectArrayElement(result, static_cast<jsize>(index), message);
+            env->DeleteLocalRef(message);
+        }
+    }
+    gState.debugMessages.clear();
+    return result;
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSeparatorText(
     JNIEnv* env,
     jclass,
@@ -3089,6 +3240,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativePlotLines(
     jstring label,
     jfloatArray values,
     jint valuesOffset,
+    jint stride,
     jstring overlay,
     jfloat scaleMin,
     jfloat scaleMax,
@@ -3103,15 +3255,17 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativePlotLines(
     const std::string text = JStringToUtf8(env, label);
     const bool hasOverlay = overlay != nullptr;
     const std::string overlayText = JStringToUtf8(env, overlay);
+    const PlotSamples samples = ResolvePlotSamples(count, valuesOffset, stride);
     ImGui::PlotLines(
         text.c_str(),
         data,
-        static_cast<int>(count),
-        std::clamp(static_cast<int>(valuesOffset), 0, static_cast<int>(count) - 1),
+        samples.count,
+        samples.offset,
         hasOverlay ? overlayText.c_str() : nullptr,
         std::isfinite(scaleMin) ? static_cast<float>(scaleMin) : kFloatMax,
         std::isfinite(scaleMax) ? static_cast<float>(scaleMax) : kFloatMax,
-        ImVec2(width, height)
+        ImVec2(width, height),
+        samples.strideBytes
     );
     env->ReleaseFloatArrayElements(values, data, JNI_ABORT);
 }
@@ -3123,6 +3277,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativePlotHistog
     jstring label,
     jfloatArray values,
     jint valuesOffset,
+    jint stride,
     jstring overlay,
     jfloat scaleMin,
     jfloat scaleMax,
@@ -3137,15 +3292,17 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativePlotHistog
     const std::string text = JStringToUtf8(env, label);
     const bool hasOverlay = overlay != nullptr;
     const std::string overlayText = JStringToUtf8(env, overlay);
+    const PlotSamples samples = ResolvePlotSamples(count, valuesOffset, stride);
     ImGui::PlotHistogram(
         text.c_str(),
         data,
-        static_cast<int>(count),
-        std::clamp(static_cast<int>(valuesOffset), 0, static_cast<int>(count) - 1),
+        samples.count,
+        samples.offset,
         hasOverlay ? overlayText.c_str() : nullptr,
         std::isfinite(scaleMin) ? static_cast<float>(scaleMin) : kFloatMax,
         std::isfinite(scaleMax) ? static_cast<float>(scaleMax) : kFloatMax,
-        ImVec2(width, height)
+        ImVec2(width, height),
+        samples.strideBytes
     );
     env->ReleaseFloatArrayElements(values, data, JNI_ABORT);
 }

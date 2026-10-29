@@ -36,7 +36,19 @@ const session: ImGui.Session = plugin.createWindow((ui, windowSession) => {
 });
 
 session.on("closed", event => plugin.text(event.type));
+session.on("error", event => {
+    const phase: "render" | "event" = event.phase;
+    plugin.text(`${phase}:${event.frame}:${event.message}`);
+});
 session.setMoreTouch(true);
+const debugSession: ImGui.Session = plugin.createWindow(ui => {
+    ui.plotLines("Samples", [0, 1, 2, 3, 4, 5, 6, 7], {valuesOffset: 2, stride: 2});
+}, {
+    debug: true,
+    onError: event => event.session.close(event.phase),
+});
+const debugMode: boolean = debugSession.debug;
+plugin.text(`${debugMode}`);
 plugin.SetMoreTouch(false);
 session.close("type-smoke-complete");
 

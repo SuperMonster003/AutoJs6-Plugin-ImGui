@@ -45,7 +45,7 @@ The current README.md supports the following languages:
 
 The ImGui Plugin brings the [Dear ImGui](https://github.com/ocornut/imgui) immediate-mode GUI library to AutoJs6, rendering controls with OpenGL ES inside a transparent floating window. It is a natural fit for lightweight floating interfaces such as debug panels, parameter tuners, and runtime HUDs, and keeps window creation, frame scheduling, touch input, and native resource cleanup in one compact API.
 
-Once the plugin is enabled in the Plugin Center, scripts use the global `imgui` object directly (registered by AutoJs6, which loads the plugin on the first member call); `plugins.load` is not needed. Requires AutoJs6 6.8.0 or later.
+Once the plugin is enabled in the Plugin Center, scripts use the global `imgui` object directly (registered by AutoJs6, which loads the plugin on the first member call); `plugins.load` is not needed. Requires AutoJs6 6.8.0 or later. When the plugin is newer than AutoJs6, members AutoJs6 does not list yet appear on `imgui` only after the plugin is loaded (on the first use of any `imgui` member); the `ui` argument of render callbacks is always complete.
 
 ******
 
@@ -63,8 +63,8 @@ Once the plugin is enabled in the Plugin Center, scripts use the global `imgui` 
 - Managed textures accept file paths, encoded bytes, Android `Bitmap`, and AutoJs6 `Image` objects; `image` / `imageButton` and three DrawList layers cover image display and custom overlay drawing.
 - Lightweight `imgui.ref(value)` / `{value: x}` references work with every stateful control while the legacy Java-array reference helpers remain fully compatible.
 - Session-managed `logWindow`, stacked `toast`, Promise dialogs, threshold-colored `statsOverlay`, and selectable CRUD `dataTable` components provide ready-made debugging UI.
-- Constant enums and PascalCase method aliases follow the native Dear ImGui naming, so migrating existing knowledge costs nothing.
-- Engineering support includes complete TypeScript declarations, five runnable examples, Android rendering instrumentation, a lock-free input queue, verified upstream-update tooling, and CI release automation.
+- Common APIs and constant enums have PascalCase aliases (e.g. `ui.Button`) that keep the plugin's argument style; the alias list and the differences from the upstream C++ signatures are in [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
+- Engineering support includes complete TypeScript declarations, six runnable examples, Android rendering instrumentation, a lock-free input queue, verified upstream-update tooling, and CI release automation.
 - Localized plugin metadata, usage instructions, README, and changelog for ten languages.
 
 ******
@@ -126,9 +126,9 @@ Themes and fonts: `setTheme` accepts all 11 `Themes`, while `setStyleProperties`
 
 Textures and custom drawing: call `createTexture` only after the window session is ready (normally once inside its render callback). The returned object exposes `width`, `height`, and idempotent `dispose()` / `close()`; all remaining textures are released automatically when the session closes. `image` / `imageButton` display textures, while `getWindowDrawList`, `getForegroundDrawList`, and `getBackgroundDrawList` expose common drawing primitives. DrawList coordinates are surface-space pixels. AutoJs6 `images.read(...)` and screenshot `Image` values can be passed directly.
 
-Window sessions: overlays default to `TouchMode.Auto`, which keeps ImGui root windows interactive while letting blank surface areas reach the app underneath; choose `Touchable` or `Passthrough` for a fixed policy. A session can change alpha/security/touch mode, collapse into a low-FPS mini bubble, create independent draggable `addButtonEx` buttons, follow `AlwaysAutoResize` content, persist layout with `iniPath`, and subscribe through `on` / `once` / `off` or option callbacks. Use `imgui.launch(...)` for a full-screen Surface in the currently resumed AutoJs6 Activity and `launchFloaty(...)` for an explicit overlay. Each script engine owns one native renderer session, but that render callback may create any number of ImGui roots with `begin` / `withWindow`; creating another session closes the previous one.
+Window sessions: overlays default to `TouchMode.Auto`, which keeps ImGui root windows interactive while letting blank surface areas reach the app underneath; choose `Touchable` or `Passthrough` for a fixed policy. A session can change alpha/security/touch mode, collapse into a low-FPS mini bubble, create independent draggable `addButtonEx` buttons, follow `AlwaysAutoResize` content, persist layout with `iniPath`, and subscribe through `on` / `once` / `off` or option callbacks. Use `imgui.launch(...)` for a full-screen Surface in the currently resumed AutoJs6 Activity and `launchFloaty(...)` for an explicit overlay. Each script engine owns one native renderer session, but that render callback may create any number of ImGui roots with `begin` / `withWindow`; creating another session closes the previous one. An exception thrown by the render callback or an event callback is printed with its stack by `console.error` (a run of the same error once) and emitted as an `error` event (`error` / `phase` / `frame`); without an `error` listener a render error closes the session (`closeReason` is `render-error`), with one the rest of the frame is skipped and rendering goes on. The `debug: true` option reports usage errors such as `begin` without `end` through `console.warn` and logcat, and shows the Metrics and Debug Log windows. Global methods such as `setTouchable` / `setGlobalAlpha` / `getComponent` act on the current session and throw `imgui.<name>: no active session` without one.
 
-High-level components attach to the active session and render after the user callback: `logWindow` provides colored levels, clearing, export callbacks, and auto-scroll; `toast` provides positioned timed notices; `alert` / `confirm` / `singleChoice` / `multiChoice` resolve Promises; `statsOverlay` plots frame time; and `dataTable` provides selection and CRUD. The five bundled examples (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, and `theme-gallery`) are discoverable through `listExamples` / `getExampleSource` and launchable with `runExample`. AutoJs6 6.8 does not yet consume the generic example metadata in its Plugin Center, so launch an example directly with the call below until host support lands:
+High-level components attach to the active session and render after the user callback: `logWindow` provides colored levels, clearing, export callbacks, and auto-scroll; `toast` provides positioned timed notices; `alert` / `confirm` / `singleChoice` / `multiChoice` resolve Promises; `statsOverlay` plots frame time; and `dataTable` provides selection and CRUD. The six bundled examples (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, and `error-handling`) are discoverable through `listExamples` / `getExampleSource` and launchable with `runExample`. AutoJs6 6.8 does not yet consume the generic example metadata in its Plugin Center, so launch an example directly with the call below until host support lands:
 
 ```js
 imgui.runExample("widget-overview");
@@ -140,9 +140,9 @@ imgui.runExample("widget-overview");
 
 ******
 
-Lower camel case methods mirror the Dear ImGui operations of the same name, and PascalCase aliases are available for users familiar with the native naming (e.g. `ui.Button` equals `ui.button`):
+Common APIs also have PascalCase aliases (e.g. `ui.Button` equals `ui.button`). The aliases keep the plugin's argument style (mutable values through `imgui.ref`, for example) and do not match the upstream C++ signatures one to one; see [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md) for the list and the differences. Lower camel case methods mirror the Dear ImGui operations of the same name and fall into these groups:
 
-- Session runtime: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, and session `on` / `once` / `off` plus their per-session forms.
+- Session runtime: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, session `on` / `once` / `off` plus their per-session forms, the session `error` event that reports callback errors, and the `debug` option that turns on debug mode.
 - Backend discovery: `getBackendCapabilities` / `BackendStatus` reports availability and production readiness for windows, split touch, the privileged process, direct input, Docking, and Multi-Viewport without performing elevation.
 - Session and windows: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, plus window state queries such as `isWindowHovered`.
 - Text and widgets: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram`, and more.
@@ -171,6 +171,20 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 
 ******
 
+#### v1.11.0
+
+###### 2026/10/29
+
+* `Hint` Global methods that act on the active window session (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) now throw `imgui.<name>: no active session` when there is no active session; getComponent used to return null
+* `Hint` The plot option offset is deprecated; use valuesOffset instead (offset still works)
+* `Feature` error event of window sessions: emitted when the render callback or an event callback throws, with error, phase (render or event) and frame; with an error listener the session keeps rendering and the handler may close it, without one the session closes with render-error as before
+* `Feature` debug window option: turns on Dear ImGui's error recovery and debug log, reports usage errors such as unmatched Begin / End through console.warn, and shows the Metrics and Debug Log windows
+* `Feature` error-handling example showing the error event, debug mode and how to track down common mistakes
+* `Feature` docs/ALIASES.md lists every PascalCase alias and how it differs from the Dear ImGui C++ signature
+* `Fix` The valuesOffset and stride options of plotLines / plotHistogram had no effect
+* `Improvement` Errors in the render callback or an event callback are printed to the console with their stack trace, and a run of the same error is printed only once
+* `Improvement` The README describes the aliases as "aliases for common APIs", explains the single-session model (a new session closes the previous one) and how to use new members, and states the target SDK as 37
+
 #### v1.10.0
 
 ###### 2026/10/29
@@ -186,13 +200,6 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 
 * `Improvement` Plugin Center icons use the sizes, positions, light and dark artwork, and circular backgrounds adjusted in Icon Studio, retaining reproducible sources and parameters
 * `Improvement` Android App info icons share Icon Studio artwork and light/dark backgrounds while preserving transparent Plugin Center artwork and existing launcher choices
-
-#### v1.9.3
-
-###### 2026/09/19
-
-* `Fix` SDK XML v4 parsing warnings with AGP 9.1 and APK native alignment checks incorrectly triggered by JVM unit-test assembly tasks, using shared build plugins 1.8.3
-* `Improvement` Raise compileSdk and targetSdk to 37 (Android 17); the plugin's behavior does not depend on the new target
 
 ##### For more release history
 
@@ -220,7 +227,7 @@ Verify the native source inventory, JNI declaration parity, unit tests, and ABI 
 .\gradlew.bat :app:verifyImGuiDebugApks
 ```
 
-Build parameters come from `version.properties`; the current minimum SDK is 24 and target SDK is 36.
+Build parameters come from `version.properties`; the current minimum SDK is 24 and target SDK is 37.
 
 ******
 

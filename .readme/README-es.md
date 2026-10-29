@@ -45,7 +45,7 @@ El archivo README.md actual admite los siguientes idiomas:
 
 El plugin ImGui lleva la biblioteca de interfaz gráfica de modo inmediato [Dear ImGui](https://github.com/ocornut/imgui) a AutoJs6 y renderiza los controles con OpenGL ES dentro de una ventana flotante transparente. Encaja de forma natural en interfaces flotantes ligeras como paneles de depuración, ajustadores de parámetros y HUD de tiempo de ejecución, y reúne la creación de ventanas, la planificación de fotogramas, la entrada táctil y la limpieza de recursos nativos en una API compacta.
 
-Una vez habilitado el plugin en el Centro de plugins, los scripts usan directamente el objeto global `imgui` (registrado por AutoJs6, que carga el plugin en la primera llamada a uno de sus miembros); no se necesita `plugins.load`. Requiere AutoJs6 6.8.0 o posterior.
+Una vez habilitado el plugin en el Centro de plugins, los scripts usan directamente el objeto global `imgui` (registrado por AutoJs6, que carga el plugin en la primera llamada a uno de sus miembros); no se necesita `plugins.load`. Requiere AutoJs6 6.8.0 o posterior. Cuando el plugin es más reciente que AutoJs6, los miembros que AutoJs6 aún no registra aparecen en `imgui` solo después de cargar el plugin (al usar por primera vez cualquier miembro de `imgui`); el argumento `ui` de los callbacks de renderizado siempre está completo.
 
 ******
 
@@ -63,8 +63,8 @@ Una vez habilitado el plugin en el Centro de plugins, los scripts usan directame
 - Las texturas administradas aceptan rutas de archivo, bytes codificados, `Bitmap` de Android y objetos `Image` de AutoJs6; `image` / `imageButton` y tres capas DrawList cubren la visualización de imágenes y el dibujo personalizado.
 - Las referencias ligeras `imgui.ref(value)` / `{value: x}` funcionan con todos los controles con estado y los helpers de arrays Java existentes siguen siendo totalmente compatibles.
 - Los componentes de sesión `logWindow`, `toast` apilados, diálogos Promise, `statsOverlay` con umbrales y `dataTable` CRUD seleccionable ofrecen interfaces de depuración listas para usar.
-- Las enumeraciones de constantes y los alias de métodos en PascalCase siguen la nomenclatura nativa de Dear ImGui, por lo que migrar el conocimiento existente no cuesta nada.
-- El soporte de ingeniería incluye declaraciones TypeScript completas, cinco ejemplos ejecutables, pruebas Android de renderizado, cola de entrada sin bloqueo, actualización upstream verificable y automatización CI de versiones.
+- Las API comunes y las enumeraciones de constantes tienen alias en PascalCase (p. ej., `ui.Button`) que conservan el estilo de argumentos del plugin; la lista de alias y las diferencias con las firmas C++ originales están en [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
+- El soporte de ingeniería incluye declaraciones TypeScript completas, seis ejemplos ejecutables, pruebas Android de renderizado, cola de entrada sin bloqueo, actualización upstream verificable y automatización CI de versiones.
 - Metadatos del plugin, instrucciones de uso, README y CHANGELOG localizados en diez idiomas.
 
 ******
@@ -126,9 +126,9 @@ Temas y fuentes: `setTheme` acepta los 11 valores de `Themes` y `setStylePropert
 
 Texturas y dibujo personalizado: llame a `createTexture` solo cuando la sesión de ventana esté lista (normalmente la primera vez dentro de su callback de renderizado). El objeto devuelto expone `width`, `height` y `dispose()` / `close()` idempotentes; las texturas restantes se liberan automáticamente al cerrar la sesión. `image` / `imageButton` muestran texturas, mientras que `getWindowDrawList`, `getForegroundDrawList` y `getBackgroundDrawList` ofrecen primitivas habituales. Las coordenadas DrawList son píxeles del Surface. Se pueden pasar directamente valores `Image` de AutoJs6 obtenidos mediante `images.read(...)` o capturas de pantalla.
 
-Sesiones de ventana: las superposiciones usan `TouchMode.Auto` por defecto, manteniendo interactivas las raíces ImGui y pasando las zonas vacías del Surface a la aplicación inferior; elija `Touchable` o `Passthrough` para una política fija. Una sesión puede cambiar opacidad/seguridad/modo táctil, reducirse a una miniburbuja de pocos FPS, crear `addButtonEx` arrastrables, seguir contenido `AlwaysAutoResize`, guardar el diseño con `iniPath` y emitir eventos mediante `on` / `once` / `off` o callbacks de opciones. `imgui.launch(...)` crea un Surface de pantalla completa en la Activity AutoJs6 actualmente reanudada y `launchFloaty(...)` selecciona explícitamente una superposición. Cada motor de scripts tiene una sesión de renderizado nativa, pero su callback puede crear todas las raíces ImGui `begin` / `withWindow` necesarias; una sesión nueva cierra la anterior.
+Sesiones de ventana: las superposiciones usan `TouchMode.Auto` por defecto, manteniendo interactivas las raíces ImGui y pasando las zonas vacías del Surface a la aplicación inferior; elija `Touchable` o `Passthrough` para una política fija. Una sesión puede cambiar opacidad/seguridad/modo táctil, reducirse a una miniburbuja de pocos FPS, crear `addButtonEx` arrastrables, seguir contenido `AlwaysAutoResize`, guardar el diseño con `iniPath` y emitir eventos mediante `on` / `once` / `off` o callbacks de opciones. `imgui.launch(...)` crea un Surface de pantalla completa en la Activity AutoJs6 actualmente reanudada y `launchFloaty(...)` selecciona explícitamente una superposición. Cada motor de scripts tiene una sesión de renderizado nativa, pero su callback puede crear todas las raíces ImGui `begin` / `withWindow` necesarias; una sesión nueva cierra la anterior. Una excepción del callback de renderizado o de un callback de evento se imprime con su pila mediante `console.error` (una sola vez para una racha del mismo error) y se emite como evento `error` (`error` / `phase` / `frame`); sin un listener de `error`, un error de renderizado cierra la sesión (`closeReason` es `render-error`), y con uno se omite el resto del fotograma y el renderizado continúa. La opción `debug: true` informa con `console.warn` y logcat de errores de uso como un `begin` sin `end`, y muestra las ventanas Metrics y Debug Log. Los métodos globales como `setTouchable` / `setGlobalAlpha` / `getComponent` actúan sobre la sesión actual y lanzan `imgui.<name>: no active session` si no hay ninguna activa.
 
-Los componentes de alto nivel se adjuntan a la sesión activa y se dibujan después del callback del usuario: `logWindow` ofrece niveles con color, limpieza, exportación y desplazamiento automático; `toast` muestra avisos temporizados; `alert` / `confirm` / `singleChoice` / `multiChoice` resuelven Promises; `statsOverlay` grafica el tiempo de cuadro; y `dataTable` ofrece selección y CRUD. Los cinco ejemplos (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo` y `theme-gallery`) se descubren con `listExamples` / `getExampleSource` y se ejecutan con `runExample`. AutoJs6 6.8 aún no consume los metadatos genéricos de ejemplos en su centro de plugins; hasta que el host lo admita, ejecute directamente la llamada siguiente:
+Los componentes de alto nivel se adjuntan a la sesión activa y se dibujan después del callback del usuario: `logWindow` ofrece niveles con color, limpieza, exportación y desplazamiento automático; `toast` muestra avisos temporizados; `alert` / `confirm` / `singleChoice` / `multiChoice` resuelven Promises; `statsOverlay` grafica el tiempo de cuadro; y `dataTable` ofrece selección y CRUD. Los seis ejemplos (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery` y `error-handling`) se descubren con `listExamples` / `getExampleSource` y se ejecutan con `runExample`. AutoJs6 6.8 aún no consume los metadatos genéricos de ejemplos en su centro de plugins; hasta que el host lo admita, ejecute directamente la llamada siguiente:
 
 ```js
 imgui.runExample("widget-overview");
@@ -140,9 +140,9 @@ imgui.runExample("widget-overview");
 
 ******
 
-Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mismo nombre, y existen alias en PascalCase para los usuarios familiarizados con la nomenclatura nativa (p. ej., `ui.Button` equivale a `ui.button`):
+Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equivale a `ui.button`). Los alias mantienen el estilo de argumentos del plugin (valores mutables con `imgui.ref`, etc.) y no corresponden uno a uno con las firmas C++ originales; la lista y las diferencias están en [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mismo nombre y se agrupan así:
 
-- Ejecución de sesión: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx` y `on` / `once` / `off` junto con sus formas por sesión.
+- Ejecución de sesión: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, `on` / `once` / `off` junto con sus formas por sesión, el evento de sesión `error` que informa de los errores de los callbacks y la opción `debug` que activa el modo de depuración.
 - Detección del backend: `getBackendCapabilities` / `BackendStatus` informa de la disponibilidad y preparación para producción de las ventanas, el toque dividido, el proceso privilegiado, la entrada directa, Docking y Multi-Viewport, sin elevar privilegios.
 - Sesión y ventanas: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, además de consultas de estado de ventana como `isWindowHovered`.
 - Texto y controles: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram`, entre otros.
@@ -171,6 +171,20 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 
 ******
 
+#### v1.11.0
+
+###### 2026/10/29
+
+* `Aviso` Los métodos globales que actúan sobre la sesión de ventana activa (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) ahora lanzan `imgui.<name>: no active session` cuando no hay una sesión activa; antes getComponent devolvía null
+* `Aviso` La opción de gráfico offset queda obsoleta; use valuesOffset en su lugar (offset sigue funcionando)
+* `Función` Evento error de las sesiones de ventana: se emite cuando la función de renderizado o una devolución de llamada de evento lanza una excepción, con error, phase (render o event) y frame; con un oyente de error la sesión sigue renderizando y el manejador puede cerrarla, sin oyente se cierra con render-error como antes
+* `Función` Opción de ventana debug: activa la recuperación de errores y el registro de depuración de Dear ImGui, avisa por console.warn de errores de uso como un Begin / End sin pareja y muestra las ventanas Metrics y Debug Log
+* `Función` Ejemplo error-handling que muestra el evento error, el modo debug y cómo localizar errores comunes
+* `Función` docs/ALIASES.md enumera todos los alias PascalCase y sus diferencias con las firmas C++ de Dear ImGui
+* `Corrección` Las opciones valuesOffset y stride de plotLines / plotHistogram no tenían efecto
+* `Mejora` Los errores de la función de renderizado o de una devolución de llamada de evento se muestran en la consola con su pila de llamadas, y un mismo error repetido se muestra una sola vez
+* `Mejora` El README describe los alias como "alias de las API comunes", explica el modelo de sesión única (una sesión nueva cierra la anterior) y el uso de los miembros nuevos, e indica el SDK de destino 37
+
 #### v1.10.0
 
 ###### 2026/10/29
@@ -186,13 +200,6 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 
 * `Mejora` Los iconos del centro de plugins usan los tamaños, posiciones, imágenes claras y oscuras y fondos circulares ajustados en Icon Studio, conservando fuentes y parámetros reproducibles
 * `Mejora` Los iconos de información de la aplicación de Android comparten las imágenes y los fondos claros y oscuros de Icon Studio, conservando las imágenes transparentes del centro de plugins y las opciones del lanzador
-
-#### v1.9.3
-
-###### 2026/09/19
-
-* `Corrección` Advertencias de lectura de SDK XML v4 con AGP 9.1 y comprobaciones de alineación nativa de APK activadas por error al ensamblar pruebas unitarias JVM, mediante los plugins de compilación compartidos 1.8.3
-* `Mejora` compileSdk y targetSdk suben a 37 (Android 17); el comportamiento del plugin no depende del nuevo objetivo
 
 ##### Para consultar más versiones
 
@@ -220,7 +227,7 @@ Verificación del inventario del código fuente nativo, de la paridad de las dec
 .\gradlew.bat :app:verifyImGuiDebugApks
 ```
 
-Los parámetros de compilación proceden de `version.properties`; el SDK mínimo actual es 24 y el SDK de destino es 36.
+Los parámetros de compilación proceden de `version.properties`; el SDK mínimo actual es 24 y el SDK de destino es 37.
 
 ******
 

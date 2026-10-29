@@ -135,12 +135,16 @@ declare namespace ImGui {
     }
 
     interface PlotOptions {
+        /** Index of the plotted sample the plot starts at (it wraps around), 0 by default. */
         valuesOffset?: number;
+        /** @deprecated Name read by 1.10.0 and earlier, used when valuesOffset is absent. */
+        offset?: number;
         overlay?: string;
         scaleMin?: number;
         scaleMax?: number;
         width?: number;
         height?: number;
+        /** Plots every stride-th value (values[0], values[stride], ...), 1 by default. Counts values, not bytes. */
         stride?: number;
     }
 
@@ -375,7 +379,15 @@ declare namespace ImGui {
         shadowColor?: Color;
         collapseButton?: boolean | FloatingButtonOptions;
         collapseLabel?: string;
+        /**
+         * Debug mode: usage errors Dear ImGui recovers from (for example begin without end) and failed assertions are
+         * printed with console.warn and logged to logcat, and the Metrics and Debug Log windows are shown. Use a window
+         * large enough for them.
+         */
+        debug?: boolean;
         events?: Partial<Record<SessionEventName, SessionEventListener>>;
+        /** Listener of the "error" event, see {@link SessionErrorEvent}. */
+        onError?: (event: SessionErrorEvent) => void;
         onMoved?: SessionEventListener;
         onResized?: SessionEventListener;
         onReady?: SessionEventListener;
@@ -407,7 +419,8 @@ declare namespace ImGui {
         | "touchableChanged"
         | "moreTouchChanged"
         | "alphaChanged"
-        | "secureChanged";
+        | "secureChanged"
+        | "error";
 
     interface SessionEvent {
         readonly type: string;
@@ -417,6 +430,29 @@ declare namespace ImGui {
     }
 
     type SessionEventListener = (event: SessionEvent) => void;
+
+    /**
+     * An exception thrown by the render callback (phase "render") or by an event callback (phase "event"). The error is
+     * also printed with console.error, a run of the same error only once. Without an "error" listener a render error
+     * closes the session (closeReason "render-error"); with one the rest of the frame is skipped and the session goes
+     * on (call session.close() in the listener to stop it). A failed high-level component render closes only that
+     * component. An exception thrown by an "error" listener is printed only.
+     */
+    interface SessionErrorEvent extends SessionEvent {
+        readonly type: "error";
+        readonly error: unknown;
+        readonly phase: "render" | "event";
+        /** Number of frames presented before the error. */
+        readonly frame: number;
+        /** error.message, or the error converted to a string. */
+        readonly message: string;
+        /** Event whose listener threw (phase "event"), "buttonClick" for a floating button callback. */
+        readonly event?: string;
+        /** High-level component whose render threw (phase "render"). */
+        readonly component?: Component;
+        /** Floating button whose callback threw (event "buttonClick"). */
+        readonly button?: FloatingButton;
+    }
 
     interface Component {
         readonly type: string;
@@ -583,6 +619,8 @@ declare namespace ImGui {
         readonly collapsedFps: number;
         readonly frameScheduler: "deadline-timer";
         readonly iniPath: string | null;
+        /** Whether the session runs in debug mode (WindowOptions.debug). */
+        readonly debug: boolean;
         ready: boolean;
         closed: boolean;
         closeReason: string | null;
@@ -596,7 +634,9 @@ declare namespace ImGui {
         destroyTexture(texture: Texture): boolean;
         /** Live backend/UID/PID/Surface/direct-input diagnostics. */
         getBackendInfo(): string;
+        on(eventName: "error", listener: (event: SessionErrorEvent) => void): this;
         on(eventName: SessionEventName | string, listener: SessionEventListener): this;
+        once(eventName: "error", listener: (event: SessionErrorEvent) => void): this;
         once(eventName: SessionEventName | string, listener: SessionEventListener): this;
         off(eventName: SessionEventName | string, listener?: SessionEventListener | null): this;
         setPosition(x: number, y: number): this;
@@ -892,18 +932,31 @@ declare namespace ImGui {
         multiChoice(...args: any[]): Promise<number[]>;
         statsOverlay(id?: string | StatsOverlayOptions, options?: StatsOverlayOptions): StatsOverlay;
         dataTable<Row = any>(id: string, headers: readonly DataTableHeaderLike<Row>[], rows: readonly Row[], options?: DataTableOptions<Row>): DataTable<Row>;
+        /** Opens a window session. One session per script engine: a new session closes the previous one. */
         createWindow(renderCallback: RenderCallback, options?: WindowOptions): Session;
+        /** Closes the active session; does nothing without one. */
         closeWindow(): void;
         launchFloaty(renderCallback: RenderCallback, options?: WindowOptions): Session;
         launch(renderCallback: RenderCallback, options?: WindowOptions): Session;
         launchPrivileged(renderCallback: RenderCallback, options?: WindowOptions): Session;
+        /** Acts on the active session. @throws Error "imgui.addButtonEx: no active session" without one. */
         addButtonEx(label: unknown, callback: () => void, options?: FloatingButtonOptions): FloatingButton;
+        /** Acts on the active session. @throws Error "imgui.setTouchable: no active session" without one. */
         setTouchable(touchMode: TouchMode | boolean): Session;
+        /** Acts on the active session. @throws Error "imgui.setMoreTouch: no active session" without one. */
         setMoreTouch(enabled: boolean): Session;
+        /** Acts on the active session. @throws Error "imgui.setGlobalAlpha: no active session" without one. */
         setGlobalAlpha(alpha: number): Session;
+        /** Acts on the active session. @throws Error "imgui.setSecure: no active session" without one. */
         setSecure(secure: boolean): Session;
+        /** Acts on the active session. @throws Error "imgui.collapseWindow: no active session" without one. */
         collapseWindow(): Session;
+        /** Acts on the active session. @throws Error "imgui.expandWindow: no active session" without one. */
         expandWindow(): Session;
+        /**
+         * Component of the active session, null when it has none of that type and id.
+         * @throws Error "imgui.getComponent: no active session" without an active session.
+         */
         getComponent(type: string, id: string): Component | null;
     }
 

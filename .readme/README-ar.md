@@ -45,7 +45,7 @@
 
 تجلب إضافة ImGui مكتبة [Dear ImGui](https://github.com/ocornut/imgui) ذات النمط الفوري إلى AutoJs6 حيث ترسم عناصر التحكم باستخدام OpenGL ES داخل نافذة عائمة شفافة. وهي خيار طبيعي للواجهات العائمة الخفيفة مثل لوحات التصحيح وأدوات ضبط المعلمات وشاشات HUD أثناء التشغيل; كما تجمع إنشاء النافذة وجدولة الإطارات والإدخال باللمس وتنظيف الموارد الأصلية في API واحدة موجزة.
 
-بعد تفعيل الإضافة في مركز الإضافات تستخدم السكربتات الكائن العام `imgui` مباشرة (يسجله AutoJs6 ويحمّل الإضافة عند أول استدعاء لأحد أعضائه); لا حاجة إلى `plugins.load`. يتطلب ذلك AutoJs6 6.8.0 أو أحدث.
+بعد تفعيل الإضافة في مركز الإضافات تستخدم السكربتات الكائن العام `imgui` مباشرة (يسجله AutoJs6 ويحمّل الإضافة عند أول استدعاء لأحد أعضائه); لا حاجة إلى `plugins.load`. يتطلب ذلك AutoJs6 6.8.0 أو أحدث. عندما تكون الإضافة أحدث من AutoJs6 لا تظهر على `imgui` الأعضاء التي لم يسجلها AutoJs6 بعد إلا بعد تحميل الإضافة (عند أول استخدام لأي عضو من `imgui`); أما الوسيط `ui` في دوال الرسم فهو كامل دائمًا.
 
 ******
 
@@ -63,8 +63,8 @@
 - تقبل الأنسجة المُدارة مسارات الملفات والبايتات المشفرة وAndroid `Bitmap` وكائنات AutoJs6 `Image`؛ وتوفر `image` / `imageButton` وطبقات DrawList الثلاث عرض الصور والرسم المخصص.
 - تعمل مراجع `imgui.ref(value)` / `{value: x}` الخفيفة مع كل عناصر التحكم ذات الحالة، مع بقاء مساعدات مراجع مصفوفات Java القديمة متوافقة بالكامل.
 - توفر مكونات الجلسة `logWindow` و`toast` المكدسة وحوارات Promise و`statsOverlay` الملوّن حسب العتبات و`dataTable` القابل للتحديد وCRUD واجهة تصحيح جاهزة.
-- تتبع تعدادات الثوابت وأسماء أساليب PascalCase البديلة التسمية الأصلية في Dear ImGui فلا يكلف نقل المعرفة الحالية شيئًا.
-- يشمل الدعم الهندسي تصريحات TypeScript كاملة وخمسة أمثلة قابلة للتشغيل واختبارات رسم Android وطابور إدخال غير حاجب وأدوات تحديث upstream قابلة للتحقق وأتمتة إصدارات CI.
+- تتوفر أسماء PascalCase بديلة للواجهات البرمجية الشائعة وتعدادات الثوابت (مثلًا `ui.Button`) وهي تحافظ على أسلوب وسائط الإضافة; قائمة الأسماء البديلة والفروق عن توقيعات C++ الأصلية في [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
+- يشمل الدعم الهندسي تصريحات TypeScript كاملة وستة أمثلة قابلة للتشغيل واختبارات رسم Android وطابور إدخال غير حاجب وأدوات تحديث upstream قابلة للتحقق وأتمتة إصدارات CI.
 - توطين معلومات الإضافة وتعليمات الاستخدام و README و CHANGELOG بعشر لغات.
 
 ******
@@ -126,9 +126,9 @@ imgui.createWindow(function (ui, overlay) {
 
 الأنسجة والرسم المخصص: استدعِ `createTexture` بعد أن تصبح جلسة النافذة جاهزة فقط (عادةً مرة واحدة داخل callback العرض). يعرض الكائن الناتج `width` و`height` والدالتين التكراريتين الآمنتين `dispose()` / `close()`؛ وتُحرر الأنسجة المتبقية تلقائياً عند إغلاق الجلسة. تعرض `image` / `imageButton` الأنسجة، بينما توفر `getWindowDrawList` و`getForegroundDrawList` و`getBackgroundDrawList` بدائيات الرسم الشائعة. تستخدم إحداثيات DrawList بكسلات Surface. يمكن تمرير قيم AutoJs6 `Image` من `images.read(...)` أو لقطات الشاشة مباشرةً.
 
-جلسات النوافذ: يستخدم التراكب `TouchMode.Auto` افتراضياً، فتظل نوافذ ImGui الجذرية تفاعلية بينما تنتقل لمسات مناطق Surface الفارغة إلى التطبيق أسفلها؛ اختر `Touchable` أو `Passthrough` لسياسة ثابتة. تستطيع الجلسة تغيير الشفافية/الأمان/وضع اللمس، والانطواء إلى فقاعة منخفضة الإطارات، وإنشاء `addButtonEx` مستقلة، واتباع محتوى `AlwaysAutoResize`، وحفظ التخطيط عبر `iniPath`، ونشر الأحداث عبر `on` / `once` / `off` أو callbacks الخيارات. ينشئ `imgui.launch(...)` سطحاً بملء الشاشة في Activity ‏AutoJs6 الحالية بحالة resumed، بينما يختار `launchFloaty(...)` التراكب صراحةً. لكل محرك نصوص جلسة عرض أصلية واحدة، لكن يمكن لـ callback الخاص بها إنشاء أي عدد من جذور ImGui عبر `begin` / `withWindow`؛ وتغلق الجلسة الجديدة السابقة.
+جلسات النوافذ: يستخدم التراكب `TouchMode.Auto` افتراضياً، فتظل نوافذ ImGui الجذرية تفاعلية بينما تنتقل لمسات مناطق Surface الفارغة إلى التطبيق أسفلها؛ اختر `Touchable` أو `Passthrough` لسياسة ثابتة. تستطيع الجلسة تغيير الشفافية/الأمان/وضع اللمس، والانطواء إلى فقاعة منخفضة الإطارات، وإنشاء `addButtonEx` مستقلة، واتباع محتوى `AlwaysAutoResize`، وحفظ التخطيط عبر `iniPath`، ونشر الأحداث عبر `on` / `once` / `off` أو callbacks الخيارات. ينشئ `imgui.launch(...)` سطحاً بملء الشاشة في Activity ‏AutoJs6 الحالية بحالة resumed، بينما يختار `launchFloaty(...)` التراكب صراحةً. لكل محرك نصوص جلسة عرض أصلية واحدة، لكن يمكن لـ callback الخاص بها إنشاء أي عدد من جذور ImGui عبر `begin` / `withWindow`؛ وتغلق الجلسة الجديدة السابقة. عندما يرمي callback الرسم أو callback حدث استثناءً, يطبع `console.error` الخطأ مع مكدس الاستدعاء (مرة واحدة لسلسلة الخطأ نفسه) ويُطلق الحدث `error` (`error` / `phase` / `frame`); من دون مستمع `error` يغلق خطأ الرسم الجلسة (`closeReason` هو `render-error`), ومع وجود مستمع يُتخطى باقي الإطار ويستمر الرسم. يبلّغ الخيار `debug: true` عبر `console.warn` وlogcat عن أخطاء الاستخدام مثل `begin` دون `end`, ويعرض نافذتي Metrics وDebug Log. تعمل الأساليب العامة مثل `setTouchable` / `setGlobalAlpha` / `getComponent` على الجلسة الحالية وترمي `imgui.<name>: no active session` عند عدم وجود جلسة نشطة.
 
-ترتبط المكونات عالية المستوى بالجلسة النشطة وتُرسم بعد callback المستخدم: يوفر `logWindow` مستويات ملوّنة ومسحاً وتصديراً وتمريراً تلقائياً؛ ويعرض `toast` إشعارات مؤقتة ذات موضع؛ وتُرجع `alert` / `confirm` / `singleChoice` / `multiChoice` كائنات Promise؛ ويرسم `statsOverlay` زمن الإطار؛ ويوفر `dataTable` التحديد وCRUD. يمكن اكتشاف الأمثلة الخمسة (`widget-overview` و`parameter-panel` و`log-hud` و`data-table-demo` و`theme-gallery`) عبر `listExamples` / `getExampleSource` وتشغيلها بـ `runExample`. لا يستهلك مركز إضافات AutoJs6 6.8 بيانات الأمثلة العامة بعد، لذا شغّل الاستدعاء أدناه مباشرة حتى يضيف المضيف الدعم:
+ترتبط المكونات عالية المستوى بالجلسة النشطة وتُرسم بعد callback المستخدم: يوفر `logWindow` مستويات ملوّنة ومسحاً وتصديراً وتمريراً تلقائياً؛ ويعرض `toast` إشعارات مؤقتة ذات موضع؛ وتُرجع `alert` / `confirm` / `singleChoice` / `multiChoice` كائنات Promise؛ ويرسم `statsOverlay` زمن الإطار؛ ويوفر `dataTable` التحديد وCRUD. يمكن اكتشاف الأمثلة الستة (`widget-overview` و`parameter-panel` و`log-hud` و`data-table-demo` و`theme-gallery` و`error-handling`) عبر `listExamples` / `getExampleSource` وتشغيلها بـ `runExample`. لا يستهلك مركز إضافات AutoJs6 6.8 بيانات الأمثلة العامة بعد، لذا شغّل الاستدعاء أدناه مباشرة حتى يضيف المضيف الدعم:
 
 ```js
 imgui.runExample("widget-overview");
@@ -140,9 +140,9 @@ imgui.runExample("widget-overview");
 
 ******
 
-تعكس أساليب lower camel case عمليات Dear ImGui التي تحمل الاسم نفسه وتتوفر أسماء PascalCase البديلة للمستخدمين المعتادين على التسمية الأصلية (مثلًا `ui.Button` يكافئ `ui.button`):
+تتوفر للواجهات الشائعة أسماء PascalCase بديلة (مثلًا `ui.Button` يكافئ `ui.button`). تحافظ الأسماء البديلة على أسلوب وسائط الإضافة (القيم القابلة للتغيير عبر `imgui.ref` مثلًا) ولا تطابق توقيعات C++ الأصلية واحدًا لواحد; القائمة والفروق في [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). تعكس أساليب lower camel case عمليات Dear ImGui التي تحمل الاسم نفسه, وهي مقسمة إلى المجموعات التالية:
 
-- وقت تشغيل الجلسة: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode` و`setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure` و`collapseWindow` / `expandWindow` و`addButtonEx` و`on` / `once` / `off` مع صيغها الخاصة بالجلسة.
+- وقت تشغيل الجلسة: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode` و`setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure` و`collapseWindow` / `expandWindow` و`addButtonEx` و`on` / `once` / `off` مع صيغها الخاصة بالجلسة, والحدث `error` للجلسة الذي يبلّغ عن أخطاء الدوال, والخيار `debug` الذي يفعّل وضع التصحيح.
 - اكتشاف الواجهة الخلفية: تعرض `getBackendCapabilities` / `BackendStatus` مدى التوفر والجاهزية للإنتاج للنوافذ واللمس المقسم والعملية ذات الامتيازات والإدخال المباشر وDocking وMulti-Viewport, من دون رفع الامتيازات.
 - الجلسة والنوافذ: `createWindow` و `closeWindow` و `withWindow` و `withChild` و `setNextWindowPos` و `setNextWindowSize` و `setNextWindowBgAlpha` إضافة إلى استعلامات حالة النافذة مثل `isWindowHovered`.
 - النص وعناصر التحكم: `text` و `textColored` و `textWrapped` و `separatorText` و `bulletText` و `labelText` و `button` و `arrowButton` و `invisibleButton` و `checkbox` و `toggle` و `radioButton` و `sliderFloat` و `sliderInt` و `vSliderFloat` و `dragFloat` و `dragInt` و `inputText` و `inputInt` و `inputFloat` و `inputTextMultiline` و `colorEdit3` و `colorEdit4` و `colorPicker4` و `colorButton` و `progressBar` و `plotLines` و `plotHistogram` وغيرها.
@@ -171,6 +171,20 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.11.0
+
+###### 2026/10/29
+
+* `تلميح` الأساليب العامة التي تعمل على جلسة النافذة النشطة (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) ترمي الآن الخطأ `imgui.<name>: no active session` عند عدم وجود جلسة نشطة; كان getComponent يعيد null سابقًا
+* `تلميح` خيار الرسم offset مهمل; استخدم valuesOffset بدلًا منه (ما زال offset يعمل)
+* `ميزة` حدث error لجلسات النوافذ: يُطلق عندما ترمي دالة الرسم أو دالة حدث استثناءً, ويحمل error و phase (render أو event) و frame; مع وجود مستمع error تواصل الجلسة الرسم ويمكن للمعالج إغلاقها, ومن دونه تُغلق الجلسة بالسبب render-error كما في السابق
+* `ميزة` خيار النافذة debug: يفعّل استرداد الأخطاء وسجل التصحيح في Dear ImGui, وينبه عبر console.warn إلى أخطاء الاستخدام مثل Begin / End غير المتطابقين, ويعرض نافذتي Metrics و Debug Log
+* `ميزة` المثال error-handling يوضح حدث error ووضع debug وطريقة تتبع الأخطاء الشائعة
+* `ميزة` يسرد docs/ALIASES.md جميع الأسماء البديلة بنمط PascalCase وفروقها عن توقيعات C++ في Dear ImGui
+* `إصلاح` لم يكن لخياري valuesOffset و stride في plotLines / plotHistogram أي تأثير
+* `تحسين` تُطبع أخطاء دالة الرسم أو دوال الأحداث في وحدة التحكم مع مكدس الاستدعاءات, ويُطبع الخطأ نفسه المتكرر مرة واحدة فقط
+* `تحسين` يصف README الأسماء البديلة بأنها "أسماء بديلة للواجهات الشائعة", ويشرح نموذج الجلسة الواحدة (الجلسة الجديدة تغلق السابقة) واستخدام الأعضاء الجديدة, ويذكر أن SDK المستهدف هو 37
+
 #### v1.10.0
 
 ###### 2026/10/29
@@ -186,13 +200,6 @@ imgui.runExample("widget-overview");
 
 * `تحسين` تستخدم أيقونات مركز الملحقات الأحجام والمواضع والصور الفاتحة والداكنة والخلفيات الدائرية المعدلة في Icon Studio مع الاحتفاظ بالمصادر والمعلمات لإعادة إنتاجها
 * `تحسين` تستخدم أيقونات معلومات التطبيق في Android صور Icon Studio وخلفياته الفاتحة والداكنة مع الحفاظ على الصور الشفافة في مركز الملحقات وخيارات المشغل الحالية
-
-#### v1.9.3
-
-###### 2026/09/19
-
-* `إصلاح` تحذيرات قراءة SDK XML v4 مع AGP 9.1 وتشغيل فحص محاذاة مكتبات APK الأصلية خطأ عند تجميع اختبارات JVM, باستخدام إضافات البناء المشتركة 1.8.3
-* `تحسين` رفع compileSdk و targetSdk إلى 37 (Android 17)؛ لا يعتمد سلوك المكون الإضافي على الهدف الجديد
 
 ##### لمزيد من سجل الإصدارات
 
@@ -220,7 +227,7 @@ imgui.runExample("widget-overview");
 .\gradlew.bat :app:verifyImGuiDebugApks
 ```
 
-تأتي معلمات البناء من `version.properties`; الحد الأدنى الحالي لحزمة SDK هو 24 وحزمة SDK المستهدفة هي 36.
+تأتي معلمات البناء من `version.properties`; الحد الأدنى الحالي لحزمة SDK هو 24 وحزمة SDK المستهدفة هي 37.
 
 ******
 

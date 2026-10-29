@@ -159,14 +159,20 @@
 
 ******
 
-- [ ] R0.1 宿主模块与插件新增成员: 核实宿主 `ImguiModule` 对 `ImguiNames` 之外的成员是否透传 (首次加载后能否访问插件新增的函数). 不透传时在本阶段给出方案 (例如加载后把插件对象的全部成员补挂到模块对象, 或文档写明新成员需要配套宿主版本并可用 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` 取完整对象), 写进 README 与附录 B 登记. 验收: 968e9f18 上 v1.11.0 新增成员经全局 `imgui` 可调用, 或文档已写明限制.
-- [ ] R0.2 PlotOptions 的 `valuesOffset` 与 `stride` 生效 (A2): `plotLines` / `plotHistogram` 以 `valuesOffset` 为准并兼容旧的 `offset`, `stride` 传到 JNI. 验收: 单测覆盖 offset / valuesOffset / stride 三种输入到 JNI 参数的映射; 设备脚本用 8 个采样点 offset 2 stride 2 绘制并以 `getItemRect` + 截图核对曲线起点.
-- [ ] R0.3 错误事件 (A5, D4): 渲染回调或事件回调抛错时 `console.error` 输出带栈信息 (同一消息连续出现只打印一次, 事件照发), 触发 `session.on("error", e)` (`e.error`, `e.phase` 为 render / event, `e.frame`); 没有 error 监听时沿用现状关闭会话 (`closeReason` 为 render-error), 有监听时跳过本帧继续渲染, 处理器内可自行 `session.close()`. 验收: 设备脚本两种情况各一组: 无监听 closed = true 且 closeReason = render-error; 有监听时 frames 继续增长, 事件计数与抛错帧数一致.
-- [ ] R0.4 `createWindow({debug: true})` (D3): 打开 Dear ImGui 的 ErrorRecovery 断言与 DebugLog 输出 (Begin / End 不配对等错误经 `console.warn` 与 logcat 可见), 并自动显示 Metrics 与 DebugLog 窗口 (R3.1 落地前先用现有 native 调用, R3.1 后改为复用). 验收: 设备脚本构造一次 `begin` 不 `end`, debug 模式 console 出现对应警告, 非 debug 模式没有.
-- [ ] R0.5 全局 setter 与单会话 (A7): `imgui.setAlpha` 等依赖活动会话的全局方法在没有活动会话时抛 `Error("imgui.<name>: no active session")` 而非空指针或静默; d.ts 标注; README 写明单会话模型 (新会话关闭旧会话). 验收: 单测 + 设备脚本无会话时调用抛出预期错误.
-- [ ] R0.6 别名说明 (A9): README 由 "PascalCase 全量别名, 迁移零成本" 改为 "常用 API 别名", 新增 `docs/ALIASES.md`: 194 个别名清单 (脚本从 `index.js` 生成, 入库脚本放 `tools/`) 与上游 C++ 签名的差异表 (ValueRef 风格, 多分量控件与键盘查询缺失等, 随 R3 / R4 补齐后更新).
-- [ ] R0.7 README 的目标 SDK 与 changelog 一致 (D4): 全部 10 语言 README 源写 37.
-- [ ] R0.8 示例 `examples/error-handling.js` (error 事件, debug 模式, 常见错误排查) 登记到 `examples/index.json` (6 个), `runExample` 可运行.
+- [x] R0.1 宿主模块与插件新增成员: 核实宿主 `ImguiModule` 对 `ImguiNames` 之外的成员是否透传 (首次加载后能否访问插件新增的函数). 不透传时在本阶段给出方案 (例如加载后把插件对象的全部成员补挂到模块对象, 或文档写明新成员需要配套宿主版本并可用 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` 取完整对象), 写进 README 与附录 B 登记. 验收: 968e9f18 上 v1.11.0 新增成员经全局 `imgui` 可调用, 或文档已写明限制.
+  完成: 1.10.0 宿主只转发 `ImguiNames` 列出的名称 (名单外为 undefined). 按 Q1 推荐先行, 宿主 `ImguiModule.forwardUnlisted` 在插件首次加载后把名单外的公开成员补挂到模块对象 (宿主本地提交); README 写明新成员在首次使用 `imgui` 任一成员后出现. 968e9f18 / 63751f63 上 `device_global_check.py` 的 forwarded 项 (ui 的 458 个公开成员经 `imgui` 都可访问) 通过; 另用临时加了两个名单外成员的插件包在 968e9f18 验证: 加载前 undefined, 加载后函数可调用且 this 为 API 对象, 非函数值可读.
+- [x] R0.2 PlotOptions 的 `valuesOffset` 与 `stride` 生效 (A2): `plotLines` / `plotHistogram` 以 `valuesOffset` 为准并兼容旧的 `offset`, `stride` 传到 JNI. 验收: 单测覆盖 offset / valuesOffset / stride 三种输入到 JNI 参数的映射; 设备脚本用 8 个采样点 offset 2 stride 2 绘制并以 `getItemRect` + 截图核对曲线起点.
+  完成: stride 按值的个数 (Q2). 单测 `ImGuiScriptFacadeTest` 覆盖三种输入的映射. 插件目前没有 `getItemRect` (R3 才加), 像素核对改为插桩测试 `ImGuiRenderInstrumentedTest.plotValuesOffsetAndStrideSelectTheSamples`: 8 个采样点 offset 2 stride 2 的截图与预先取出的 4 个值 (stride 1) 的截图逐像素一致, 且与不取样的截图不同; `tools/device_r0_check.py` 的 plot 项确认脚本层两种写法 (valuesOffset 与旧 offset) 不报错.
+- [x] R0.3 错误事件 (A5, D4): 渲染回调或事件回调抛错时 `console.error` 输出带栈信息 (同一消息连续出现只打印一次, 事件照发), 触发 `session.on("error", e)` (`e.error`, `e.phase` 为 render / event, `e.frame`); 没有 error 监听时沿用现状关闭会话 (`closeReason` 为 render-error), 有监听时跳过本帧继续渲染, 处理器内可自行 `session.close()`. 验收: 设备脚本两种情况各一组: 无监听 closed = true 且 closeReason = render-error; 有监听时 frames 继续增长, 事件计数与抛错帧数一致.
+  完成: 有监听时抛错帧已提交的控件照常绘制, 未闭合的 begin / push 由 ErrorRecovery 收尾 (Q4). `device_r0_check.py`: 无监听 closeReason = render-error; 有监听 41 帧中抛错 6 帧, 事件 6 个 (phase render, frame 递增), 连续 5 帧的同一错误 console 只打印 1 次; 事件回调抛错发出 phase event 的 error 事件且会话不关; 处理器内 close 生效.
+- [x] R0.4 `createWindow({debug: true})` (D3): 打开 Dear ImGui 的 ErrorRecovery 断言与 DebugLog 输出 (Begin / End 不配对等错误经 `console.warn` 与 logcat 可见), 并自动显示 Metrics 与 DebugLog 窗口 (R3.1 落地前先用现有 native 调用, R3.1 后改为复用). 验收: 设备脚本构造一次 `begin` 不 `end`, debug 模式 console 出现对应警告, 非 debug 模式没有.
+  完成: 插件的 `IM_ASSERT` (ImGuiUserConfig.h) 在 debug 会话中报告为警告而不中止进程, 其他时候不求值; 用法错误经 ErrorCallback 收集, 同一消息连续出现只报一次. 插桩测试 `debugModeReportsAWindowLeftOpen` 与 `device_r0_check.py` 的 debug-warning 项 (debug 1 条 "Missing End()", 非 debug 0 条) 通过. R3.1 落地后 Metrics / DebugLog 窗口改为复用其调用.
+- [x] R0.5 全局 setter 与单会话 (A7): `imgui.setAlpha` 等依赖活动会话的全局方法在没有活动会话时抛 `Error("imgui.<name>: no active session")` 而非空指针或静默; d.ts 标注; README 写明单会话模型 (新会话关闭旧会话). 验收: 单测 + 设备脚本无会话时调用抛出预期错误.
+  完成: 覆盖 setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent (getComponent 以前返回 null, 按 Q3 推荐改为抛出, changelog hint 已写); 单测 `ImGuiScriptFacadeTest` 与 `device_r0_check.py` 的 no-session 项通过.
+- [x] R0.6 别名说明 (A9): README 由 "PascalCase 全量别名, 迁移零成本" 改为 "常用 API 别名", 新增 `docs/ALIASES.md`: 194 个别名清单 (脚本从 `index.js` 生成, 入库脚本放 `tools/`) 与上游 C++ 签名的差异表 (ValueRef 风格, 多分量控件与键盘查询缺失等, 随 R3 / R4 补齐后更新). 完成: `tools/generate_aliases_doc.py` (`--check` 校验) 生成清单并按 vendored `imgui.h` 标出上游同名函数 (156 个有, `SetWindowFontScale` 为 obsolete, 37 个为插件功能或改名), 差异表在 ALIASES.md 手写部分.
+- [x] R0.7 README 的目标 SDK 与 changelog 一致 (D4): 全部 10 语言 README 源写 37.
+- [x] R0.8 示例 `examples/error-handling.js` (error 事件, debug 模式, 常见错误排查) 登记到 `examples/index.json` (6 个), `runExample` 可运行.
+  完成: `listExamples()` 返回 6 个; `device_r0_check.py` 的 example 项 (`runExample("error-handling", {autoCloseMs: 3000})` 以 example-timeout 关闭, debug 默认开) 通过.
 - [ ] R0.9 发布 v1.11.0 (连同未发布的 v1.10.0 改动一起推送, v1.10.0 不单独打 tag, changelog 保留 1.10.0 条目).
 
 ******
@@ -288,4 +294,7 @@
 
 格式: `- [状态] 编号 问题 | 选项: A (推荐) / B | 影响: 条目 | 改选返工: ... | 来源`. 状态: 需拍板 / 已按推荐先行待确认 / 已决 / 暂缓. 编号从 Q1 起.
 
-- (暂无)
+- [已按推荐先行待确认] Q1 宿主 `ImguiModule` 不透传 `ImguiNames` 之外的成员 (核实结果: 1.10.0 宿主上插件新增的函数经全局 `imgui` 为 undefined), 怎么补 | 选项: A (推荐, 已先行) 宿主在插件首次加载后把名单外的公开成员补挂到模块对象 (函数转发, 其他值 getter; 宿主本地提交), README 写明新成员在首次使用 `imgui` 任一成员后才出现, 渲染回调的 `ui` 始终完整 / B 只写文档: 新成员要等配套宿主, 之前用 `plugins.load(...)` 取完整对象 / C 宿主改为 Proxy 式按名查找 (每次访问都查插件对象, 加载前也能看到名称需先加载插件) | 影响: R0.1 及以后每个阶段的新增成员 | 改选返工: B 撤销宿主 forwardUnlisted (约 40 行) 并改 README 一句; C 需改宿主模块层的安装模型, 约 1 天 | 来源: imgui-r0
+- [已按推荐先行待确认] Q2 PlotOptions `stride` 的单位 | 选项: A (推荐, 已先行) 按值的个数 (stride 2 即每隔一个取值, JNI 内乘以 sizeof(float)) / B 按字节, 与 C++ 的 `stride` 一致 (脚本需写 8 表示每隔一个 float) | 影响: R0.2, d.ts 与 ALIASES.md 差异表 | 改选返工: B 改一行换算与单测, 文档两处, 约 0.5 小时 | 来源: imgui-r0
+- [已按推荐先行待确认] Q3 `getComponent` 没有活动会话时的行为 (1.10.0 返回 null) | 选项: A (推荐, 已先行) 与其他依赖会话的全局方法一致, 抛 `imgui.getComponent: no active session` (破坏性, changelog hint 已写) / B 保持返回 null, 只有 setter 类方法抛出 | 影响: R0.5 | 改选返工: 一行代码, 单测与 d.ts 注释各一处, 约 0.5 小时 | 来源: imgui-r0
+- [已按推荐先行待确认] Q4 有 `error` 监听时, 渲染回调抛错那一帧怎么呈现 | 选项: A (推荐, 已先行) 抛错前已提交的控件照常绘制, 未闭合的 begin / push 由 ErrorRecovery 静默收尾 (等同 Dear ImGui 的 "recoverable error" 行为), 下一帧重新调用回调 / B 丢弃这一帧 (不绘制, 保留上一帧画面) | 影响: R0.3 | 改选返工: B 需在 native 加 "结束帧但不提交绘制" 路径与插桩测试, 约 2 小时 | 来源: imgui-r0

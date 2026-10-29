@@ -45,7 +45,7 @@
 
 ImGui 外掛將 [Dear ImGui](https://github.com/ocornut/imgui) 立即模式圖形函式庫帶入 AutoJs6, 在透明浮動視窗中以 OpenGL ES 渲染控制項, 適合為指令碼編寫除錯面板/參數調節器/執行狀態 HUD 等輕量浮動介面. 外掛透過一套精簡的 API 統一管理視窗建立/影格排程/觸控輸入和原生資源清理.
 
-外掛在外掛中心啟用後, 指令碼直接使用全域物件 `imgui` (由 AutoJs6 註冊, 首次呼叫成員時載入外掛), 不需要 `plugins.load`; 需要 AutoJs6 6.8.0 或以上版本.
+外掛在外掛中心啟用後, 指令碼直接使用全域物件 `imgui` (由 AutoJs6 註冊, 首次呼叫成員時載入外掛), 不需要 `plugins.load`; 需要 AutoJs6 6.8.0 或以上版本; 外掛比 AutoJs6 新時, AutoJs6 尚未登記的新成員要等外掛載入後 (首次使用 `imgui` 的任一成員時) 才會出現在 `imgui` 上, 渲染回呼的 `ui` 參數始終完整.
 
 ******
 
@@ -63,8 +63,8 @@ ImGui 外掛將 [Dear ImGui](https://github.com/ocornut/imgui) 立即模式圖�
 - 代管紋理支援檔案路徑、編碼位元組、Android `Bitmap` 與 AutoJs6 `Image`; `image` / `imageButton` 和三層 DrawList 可完成圖片顯示與浮動視窗自繪.
 - 輕量 `imgui.ref(value)` / `{value: x}` 參照可用於所有具狀態控制項, 現有 Java 陣列參照輔助方法保持完全相容.
 - 工作階段託管的 `logWindow`、堆疊 `toast`、Promise 對話框、閾值變色 `statsOverlay` 與可選取 CRUD `dataTable` 可直接組成偵錯介面.
-- 常數列舉與 PascalCase 方法別名和 Dear ImGui 原始命名保持一致, 遷移零成本.
-- 工程支援包含完整 TypeScript 宣告、五個可執行範例、Android 渲染儀器測試、無鎖輸入佇列、可驗證的上游更新工具與 CI 發布自動化.
+- 常用 API 與常數列舉提供 PascalCase 別名 (如 `ui.Button`), 參數沿用外掛風格; 別名清單及與上游 C++ 簽章的差異見 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
+- 工程支援包含完整 TypeScript 宣告、六個可執行範例、Android 渲染儀器測試、無鎖輸入佇列、可驗證的上游更新工具與 CI 發布自動化.
 - 外掛資訊/使用說明/README 和 CHANGELOG 的十種語言本地化.
 
 ******
@@ -126,9 +126,9 @@ imgui.createWindow(function (ui, overlay) {
 
 紋理與自繪: 請在視窗工作階段就緒後呼叫 `createTexture` (通常於渲染回呼首次執行時建立). 傳回物件包含 `width` / `height` 與冪等的 `dispose()` / `close()`; 工作階段關閉時會自動釋放其餘紋理. `image` / `imageButton` 用於顯示紋理, `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` 提供常用繪圖原語. DrawList 座標採用 Surface 像素座標. 可直接傳入 AutoJs6 `images.read(...)` 與螢幕擷取所得的 `Image`.
 
-視窗工作階段: 懸浮窗預設採用 `TouchMode.Auto`, ImGui 根視窗保持可互動, Surface 空白區域則直接觸達下層應用程式; 也可用 `Touchable` 或 `Passthrough` 固定策略. 工作階段支援動態透明度/防擷取/觸控模式、收合為低幀率迷你懸浮球、建立獨立可拖曳 `addButtonEx`、跟隨 `AlwaysAutoResize` 內容、透過 `iniPath` 持久化版面配置, 並以 `on` / `once` / `off` 或 options 回呼訂閱事件. `imgui.launch(...)` 會在目前前景 AutoJs6 Activity 中建立全螢幕 Surface, `launchFloaty(...)` 則明確選擇懸浮窗. 每個指令碼引擎只擁有一個原生渲染工作階段, 但可在同一渲染回呼中用 `begin` / `withWindow` 建立任意多個 ImGui 根視窗; 新建工作階段會關閉舊工作階段.
+視窗工作階段: 懸浮窗預設採用 `TouchMode.Auto`, ImGui 根視窗保持可互動, Surface 空白區域則直接觸達下層應用程式; 也可用 `Touchable` 或 `Passthrough` 固定策略. 工作階段支援動態透明度/防擷取/觸控模式、收合為低幀率迷你懸浮球、建立獨立可拖曳 `addButtonEx`、跟隨 `AlwaysAutoResize` 內容、透過 `iniPath` 持久化版面配置, 並以 `on` / `once` / `off` 或 options 回呼訂閱事件. `imgui.launch(...)` 會在目前前景 AutoJs6 Activity 中建立全螢幕 Surface, `launchFloaty(...)` 則明確選擇懸浮窗. 每個指令碼引擎只擁有一個原生渲染工作階段, 但可在同一渲染回呼中用 `begin` / `withWindow` 建立任意多個 ImGui 根視窗; 新建工作階段會關閉舊工作階段. 渲染回呼或事件回呼擲出錯誤時以 `console.error` 輸出錯誤與呼叫堆疊 (同一錯誤連續出現只輸出一次) 並觸發 `error` 事件 (含 `error` / `phase` / `frame`); 沒有 `error` 監聽器時渲染錯誤會關閉工作階段 (`closeReason` 為 `render-error`), 有監聽器時略過本幀剩餘部分並繼續渲染. 選項 `debug: true` 以 `console.warn` 與 logcat 回報 `begin` 未配對 `end` 等用法錯誤, 並顯示 Metrics 與 Debug Log 視窗. `setTouchable` / `setGlobalAlpha` / `getComponent` 等全域方法作用於目前工作階段, 沒有作用中的工作階段時擲出 `imgui.<name>: no active session`.
 
-高階元件會掛接到目前工作階段並在使用者渲染回呼後繪製: `logWindow` 提供等級著色、清除、匯出回呼與自動捲底; `toast` 提供定時定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 回傳 Promise; `statsOverlay` 繪製幀耗時; `dataTable` 提供資料列選取與 CRUD. 五個內建範例 (`widget-overview`、`parameter-panel`、`log-hud`、`data-table-demo`、`theme-gallery`) 可透過 `listExamples` / `getExampleSource` 發現並用 `runExample` 啟動. AutoJs6 6.8 外掛中心尚未使用通用範例中繼資料, 在宿主支援前可直接執行下方呼叫:
+高階元件會掛接到目前工作階段並在使用者渲染回呼後繪製: `logWindow` 提供等級著色、清除、匯出回呼與自動捲底; `toast` 提供定時定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 回傳 Promise; `statsOverlay` 繪製幀耗時; `dataTable` 提供資料列選取與 CRUD. 六個內建範例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling`) 可透過 `listExamples` / `getExampleSource` 發現並用 `runExample` 啟動. AutoJs6 6.8 外掛中心尚未使用通用範例中繼資料, 在宿主支援前可直接執行下方呼叫:
 
 ```js
 imgui.runExample("widget-overview");
@@ -140,9 +140,9 @@ imgui.runExample("widget-overview");
 
 ******
 
-小駝峰方法對應同名 Dear ImGui 操作, 熟悉原始命名的使用者也可使用 PascalCase 別名 (如 `ui.Button` 等價於 `ui.button`):
+常用 API 另有 PascalCase 別名 (如 `ui.Button` 等價於 `ui.button`), 別名沿用外掛的參數風格 (例如可變值使用 `imgui.ref`), 與上游 C++ 簽章並非一一對應, 清單與差異見 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). 小駝峰方法對應同名 Dear ImGui 操作, 依功能分組如下:
 
-- 工作階段執行階段: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 以及工作階段級 `on` / `once` / `off` 與對應執行個體方法.
+- 工作階段執行階段: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 以及工作階段級 `on` / `once` / `off` 與對應執行個體方法; 工作階段 `error` 事件回報回呼錯誤, `debug` 選項開啟偵錯模式.
 - 後端探測: `getBackendCapabilities` / `BackendStatus` 回報視窗, split-touch, 特權處理程序, direct input, Docking 與 Multi-Viewport 的可用性與正式環境就緒狀態, 不執行權限提升操作.
 - 會話與視窗: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` 以及 `isWindowHovered` 等視窗狀態查詢.
 - 文字與控制項: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等.
@@ -171,6 +171,20 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.11.0
+
+###### 2026/10/29
+
+* `提示` 依賴使用中視窗工作階段的全域方法 (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) 在沒有使用中工作階段時改為擲出 `imgui.<方法名稱>: no active session` 錯誤, 其中 getComponent 以前回傳 null
+* `提示` 繪圖選項 offset 已棄用, 請改用 valuesOffset (舊寫法仍然有效)
+* `新增` 視窗工作階段的 error 事件: 繪製回呼或事件回呼擲出錯誤時觸發, 事件含 error, phase (render 或 event) 與 frame; 有 error 監聽器時工作階段繼續繪製, 可在處理器中自行關閉工作階段, 沒有監聽器時與以前一樣以 render-error 關閉
+* `新增` 視窗選項 debug: 開啟 Dear ImGui 的錯誤復原與偵錯記錄, Begin / End 不成對等用法錯誤經 console.warn 提示, 並顯示 Metrics 與 Debug Log 視窗
+* `新增` 範例 error-handling, 示範 error 事件, debug 模式與常見錯誤的排查
+* `新增` 別名文件 docs/ALIASES.md, 列出全部 PascalCase 別名及其與 Dear ImGui C++ 簽章的差異
+* `修復` plotLines / plotHistogram 的 valuesOffset 與 stride 選項無效的問題
+* `優化` 繪製回呼或事件回呼出錯時主控台輸出含呼叫堆疊的錯誤訊息, 同一錯誤連續出現時只輸出一次
+* `優化` README 的別名說明改為 "常用 API 別名", 補充單一工作階段模型 (建立新工作階段會關閉上一個) 與新增成員的使用說明, 目標 SDK 更正為 37
+
 #### v1.10.0
 
 ###### 2026/10/29
@@ -186,13 +200,6 @@ imgui.runExample("widget-overview");
 
 * `優化` 外掛程式中心圖示採用統一工作台調整後的尺寸, 位置, 明暗圖稿與圓形底色, 保留可重建原稿和參數
 * `優化` Android 系統應用程式資訊圖示與圖示工作台共用圖稿及明暗底色, 保留外掛程式中心透明圖稿與現有啟動器選項
-
-#### v1.9.3
-
-###### 2026/09/19
-
-* `修復` AGP 9.1 建置時的 SDK XML v4 解析警告及 JVM 單元測試組裝工作誤觸發 APK 原生程式庫對齊檢查的問題 (共用建置外掛 1.8.3)
-* `優化` 將 compileSdk 與 targetSdk 提升到 37 (Android 17), 外掛程式行為不受新目標版本影響
 
 ##### 更多發行歷史可參閱
 
@@ -220,7 +227,7 @@ imgui.runExample("widget-overview");
 .\gradlew.bat :app:verifyImGuiDebugApks
 ```
 
-建置參數來自 `version.properties`, 目前最低 SDK 為 24, 目標 SDK 為 36.
+建置參數來自 `version.properties`, 目前最低 SDK 為 24, 目標 SDK 為 37.
 
 ******
 

@@ -5,6 +5,26 @@
   "changelog_label_improvement": "تحسين",
   "changelog_label_dependency": "تبعية",
   "$data": {
+    "v1.11.0": {
+      "released_date": "2026/10/29",
+      "hint": [
+        "الأساليب العامة التي تعمل على جلسة النافذة النشطة (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) ترمي الآن الخطأ `imgui.<name>: no active session` عند عدم وجود جلسة نشطة; كان getComponent يعيد null سابقًا",
+        "خيار الرسم offset مهمل; استخدم valuesOffset بدلًا منه (ما زال offset يعمل)"
+      ],
+      "feature": [
+        "حدث error لجلسات النوافذ: يُطلق عندما ترمي دالة الرسم أو دالة حدث استثناءً, ويحمل error و phase (render أو event) و frame; مع وجود مستمع error تواصل الجلسة الرسم ويمكن للمعالج إغلاقها, ومن دونه تُغلق الجلسة بالسبب render-error كما في السابق",
+        "خيار النافذة debug: يفعّل استرداد الأخطاء وسجل التصحيح في Dear ImGui, وينبه عبر console.warn إلى أخطاء الاستخدام مثل Begin / End غير المتطابقين, ويعرض نافذتي Metrics و Debug Log",
+        "المثال error-handling يوضح حدث error ووضع debug وطريقة تتبع الأخطاء الشائعة",
+        "يسرد docs/ALIASES.md جميع الأسماء البديلة بنمط PascalCase وفروقها عن توقيعات C++ في Dear ImGui"
+      ],
+      "fix": [
+        "لم يكن لخياري valuesOffset و stride في plotLines / plotHistogram أي تأثير"
+      ],
+      "improvement": [
+        "تُطبع أخطاء دالة الرسم أو دوال الأحداث في وحدة التحكم مع مكدس الاستدعاءات, ويُطبع الخطأ نفسه المتكرر مرة واحدة فقط",
+        "يصف README الأسماء البديلة بأنها \"أسماء بديلة للواجهات الشائعة\", ويشرح نموذج الجلسة الواحدة (الجلسة الجديدة تغلق السابقة) واستخدام الأعضاء الجديدة, ويذكر أن SDK المستهدف هو 37"
+      ]
+    },
     "v1.10.0": {
       "released_date": "2026/10/29",
       "hint": [

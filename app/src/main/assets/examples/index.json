@@ -31,6 +31,12 @@
       "title": "Theme Gallery",
       "asset": "examples/theme-gallery.js",
       "runner": "imgui.runExample"
+    },
+    {
+      "id": "error-handling",
+      "title": "Error Handling",
+      "asset": "examples/error-handling.js",
+      "runner": "imgui.runExample"
     }
   ]
 }

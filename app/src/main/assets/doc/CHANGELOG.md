@@ -4,6 +4,20 @@
 
 ******
 
+# v1.11.0
+
+###### 2026/10/29
+
+* `提示` 依赖活动窗口会话的全局方法 (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) 在没有活动会话时改为抛出 `imgui.<方法名>: no active session` 错误, 其中 getComponent 以前返回 null
+* `提示` 绘图选项 offset 已废弃, 请改用 valuesOffset (旧写法仍然有效)
+* `新增` 窗口会话的 error 事件: 渲染回调或事件回调抛错时触发, 事件含 error, phase (render 或 event) 与 frame; 有 error 监听时会话继续渲染, 可在处理器中自行关闭会话, 没有监听时与以前一样以 render-error 关闭
+* `新增` 窗口选项 debug: 打开 Dear ImGui 的错误恢复与调试日志, Begin / End 不配对等用法错误经 console.warn 提示, 并显示 Metrics 与 Debug Log 窗口
+* `新增` 示例 error-handling, 演示 error 事件, debug 模式与常见错误的排查
+* `新增` 别名文档 docs/ALIASES.md, 列出全部 PascalCase 别名及其与 Dear ImGui C++ 签名的差异
+* `修复` plotLines / plotHistogram 的 valuesOffset 与 stride 选项不生效的问题
+* `优化` 渲染回调或事件回调出错时控制台输出带调用栈的错误信息, 同一错误连续出现时只输出一次
+* `优化` README 的别名说明改为 "常用 API 别名", 补充单会话模型 (新建会话会关闭上一个会话) 与新增成员的使用说明, 目标 SDK 更正为 37
+
 # v1.10.0
 
 ###### 2026/10/29

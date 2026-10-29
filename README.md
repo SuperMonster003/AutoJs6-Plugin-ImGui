@@ -45,7 +45,7 @@
 
 ImGui 插件将 [Dear ImGui](https://github.com/ocornut/imgui) 即时模式图形库带入 AutoJs6, 在透明浮动窗口中以 OpenGL ES 渲染控件, 适合为脚本编写调试面板/参数调节器/运行状态 HUD 等轻量浮动界面. 插件通过一套紧凑的 API 统一管理窗口创建/帧调度/触摸输入和原生资源清理.
 
-插件在插件中心启用后, 脚本直接使用全局对象 `imgui` (由 AutoJs6 注册, 首次调用成员时加载插件), 不需要 `plugins.load`; 需要 AutoJs6 6.8.0 及以上版本.
+插件在插件中心启用后, 脚本直接使用全局对象 `imgui` (由 AutoJs6 注册, 首次调用成员时加载插件), 不需要 `plugins.load`; 需要 AutoJs6 6.8.0 及以上版本; 插件比 AutoJs6 新时, AutoJs6 尚未登记的新成员要等插件加载后 (首次使用 `imgui` 的任一成员时) 才出现在 `imgui` 上, 渲染回调的 `ui` 参数始终完整.
 
 ******
 
@@ -63,8 +63,8 @@ ImGui 插件将 [Dear ImGui](https://github.com/ocornut/imgui) 即时模式图�
 - 托管纹理支持文件路径、编码字节、Android `Bitmap` 与 AutoJs6 `Image`; `image` / `imageButton` 和三层 DrawList 可完成图片显示与浮窗自绘.
 - 轻量 `imgui.ref(value)` / `{value: x}` 引用可用于全部有状态控件, 现有 Java 数组引用辅助方法保持完全兼容.
 - 会话托管的 `logWindow`、堆叠 `toast`、Promise 对话框、阈值变色 `statsOverlay` 与可选择 CRUD `dataTable` 可直接组成调试界面.
-- 常量枚举与 PascalCase 方法别名同 Dear ImGui 原生命名保持一致, 迁移零成本.
-- 工程支持包含完整 TypeScript 声明、五个可运行示例、Android 渲染仪器测试、无锁输入队列、可验证的上游更新工具与 CI 发布自动化.
+- 常用 API 与常量枚举提供 PascalCase 别名 (如 `ui.Button`), 参数沿用插件风格; 别名清单及与上游 C++ 签名的差异见 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
+- 工程支持包含完整 TypeScript 声明、六个可运行示例、Android 渲染仪器测试、无锁输入队列、可验证的上游更新工具与 CI 发布自动化.
 - 插件信息/使用说明/README 和 CHANGELOG 的十种语言本地化.
 
 ******
@@ -126,9 +126,9 @@ imgui.createWindow(function (ui, overlay) {
 
 纹理与自绘: 请在窗口会话就绪后调用 `createTexture` (通常在渲染回调首次执行时创建). 返回对象包含 `width` / `height` 与幂等的 `dispose()` / `close()`; 会话关闭时会自动释放剩余纹理. `image` / `imageButton` 用于显示纹理, `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` 提供常用绘制原语. DrawList 坐标采用 Surface 像素坐标. 可直接传入 AutoJs6 `images.read(...)` 与截图得到的 `Image`.
 
-窗口会话: 悬浮窗默认采用 `TouchMode.Auto`, ImGui 根窗口保持可交互, Surface 空白区域则直接触达下层应用; 也可用 `Touchable` 或 `Passthrough` 固定策略. 会话支持动态透明度/防截屏/触摸模式、收起为低帧率迷你悬浮球、创建独立可拖动 `addButtonEx`、跟随 `AlwaysAutoResize` 内容、通过 `iniPath` 持久化布局, 并以 `on` / `once` / `off` 或 options 回调订阅事件. `imgui.launch(...)` 会在当前前台 AutoJs6 Activity 中创建全屏 Surface, `launchFloaty(...)` 则显式选择悬浮窗. 每个脚本引擎仅拥有一个原生渲染会话, 但可在同一渲染回调中用 `begin` / `withWindow` 创建任意多个 ImGui 根窗口; 新建会话会关闭旧会话.
+窗口会话: 悬浮窗默认采用 `TouchMode.Auto`, ImGui 根窗口保持可交互, Surface 空白区域则直接触达下层应用; 也可用 `Touchable` 或 `Passthrough` 固定策略. 会话支持动态透明度/防截屏/触摸模式、收起为低帧率迷你悬浮球、创建独立可拖动 `addButtonEx`、跟随 `AlwaysAutoResize` 内容、通过 `iniPath` 持久化布局, 并以 `on` / `once` / `off` 或 options 回调订阅事件. `imgui.launch(...)` 会在当前前台 AutoJs6 Activity 中创建全屏 Surface, `launchFloaty(...)` 则显式选择悬浮窗. 每个脚本引擎仅拥有一个原生渲染会话, 但可在同一渲染回调中用 `begin` / `withWindow` 创建任意多个 ImGui 根窗口; 新建会话会关闭旧会话. 渲染回调或事件回调抛错时以 `console.error` 输出错误与调用栈 (同一错误连续出现只输出一次) 并触发 `error` 事件 (含 `error` / `phase` / `frame`); 没有 `error` 监听时渲染错误会关闭会话 (`closeReason` 为 `render-error`), 有监听时跳过本帧剩余部分并继续渲染. 选项 `debug: true` 以 `console.warn` 与 logcat 报告 `begin` 未配对 `end` 等用法错误, 并显示 Metrics 与 Debug Log 窗口. `setTouchable` / `setGlobalAlpha` / `getComponent` 等全局方法作用于当前会话, 没有活动会话时抛出 `imgui.<name>: no active session`.
 
-高层组件会挂接到当前会话并在用户渲染回调后绘制: `logWindow` 提供等级着色、清空、导出回调与自动滚底; `toast` 提供定时定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 返回 Promise; `statsOverlay` 绘制帧耗时; `dataTable` 提供行选择与 CRUD. 五个内置示例 (`widget-overview`、`parameter-panel`、`log-hud`、`data-table-demo`、`theme-gallery`) 可通过 `listExamples` / `getExampleSource` 发现并用 `runExample` 启动. AutoJs6 6.8 插件中心尚未消费通用示例元数据, 在宿主支持前可直接运行下方调用:
+高层组件会挂接到当前会话并在用户渲染回调后绘制: `logWindow` 提供等级着色、清空、导出回调与自动滚底; `toast` 提供定时定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 返回 Promise; `statsOverlay` 绘制帧耗时; `dataTable` 提供行选择与 CRUD. 六个内置示例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling`) 可通过 `listExamples` / `getExampleSource` 发现并用 `runExample` 启动. AutoJs6 6.8 插件中心尚未消费通用示例元数据, 在宿主支持前可直接运行下方调用:
 
 ```js
 imgui.runExample("widget-overview");
@@ -140,9 +140,9 @@ imgui.runExample("widget-overview");
 
 ******
 
-小驼峰方法对应同名 Dear ImGui 操作, 熟悉原生命名的用户也可使用 PascalCase 别名 (如 `ui.Button` 等价于 `ui.button`):
+常用 API 另有 PascalCase 别名 (如 `ui.Button` 等价于 `ui.button`), 别名沿用插件的参数风格 (例如可变值使用 `imgui.ref`), 与上游 C++ 签名并非一一对应, 清单与差异见 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). 小驼峰方法对应同名 Dear ImGui 操作, 按功能分组如下:
 
-- 会话运行时: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 以及会话级 `on` / `once` / `off` 与对应实例方法.
+- 会话运行时: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 以及会话级 `on` / `once` / `off` 与对应实例方法; 会话 `error` 事件报告回调错误, `debug` 选项开启调试模式.
 - 后端探测: `getBackendCapabilities` / `BackendStatus` 报告窗口、split-touch、特权进程、direct input、Docking 与 Multi-Viewport 的可用性和生产就绪状态, 不执行提权操作.
 - 会话与窗口: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` 以及 `isWindowHovered` 等窗口状态查询.
 - 文本与控件: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等.
@@ -171,6 +171,20 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.11.0
+
+###### 2026/10/29
+
+* `提示` 依赖活动窗口会话的全局方法 (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) 在没有活动会话时改为抛出 `imgui.<方法名>: no active session` 错误, 其中 getComponent 以前返回 null
+* `提示` 绘图选项 offset 已废弃, 请改用 valuesOffset (旧写法仍然有效)
+* `新增` 窗口会话的 error 事件: 渲染回调或事件回调抛错时触发, 事件含 error, phase (render 或 event) 与 frame; 有 error 监听时会话继续渲染, 可在处理器中自行关闭会话, 没有监听时与以前一样以 render-error 关闭
+* `新增` 窗口选项 debug: 打开 Dear ImGui 的错误恢复与调试日志, Begin / End 不配对等用法错误经 console.warn 提示, 并显示 Metrics 与 Debug Log 窗口
+* `新增` 示例 error-handling, 演示 error 事件, debug 模式与常见错误的排查
+* `新增` 别名文档 docs/ALIASES.md, 列出全部 PascalCase 别名及其与 Dear ImGui C++ 签名的差异
+* `修复` plotLines / plotHistogram 的 valuesOffset 与 stride 选项不生效的问题
+* `优化` 渲染回调或事件回调出错时控制台输出带调用栈的错误信息, 同一错误连续出现时只输出一次
+* `优化` README 的别名说明改为 "常用 API 别名", 补充单会话模型 (新建会话会关闭上一个会话) 与新增成员的使用说明, 目标 SDK 更正为 37
+
 #### v1.10.0
 
 ###### 2026/10/29
@@ -186,13 +200,6 @@ imgui.runExample("widget-overview");
 
 * `优化` 插件中心图标采用统一工作台调整后的尺寸, 位置, 亮暗图稿与圆形底色, 保留可重建原稿和参数
 * `优化` Android 系统应用信息图标与图标工作台共用图稿和亮暗底色, 保留插件中心透明图稿及现有启动器选项
-
-#### v1.9.3
-
-###### 2026/09/19
-
-* `修复` AGP 9.1 构建时的 SDK XML v4 解析警告, 以及 JVM 单元测试误触发 APK 原生库对齐检查的问题 (共享构建插件 1.8.3)
-* `优化` compileSdk/targetSdk 升级至 37 (Android 17)
 
 ##### 更多发行历史可参阅
 
@@ -220,7 +227,7 @@ imgui.runExample("widget-overview");
 .\gradlew.bat :app:verifyImGuiDebugApks
 ```
 
-构建参数来自 `version.properties`, 当前最低 SDK 为 24, 目标 SDK 为 36.
+构建参数来自 `version.properties`, 当前最低 SDK 为 24, 目标 SDK 为 37.
 
 ******
 

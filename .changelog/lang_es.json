@@ -5,6 +5,26 @@
   "changelog_label_improvement": "Mejora",
   "changelog_label_dependency": "Dependencia",
   "$data": {
+    "v1.11.0": {
+      "released_date": "2026/10/29",
+      "hint": [
+        "Los métodos globales que actúan sobre la sesión de ventana activa (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) ahora lanzan `imgui.<name>: no active session` cuando no hay una sesión activa; antes getComponent devolvía null",
+        "La opción de gráfico offset queda obsoleta; use valuesOffset en su lugar (offset sigue funcionando)"
+      ],
+      "feature": [
+        "Evento error de las sesiones de ventana: se emite cuando la función de renderizado o una devolución de llamada de evento lanza una excepción, con error, phase (render o event) y frame; con un oyente de error la sesión sigue renderizando y el manejador puede cerrarla, sin oyente se cierra con render-error como antes",
+        "Opción de ventana debug: activa la recuperación de errores y el registro de depuración de Dear ImGui, avisa por console.warn de errores de uso como un Begin / End sin pareja y muestra las ventanas Metrics y Debug Log",
+        "Ejemplo error-handling que muestra el evento error, el modo debug y cómo localizar errores comunes",
+        "docs/ALIASES.md enumera todos los alias PascalCase y sus diferencias con las firmas C++ de Dear ImGui"
+      ],
+      "fix": [
+        "Las opciones valuesOffset y stride de plotLines / plotHistogram no tenían efecto"
+      ],
+      "improvement": [
+        "Los errores de la función de renderizado o de una devolución de llamada de evento se muestran en la consola con su pila de llamadas, y un mismo error repetido se muestra una sola vez",
+        "El README describe los alias como \"alias de las API comunes\", explica el modelo de sesión única (una sesión nueva cierra la anterior) y el uso de los miembros nuevos, e indica el SDK de destino 37"
+      ]
+    },
     "v1.10.0": {
       "released_date": "2026/10/29",
       "hint": [

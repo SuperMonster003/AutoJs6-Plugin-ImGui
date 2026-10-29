@@ -4,6 +4,20 @@
 
 ******
 
+# v1.11.0
+
+###### 2026/10/29
+
+* `ヒント` アクティブなウィンドウセッションに依存するグローバルメソッド (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) は, アクティブなセッションがないとき `imgui.<メソッド名>: no active session` エラーを投げるようになりました. getComponent は以前 null を返していました
+* `ヒント` 描画オプション offset は非推奨になりました. 代わりに valuesOffset を使ってください (offset も引き続き動作します)
+* `機能` ウィンドウセッションの error イベント: 描画コールバックまたはイベントコールバックが例外を投げたときに発生し, error, phase (render または event), frame を含みます. error リスナーがあればセッションは描画を続け, ハンドラー内でセッションを閉じることもできます. リスナーがなければ従来どおり render-error で閉じます
+* `機能` ウィンドウオプション debug: Dear ImGui のエラー回復とデバッグログを有効にし, Begin / End の対応漏れなどの使い方の誤りを console.warn で知らせ, Metrics と Debug Log ウィンドウを表示します
+* `機能` サンプル error-handling: error イベント, debug モード, よくある誤りの調べ方を示します
+* `機能` エイリアス文書 docs/ALIASES.md: すべての PascalCase エイリアスと Dear ImGui C++ シグネチャとの違いを一覧にしました
+* `修正` plotLines / plotHistogram の valuesOffset と stride オプションが効かない問題
+* `改善` 描画コールバックまたはイベントコールバックでエラーが起きると, コンソールにスタックトレース付きで出力し, 同じエラーが続く場合は 1 回だけ出力します
+* `改善` README のエイリアス説明を "よく使う API のエイリアス" に改め, 単一セッションモデル (新しいセッションは前のセッションを閉じる) と新しいメンバーの使い方を追記し, ターゲット SDK を 37 に訂正しました
+
 # v1.10.0
 
 ###### 2026/10/29

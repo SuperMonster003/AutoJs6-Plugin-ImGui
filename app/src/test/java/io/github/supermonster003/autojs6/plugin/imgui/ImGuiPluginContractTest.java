@@ -59,6 +59,7 @@ public class ImGuiPluginContractTest {
                 "log-hud",
                 "data-table-demo",
                 "theme-gallery",
+                "error-handling",
             },
             ImGuiPluginContract.exampleNames()
         );

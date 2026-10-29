@@ -37,6 +37,7 @@ public final class ImGuiPluginContract {
         "log-hud",
         "data-table-demo",
         "theme-gallery",
+        "error-handling",
     };
 
     private ImGuiPluginContract() {

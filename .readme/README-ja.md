@@ -45,7 +45,7 @@
 
 ImGui プラグインは [Dear ImGui](https://github.com/ocornut/imgui) 即時モード GUI ライブラリを AutoJs6 に取り込み, 透明なフローティングウィンドウ内で OpenGL ES を用いてコントロールを描画します. デバッグパネル/パラメータチューナー/実行時 HUD などの軽量なフローティングインターフェースに最適で, ウィンドウ作成/フレームスケジュール/タッチ入力/ネイティブリソース解放をひとつのコンパクトな API にまとめています.
 
-プラグインセンターでプラグインを有効にすると, スクリプトはグローバルオブジェクト `imgui` を直接使用できます (AutoJs6 が登録し, メンバーを初めて呼び出したときにプラグインを読み込みます). `plugins.load` は不要です. AutoJs6 6.8.0 以降が必要です.
+プラグインセンターでプラグインを有効にすると, スクリプトはグローバルオブジェクト `imgui` を直接使用できます (AutoJs6 が登録し, メンバーを初めて呼び出したときにプラグインを読み込みます). `plugins.load` は不要です. AutoJs6 6.8.0 以降が必要です. プラグインが AutoJs6 より新しい場合, AutoJs6 にまだ登録されていない新メンバーはプラグインの読み込み後 (`imgui` のいずれかのメンバーを初めて使ったとき) に `imgui` に現れます. 描画コールバックの `ui` 引数は常にすべてのメンバーを持ちます.
 
 ******
 
@@ -63,8 +63,8 @@ ImGui プラグインは [Dear ImGui](https://github.com/ocornut/imgui) 即時�
 - 管理対象テクスチャはファイルパス、エンコード済みバイト列、Android `Bitmap`、AutoJs6 `Image` に対応し、`image` / `imageButton` と 3 層の DrawList で画像表示とカスタム描画を行えます.
 - 軽量な `imgui.ref(value)` / `{value: x}` 参照はすべての状態付きコントロールで使用でき、従来の Java 配列参照ヘルパーも完全互換です.
 - セッション管理の `logWindow`、積み重ね可能な `toast`、Promise ダイアログ、しきい値色付き `statsOverlay`、選択/CRUD 対応 `dataTable` でデバッグ UI をすぐ構築できます.
-- 定数列挙と PascalCase メソッドエイリアスは Dear ImGui のネイティブ命名に従っており, 既存の知識をそのまま活かせます.
-- 完全な TypeScript 宣言、実行可能な 5 サンプル、Android 描画計装テスト、ロックフリー入力キュー、検証可能な上流更新ツール、CI リリース自動化を提供します.
+- よく使う API と定数列挙には PascalCase エイリアス (例: `ui.Button`) があり, 引数はプラグインの形式に従います. エイリアス一覧と上流 C++ シグネチャとの違いは [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md) を参照してください.
+- 完全な TypeScript 宣言、実行可能な 6 サンプル、Android 描画計装テスト、ロックフリー入力キュー、検証可能な上流更新ツール、CI リリース自動化を提供します.
 - プラグイン情報/使用説明/README/CHANGELOG を 10 言語にローカライズします.
 
 ******
@@ -126,9 +126,9 @@ imgui.createWindow(function (ui, overlay) {
 
 テクスチャとカスタム描画: ウィンドウセッションの準備完了後に `createTexture` を呼び出してください (通常はレンダーコールバック内の初回実行時). 戻り値は `width` / `height` と、冪等な `dispose()` / `close()` を公開します. 残ったテクスチャはセッション終了時に自動解放されます. `image` / `imageButton` でテクスチャを表示し、`getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` で一般的な描画プリミティブを利用できます. DrawList 座標は Surface のピクセル座標です. AutoJs6 の `images.read(...)` やスクリーンショットの `Image` を直接渡せます.
 
-ウィンドウセッション: オーバーレイは既定で `TouchMode.Auto` を使い、ImGui ルートウィンドウを操作可能に保ちながら Surface の空白領域を背後のアプリへ渡します。固定する場合は `Touchable` または `Passthrough` を選択します。セッションは透明度/セキュリティ/タッチモードの変更、低 FPS ミニバブルへの折りたたみ、独立した `addButtonEx`、`AlwaysAutoResize` 追従、`iniPath` による配置保存、`on` / `once` / `off` またはオプションのコールバックによるイベント購読に対応します。`imgui.launch(...)` は現在 resumed の AutoJs6 Activity に全画面 Surface を作り、`launchFloaty(...)` はオーバーレイを明示します。スクリプトエンジンごとのネイティブレンダーセッションは 1 つですが、同じコールバックで任意の数の `begin` / `withWindow` ImGui ルートを作成できます。新しいセッションは以前のセッションを閉じます。
+ウィンドウセッション: オーバーレイは既定で `TouchMode.Auto` を使い、ImGui ルートウィンドウを操作可能に保ちながら Surface の空白領域を背後のアプリへ渡します。固定する場合は `Touchable` または `Passthrough` を選択します。セッションは透明度/セキュリティ/タッチモードの変更、低 FPS ミニバブルへの折りたたみ、独立した `addButtonEx`、`AlwaysAutoResize` 追従、`iniPath` による配置保存、`on` / `once` / `off` またはオプションのコールバックによるイベント購読に対応します。`imgui.launch(...)` は現在 resumed の AutoJs6 Activity に全画面 Surface を作り、`launchFloaty(...)` はオーバーレイを明示します。スクリプトエンジンごとのネイティブレンダーセッションは 1 つですが、同じコールバックで任意の数の `begin` / `withWindow` ImGui ルートを作成できます。新しいセッションは以前のセッションを閉じます。 描画コールバックやイベントコールバックが例外を投げると, `console.error` にエラーとスタックを出力し (同じエラーが続く場合は 1 回だけ), `error` イベント (`error` / `phase` / `frame`) を発行します. `error` リスナーがない場合, 描画エラーはセッションを閉じます (`closeReason` は `render-error`). リスナーがある場合はそのフレームの残りを飛ばして描画を続けます. オプション `debug: true` は `begin` に対応する `end` がないなどの使い方の誤りを `console.warn` と logcat に報告し, Metrics と Debug Log ウィンドウを表示します. `setTouchable` / `setGlobalAlpha` / `getComponent` などのグローバルメソッドは現在のセッションに作用し, アクティブなセッションがない場合は `imgui.<name>: no active session` を投げます.
 
-高レベルコンポーネントはアクティブなセッションに接続され、ユーザーの描画コールバック後に描画されます. `logWindow` はレベル色分け、消去、エクスポート、オートスクロール、`toast` は位置指定付き時間通知、`alert` / `confirm` / `singleChoice` / `multiChoice` は Promise、`statsOverlay` はフレーム時間グラフ、`dataTable` は選択と CRUD を提供します. 5 つの内蔵例 (`widget-overview`、`parameter-panel`、`log-hud`、`data-table-demo`、`theme-gallery`) は `listExamples` / `getExampleSource` で確認し、`runExample` で実行できます. AutoJs6 6.8 のプラグインセンターは汎用サンプルメタデータをまだ利用しないため、ホスト対応までは次の呼び出しを直接実行してください:
+高レベルコンポーネントはアクティブなセッションに接続され、ユーザーの描画コールバック後に描画されます. `logWindow` はレベル色分け、消去、エクスポート、オートスクロール、`toast` は位置指定付き時間通知、`alert` / `confirm` / `singleChoice` / `multiChoice` は Promise、`statsOverlay` はフレーム時間グラフ、`dataTable` は選択と CRUD を提供します. 6 つの内蔵例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling`) は `listExamples` / `getExampleSource` で確認し、`runExample` で実行できます. AutoJs6 6.8 のプラグインセンターは汎用サンプルメタデータをまだ利用しないため、ホスト対応までは次の呼び出しを直接実行してください:
 
 ```js
 imgui.runExample("widget-overview");
@@ -140,9 +140,9 @@ imgui.runExample("widget-overview");
 
 ******
 
-lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイティブ命名に慣れたユーザー向けに PascalCase エイリアスも利用できます (例: `ui.Button` は `ui.button` と等価):
+よく使う API には PascalCase エイリアスもあります (例: `ui.Button` は `ui.button` と等価). エイリアスの引数はプラグインの形式 (可変値は `imgui.ref` など) に従い, 上流 C++ シグネチャと 1 対 1 には対応しません. 一覧と違いは [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md) を参照してください. lower camel case メソッドは同名の Dear ImGui 操作に対応し, 機能別に次のように分類されます:
 
-- セッションランタイム: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, セッション版を含む `on` / `once` / `off`.
+- セッションランタイム: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, セッション版を含む `on` / `once` / `off`, コールバックのエラーを伝えるセッションの `error` イベント, デバッグモードを有効にする `debug` オプション.
 - バックエンドの検出: `getBackendCapabilities` / `BackendStatus` は, ウィンドウ, split-touch, 特権プロセス, direct input, Docking, Multi-Viewport の利用可否と本番運用への対応状況を報告します. 権限昇格は行いません.
 - セッションとウィンドウ: `createWindow`/`closeWindow`/`withWindow`/`withChild`/`setNextWindowPos`/`setNextWindowSize`/`setNextWindowBgAlpha` に加え, `isWindowHovered` などのウィンドウ状態クエリ.
 - テキストとコントロール: `text`/`textColored`/`textWrapped`/`separatorText`/`bulletText`/`labelText`/`button`/`arrowButton`/`invisibleButton`/`checkbox`/`toggle`/`radioButton`/`sliderFloat`/`sliderInt`/`vSliderFloat`/`dragFloat`/`dragInt`/`inputText`/`inputInt`/`inputFloat`/`inputTextMultiline`/`colorEdit3`/`colorEdit4`/`colorPicker4`/`colorButton`/`progressBar`/`plotLines`/`plotHistogram` など.
@@ -171,6 +171,20 @@ lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイ�
 
 ******
 
+#### v1.11.0
+
+###### 2026/10/29
+
+* `ヒント` アクティブなウィンドウセッションに依存するグローバルメソッド (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) は, アクティブなセッションがないとき `imgui.<メソッド名>: no active session` エラーを投げるようになりました. getComponent は以前 null を返していました
+* `ヒント` 描画オプション offset は非推奨になりました. 代わりに valuesOffset を使ってください (offset も引き続き動作します)
+* `機能` ウィンドウセッションの error イベント: 描画コールバックまたはイベントコールバックが例外を投げたときに発生し, error, phase (render または event), frame を含みます. error リスナーがあればセッションは描画を続け, ハンドラー内でセッションを閉じることもできます. リスナーがなければ従来どおり render-error で閉じます
+* `機能` ウィンドウオプション debug: Dear ImGui のエラー回復とデバッグログを有効にし, Begin / End の対応漏れなどの使い方の誤りを console.warn で知らせ, Metrics と Debug Log ウィンドウを表示します
+* `機能` サンプル error-handling: error イベント, debug モード, よくある誤りの調べ方を示します
+* `機能` エイリアス文書 docs/ALIASES.md: すべての PascalCase エイリアスと Dear ImGui C++ シグネチャとの違いを一覧にしました
+* `修正` plotLines / plotHistogram の valuesOffset と stride オプションが効かない問題
+* `改善` 描画コールバックまたはイベントコールバックでエラーが起きると, コンソールにスタックトレース付きで出力し, 同じエラーが続く場合は 1 回だけ出力します
+* `改善` README のエイリアス説明を "よく使う API のエイリアス" に改め, 単一セッションモデル (新しいセッションは前のセッションを閉じる) と新しいメンバーの使い方を追記し, ターゲット SDK を 37 に訂正しました
+
 #### v1.10.0
 
 ###### 2026/10/29
@@ -186,13 +200,6 @@ lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイ�
 
 * `改善` プラグインセンターのアイコンに Icon Studio で調整したサイズ, 位置, 明暗の図稿と円形背景を適用し, 再生成可能な原稿とパラメーターを保持
 * `改善` Android のアプリ情報アイコンに Icon Studio と共通の図案と明暗の背景色を使用し, プラグインセンターの透明な図案と既存のランチャー設定を維持
-
-#### v1.9.3
-
-###### 2026/09/19
-
-* `修正` 共有ビルドプラグイン 1.8.3 により, AGP 9.1 での SDK XML v4 解析警告と, JVM 単体テストの組み立て時に APK ネイティブライブラリのアラインメント検証が誤って実行される問題
-* `改善` compileSdk と targetSdk を 37 (Android 17) に引き上げ, プラグインの動作は新しいターゲットの影響を受けない
 
 ##### その他のリリース履歴
 
@@ -220,7 +227,7 @@ CRC32 ダイジェスト付きファイル名の Release ビルド:
 .\gradlew.bat :app:verifyImGuiDebugApks
 ```
 
-ビルドパラメータは `version.properties` から取得します. 現在の最小 SDK は 24, ターゲット SDK は 36 です.
+ビルドパラメータは `version.properties` から取得します. 現在の最小 SDK は 24, ターゲット SDK は 37 です.
 
 ******
 

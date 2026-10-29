@@ -1,7 +1,9 @@
 package io.github.supermonster003.autojs6.plugin.imgui;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import android.graphics.Bitmap;
@@ -324,6 +326,114 @@ public final class ImGuiRenderInstrumentedTest {
             }
             context.unbindService(serviceConnection);
         }
+    }
+
+    @Test
+    public void plotValuesOffsetAndStrideSelectTheSamples() throws Exception {
+        try (ActivityScenario<ImGuiRenderTestActivity> scenario =
+                 ActivityScenario.launch(ImGuiRenderTestActivity.class)) {
+            AtomicReference<ImGuiRenderTestActivity> activityReference = new AtomicReference<>();
+            scenario.onActivity(activityReference::set);
+            ImGuiRenderTestActivity activity = activityReference.get();
+            assertNotNull(activity);
+
+            Surface surface = activity.awaitSurface(10, TimeUnit.SECONDS);
+            SurfaceView surfaceView = activity.getSurfaceView();
+            ImGuiPluginConnection connection = new ImGuiPluginConnection(activity, activity, null);
+            try {
+                assertTrue(connection.init(
+                    surface,
+                    1.0F,
+                    "asset://fonts/AutoJs6CjkFallback-Regular.otf",
+                    16.0F
+                ));
+                configureBaselinePalette(connection);
+                float[] samples = {0, 9, 7, 1, 2, 8, 5, 3};
+
+                // 8 samples, stride 2 -> values[0], [2], [4], [6] = 0, 7, 2, 5; offset 2 -> 2, 5, 0, 7.
+                Bitmap strided = renderPlotFrame(connection, surfaceView, samples, 2, 2);
+                Bitmap expected = renderPlotFrame(connection, surfaceView, new float[]{2, 5, 0, 7}, 0, 1);
+                Bitmap unstrided = renderPlotFrame(connection, surfaceView, samples, 0, 1);
+                assertTrue("valuesOffset 2 stride 2 differs from the selected samples", strided.sameAs(expected));
+                assertFalse("the plot ignored valuesOffset / stride", strided.sameAs(unstrided));
+                strided.recycle();
+                expected.recycle();
+                unstrided.recycle();
+            } finally {
+                if (connection.isOwner()) {
+                    connection.shutdown();
+                }
+            }
+        }
+    }
+
+    @Test
+    public void debugModeReportsAWindowLeftOpen() throws Exception {
+        try (ActivityScenario<ImGuiRenderTestActivity> scenario =
+                 ActivityScenario.launch(ImGuiRenderTestActivity.class)) {
+            AtomicReference<ImGuiRenderTestActivity> activityReference = new AtomicReference<>();
+            scenario.onActivity(activityReference::set);
+            ImGuiRenderTestActivity activity = activityReference.get();
+            assertNotNull(activity);
+
+            Surface surface = activity.awaitSurface(10, TimeUnit.SECONDS);
+            ImGuiPluginConnection connection = new ImGuiPluginConnection(activity, activity, null);
+            try {
+                assertTrue(connection.init(
+                    surface,
+                    1.0F,
+                    "asset://fonts/AutoJs6CjkFallback-Regular.otf",
+                    16.0F
+                ));
+                renderUnendedFrame(connection, false);
+                assertNull(connection.takeDebugMessages());
+
+                connection.setDebugMode(true);
+                renderUnendedFrame(connection, true);
+                String[] messages = connection.takeDebugMessages();
+                assertNotNull("debug mode reported nothing", messages);
+                assertTrue(String.join("\n", messages), String.join("\n", messages).contains("Missing End()"));
+
+                // The same mistake in the next frame is not reported again.
+                renderUnendedFrame(connection, true);
+                assertNull(connection.takeDebugMessages());
+            } finally {
+                if (connection.isOwner()) {
+                    connection.shutdown();
+                }
+            }
+        }
+    }
+
+    private static Bitmap renderPlotFrame(
+        ImGuiPluginConnection connection,
+        SurfaceView surfaceView,
+        float[] values,
+        int valuesOffset,
+        int stride
+    ) throws InterruptedException {
+        // Two identical frames, so the copied buffer is not one rendered before the plot.
+        for (int frame = 0; frame < 2; frame++) {
+            assertTrue(connection.newFrame());
+            connection.setNextWindowPos(20, 20, 1, 0, 0);
+            connection.setNextWindowSize(300, 200, 1);
+            assertTrue(connection.begin("Plot", null, 0));
+            connection.plotLines("##plot", values, valuesOffset, stride, null, 0, 10, 260, 120);
+            connection.end();
+            assertTrue(connection.render());
+        }
+        return copySurface(surfaceView);
+    }
+
+    private static void renderUnendedFrame(ImGuiPluginConnection connection, boolean debug) {
+        assertTrue(connection.newFrame());
+        connection.begin("Left open", null, 0);
+        connection.text("no end()");
+        if (debug) {
+            connection.showDebugWindows();
+        }
+        connection.recoverFrame();
+        assertTrue(connection.render());
     }
 
     private static void configureBaselinePalette(ImGuiPluginConnection connection) {

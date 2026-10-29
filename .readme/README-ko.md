@@ -45,7 +45,7 @@
 
 ImGui 플러그인은 [Dear ImGui](https://github.com/ocornut/imgui) 즉시 모드 GUI 라이브러리를 AutoJs6에 도입하여 투명한 플로팅 창 안에서 OpenGL ES로 컨트롤을 렌더링합니다. 디버그 패널, 매개변수 조정기, 실행 중 HUD 같은 가벼운 플로팅 인터페이스에 잘 어울리며 창 생성, 프레임 예약, 터치 입력, 네이티브 리소스 정리를 하나의 간결한 API로 관리합니다.
 
-플러그인 센터에서 플러그인을 활성화하면 스크립트에서 전역 객체 `imgui`를 바로 사용할 수 있습니다 (AutoJs6이 등록하며 멤버를 처음 호출할 때 플러그인을 로드합니다). `plugins.load`는 필요하지 않습니다. AutoJs6 6.8.0 이상이 필요합니다.
+플러그인 센터에서 플러그인을 활성화하면 스크립트에서 전역 객체 `imgui`를 바로 사용할 수 있습니다 (AutoJs6이 등록하며 멤버를 처음 호출할 때 플러그인을 로드합니다). `plugins.load`는 필요하지 않습니다. AutoJs6 6.8.0 이상이 필요합니다. 플러그인이 AutoJs6보다 새로우면 AutoJs6에 아직 등록되지 않은 새 멤버는 플러그인이 로드된 뒤(`imgui` 멤버를 처음 사용할 때)에야 `imgui`에 나타납니다. 렌더 콜백의 `ui` 인수는 항상 모든 멤버를 가집니다.
 
 ******
 
@@ -63,8 +63,8 @@ ImGui 플러그인은 [Dear ImGui](https://github.com/ocornut/imgui) 즉시 모�
 - 관리형 텍스처는 파일 경로, 인코딩된 바이트, Android `Bitmap`, AutoJs6 `Image`를 지원하며 `image` / `imageButton`과 3개 DrawList 레이어로 이미지 표시와 사용자 지정 그리기를 제공합니다.
 - 가벼운 `imgui.ref(value)` / `{value: x}` 참조는 모든 상태형 컨트롤에서 작동하며 기존 Java 배열 참조 헬퍼도 완전히 호환됩니다.
 - 세션 관리 `logWindow`, 스택형 `toast`, Promise 대화상자, 임계값 색상 `statsOverlay`, 선택/CRUD `dataTable`로 즉시 디버그 UI를 구성할 수 있습니다.
-- 상수 열거형과 PascalCase 메서드 별칭은 Dear ImGui 네이티브 명명을 그대로 따르므로 기존 지식을 비용 없이 활용할 수 있습니다.
-- 완전한 TypeScript 선언, 실행 가능한 예제 5개, Android 렌더링 계측 테스트, 락프리 입력 큐, 검증 가능한 업스트림 업데이트 도구, CI 릴리스 자동화를 제공합니다.
+- 자주 쓰는 API와 상수 열거형에는 PascalCase 별칭(예: `ui.Button`)이 있으며 인수는 플러그인 형식을 따릅니다. 별칭 목록과 업스트림 C++ 시그니처와의 차이는 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md)를 참고하세요.
+- 완전한 TypeScript 선언, 실행 가능한 예제 6개, Android 렌더링 계측 테스트, 락프리 입력 큐, 검증 가능한 업스트림 업데이트 도구, CI 릴리스 자동화를 제공합니다.
 - 플러그인 정보, 사용 설명, README, CHANGELOG를 10개 언어로 현지화합니다.
 
 ******
@@ -126,9 +126,9 @@ imgui.createWindow(function (ui, overlay) {
 
 텍스처와 사용자 지정 그리기: 창 세션이 준비된 뒤 `createTexture`를 호출하세요 (일반적으로 렌더 콜백 안에서 처음 한 번 생성). 반환 객체는 `width`, `height`, 멱등인 `dispose()` / `close()`를 제공하며 남은 텍스처는 세션 종료 시 자동으로 해제됩니다. `image` / `imageButton`으로 텍스처를 표시하고 `getWindowDrawList`, `getForegroundDrawList`, `getBackgroundDrawList`로 일반적인 그리기 프리미티브를 사용할 수 있습니다. DrawList 좌표는 Surface 픽셀 좌표입니다. AutoJs6 `images.read(...)`와 스크린샷 `Image` 값을 직접 전달할 수 있습니다.
 
-창 세션: 오버레이는 기본적으로 `TouchMode.Auto`를 사용하여 ImGui 루트 창은 상호작용 가능하게 유지하고 Surface 빈 영역의 입력은 뒤쪽 앱으로 전달합니다. 고정 정책은 `Touchable` 또는 `Passthrough`를 선택하세요. 세션은 투명도/보안/터치 모드 변경, 저 FPS 미니 버블로 접기, 독립적인 `addButtonEx`, `AlwaysAutoResize` 콘텐츠 추적, `iniPath` 레이아웃 저장, `on` / `once` / `off` 또는 옵션 콜백 이벤트를 지원합니다. `imgui.launch(...)`는 현재 resumed 상태인 AutoJs6 Activity에 전체 화면 Surface를 만들고 `launchFloaty(...)`는 오버레이를 명시합니다. 스크립트 엔진당 네이티브 렌더 세션은 하나지만 같은 콜백에서 원하는 수의 `begin` / `withWindow` ImGui 루트를 만들 수 있습니다. 새 세션은 이전 세션을 닫습니다.
+창 세션: 오버레이는 기본적으로 `TouchMode.Auto`를 사용하여 ImGui 루트 창은 상호작용 가능하게 유지하고 Surface 빈 영역의 입력은 뒤쪽 앱으로 전달합니다. 고정 정책은 `Touchable` 또는 `Passthrough`를 선택하세요. 세션은 투명도/보안/터치 모드 변경, 저 FPS 미니 버블로 접기, 독립적인 `addButtonEx`, `AlwaysAutoResize` 콘텐츠 추적, `iniPath` 레이아웃 저장, `on` / `once` / `off` 또는 옵션 콜백 이벤트를 지원합니다. `imgui.launch(...)`는 현재 resumed 상태인 AutoJs6 Activity에 전체 화면 Surface를 만들고 `launchFloaty(...)`는 오버레이를 명시합니다. 스크립트 엔진당 네이티브 렌더 세션은 하나지만 같은 콜백에서 원하는 수의 `begin` / `withWindow` ImGui 루트를 만들 수 있습니다. 새 세션은 이전 세션을 닫습니다. 렌더 콜백이나 이벤트 콜백이 예외를 던지면 `console.error`로 오류와 스택을 출력하고(같은 오류가 이어지면 한 번만) `error` 이벤트(`error` / `phase` / `frame`)를 발생시킵니다. `error` 리스너가 없으면 렌더 오류는 세션을 닫고(`closeReason`은 `render-error`), 리스너가 있으면 해당 프레임의 나머지를 건너뛰고 렌더링을 계속합니다. 옵션 `debug: true`는 `begin`에 짝이 맞는 `end`가 없는 등의 사용 오류를 `console.warn`과 logcat으로 보고하고 Metrics와 Debug Log 창을 표시합니다. `setTouchable` / `setGlobalAlpha` / `getComponent` 등 전역 메서드는 현재 세션에 작용하며 활성 세션이 없으면 `imgui.<name>: no active session`을 던집니다.
 
-고수준 컴포넌트는 활성 세션에 연결되어 사용자 렌더 콜백 뒤에 그려집니다. `logWindow`는 레벨 색상, 지우기, 내보내기, 자동 스크롤을, `toast`는 위치 지정 시간 알림을, `alert` / `confirm` / `singleChoice` / `multiChoice`는 Promise를, `statsOverlay`는 프레임 시간 그래프를, `dataTable`은 선택과 CRUD를 제공합니다. 내장 예제 5개(`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`)는 `listExamples` / `getExampleSource`로 찾고 `runExample`로 실행할 수 있습니다. AutoJs6 6.8 플러그인 센터는 아직 범용 예제 메타데이터를 사용하지 않으므로 호스트 지원 전에는 아래 호출을 직접 실행하세요:
+고수준 컴포넌트는 활성 세션에 연결되어 사용자 렌더 콜백 뒤에 그려집니다. `logWindow`는 레벨 색상, 지우기, 내보내기, 자동 스크롤을, `toast`는 위치 지정 시간 알림을, `alert` / `confirm` / `singleChoice` / `multiChoice`는 Promise를, `statsOverlay`는 프레임 시간 그래프를, `dataTable`은 선택과 CRUD를 제공합니다. 내장 예제 6개(`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling`)는 `listExamples` / `getExampleSource`로 찾고 `runExample`로 실행할 수 있습니다. AutoJs6 6.8 플러그인 센터는 아직 범용 예제 메타데이터를 사용하지 않으므로 호스트 지원 전에는 아래 호출을 직접 실행하세요:
 
 ```js
 imgui.runExample("widget-overview");
@@ -140,9 +140,9 @@ imgui.runExample("widget-overview");
 
 ******
 
-lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며 네이티브 명명에 익숙한 사용자를 위한 PascalCase 별칭도 제공합니다 (예: `ui.Button`은 `ui.button`과 같습니다):
+자주 쓰는 API에는 PascalCase 별칭도 있습니다(예: `ui.Button`은 `ui.button`과 같습니다). 별칭의 인수는 플러그인 형식(가변 값은 `imgui.ref` 등)을 따르므로 업스트림 C++ 시그니처와 일대일로 대응하지 않습니다. 목록과 차이는 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md)를 참고하세요. lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며 기능별 분류는 다음과 같습니다:
 
-- 세션 런타임: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 세션별 형식을 포함한 `on` / `once` / `off`.
+- 세션 런타임: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 세션별 형식을 포함한 `on` / `once` / `off`, 콜백 오류를 알리는 세션 `error` 이벤트와 디버그 모드를 켜는 `debug` 옵션.
 - 백엔드 탐색: `getBackendCapabilities` / `BackendStatus`는 창, split-touch, 권한 있는 프로세스, 직접 입력, Docking 및 Multi-Viewport의 사용 가능 여부와 운영 환경 준비 상태를 보고하며 권한 상승은 수행하지 않습니다.
 - 세션과 창: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `setNextWindowPos`, `setNextWindowSize`, `setNextWindowBgAlpha` 및 `isWindowHovered` 같은 창 상태 조회.
 - 텍스트와 컨트롤: `text`, `textColored`, `textWrapped`, `separatorText`, `bulletText`, `labelText`, `button`, `arrowButton`, `invisibleButton`, `checkbox`, `toggle`, `radioButton`, `sliderFloat`, `sliderInt`, `vSliderFloat`, `dragFloat`, `dragInt`, `inputText`, `inputInt`, `inputFloat`, `inputTextMultiline`, `colorEdit3`, `colorEdit4`, `colorPicker4`, `colorButton`, `progressBar`, `plotLines`, `plotHistogram` 등.
@@ -171,6 +171,20 @@ lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며
 
 ******
 
+#### v1.11.0
+
+###### 2026/10/29
+
+* `힌트` 활성 창 세션에 의존하는 전역 메서드(setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent)는 활성 세션이 없을 때 `imgui.<메서드 이름>: no active session` 오류를 던지도록 바뀌었습니다. getComponent는 이전에 null을 반환했습니다
+* `힌트` 그리기 옵션 offset은 더 이상 권장되지 않습니다. 대신 valuesOffset을 사용하세요(offset도 계속 동작합니다)
+* `기능` 창 세션의 error 이벤트: 렌더 콜백이나 이벤트 콜백이 예외를 던지면 발생하며 error, phase(render 또는 event), frame을 담습니다. error 리스너가 있으면 세션은 계속 렌더링하고 핸들러에서 세션을 닫을 수도 있으며, 리스너가 없으면 이전처럼 render-error로 닫힙니다
+* `기능` 창 옵션 debug: Dear ImGui의 오류 복구와 디버그 로그를 켜고, Begin / End 짝이 맞지 않는 등의 사용 오류를 console.warn으로 알리며, Metrics와 Debug Log 창을 표시합니다
+* `기능` 예제 error-handling: error 이벤트, debug 모드, 흔한 오류를 찾는 방법을 보여 줍니다
+* `기능` 별칭 문서 docs/ALIASES.md: 모든 PascalCase 별칭과 Dear ImGui C++ 시그니처와의 차이를 정리했습니다
+* `수정` plotLines / plotHistogram의 valuesOffset과 stride 옵션이 적용되지 않던 문제
+* `개선` 렌더 콜백이나 이벤트 콜백에서 오류가 나면 콘솔에 스택 트레이스와 함께 출력하고, 같은 오류가 이어지면 한 번만 출력합니다
+* `개선` README의 별칭 설명을 "자주 쓰는 API 별칭"으로 바꾸고 단일 세션 모델(새 세션은 이전 세션을 닫음)과 새 멤버 사용법을 추가했으며 대상 SDK를 37로 바로잡았습니다
+
 #### v1.10.0
 
 ###### 2026/10/29
@@ -186,13 +200,6 @@ lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며
 
 * `개선` 플러그인 센터 아이콘에 Icon Studio에서 조정한 크기, 위치, 밝은 이미지와 어두운 이미지 및 원형 배경을 적용하고 재생성 가능한 원본과 매개변수를 유지
 * `개선` Android 앱 정보 아이콘에 Icon Studio의 그림과 밝은 배경 및 어두운 배경을 사용하고 플러그인 센터의 투명 그림과 기존 런처 옵션을 유지
-
-#### v1.9.3
-
-###### 2026/09/19
-
-* `수정` 공유 빌드 플러그인 1.8.3을 통해 AGP 9.1의 SDK XML v4 파싱 경고 및 JVM 단위 테스트 조립 작업에서 APK 네이티브 라이브러리 정렬 검사가 잘못 실행되는 문제 해결
-* `개선` compileSdk 와 targetSdk 를 37 (Android 17) 로 올리며, 플러그인 동작은 새 대상 버전의 영향을 받지 않음
 
 ##### 더 많은 릴리스 기록
 
@@ -220,7 +227,7 @@ CRC32 요약을 파일 이름에 포함하는 Release 빌드:
 .\gradlew.bat :app:verifyImGuiDebugApks
 ```
 
-빌드 매개변수는 `version.properties`에서 가져옵니다. 현재 최소 SDK는 24이고 대상 SDK는 36입니다.
+빌드 매개변수는 `version.properties`에서 가져옵니다. 현재 최소 SDK는 24이고 대상 SDK는 37입니다.
 
 ******
 

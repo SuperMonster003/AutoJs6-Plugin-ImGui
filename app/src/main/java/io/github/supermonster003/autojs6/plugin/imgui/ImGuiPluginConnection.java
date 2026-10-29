@@ -950,6 +950,45 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         ImGuiNative.nativeShowDemoWindow(open);
     }
 
+    /**
+     * Debug mode of the session (createWindow({debug: true})): usage errors and failed assertions are queued for
+     * {@link #takeDebugMessages()}, and the Metrics and Debug Log windows are shown by {@link #showDebugWindows()}.
+     */
+    public void setDebugMode(boolean enabled) {
+        NATIVE_LOCK.lock();
+        try {
+            requireOwner();
+            ImGuiNative.nativeSetDebugMode(enabled);
+        } finally {
+            NATIVE_LOCK.unlock();
+        }
+    }
+
+    public void showDebugWindows() {
+        requireOwner();
+        ImGuiNative.nativeShowDebugWindows();
+    }
+
+    /** Closes what a failed render callback left open in the current frame, so the frame can still be rendered. */
+    public void recoverFrame() {
+        if (frameThread != Thread.currentThread()) {
+            return;
+        }
+        requireOwner();
+        ImGuiNative.nativeRecoverFrame();
+    }
+
+    /** The debug messages queued since the previous call, or null when there are none. */
+    public String[] takeDebugMessages() {
+        NATIVE_LOCK.lock();
+        try {
+            requireOwner();
+            return ImGuiNative.nativeTakeDebugMessages();
+        } finally {
+            NATIVE_LOCK.unlock();
+        }
+    }
+
     public void separatorText(String label) {
         requireOwner();
         ImGuiNative.nativeSeparatorText(label);
@@ -1057,6 +1096,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         String label,
         float[] values,
         int valuesOffset,
+        int stride,
         String overlay,
         float scaleMin,
         float scaleMax,
@@ -1065,7 +1105,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
     ) {
         requireOwner();
         ImGuiNative.nativePlotLines(
-            label, values, valuesOffset, overlay, scaleMin, scaleMax, width, height
+            label, values, valuesOffset, stride, overlay, scaleMin, scaleMax, width, height
         );
     }
 
@@ -1073,6 +1113,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         String label,
         float[] values,
         int valuesOffset,
+        int stride,
         String overlay,
         float scaleMin,
         float scaleMax,
@@ -1081,7 +1122,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
     ) {
         requireOwner();
         ImGuiNative.nativePlotHistogram(
-            label, values, valuesOffset, overlay, scaleMin, scaleMax, width, height
+            label, values, valuesOffset, stride, overlay, scaleMin, scaleMax, width, height
         );
     }
 

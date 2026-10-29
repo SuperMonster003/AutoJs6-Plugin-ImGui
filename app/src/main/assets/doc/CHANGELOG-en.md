@@ -4,6 +4,20 @@
 
 ******
 
+# v1.11.0
+
+###### 2026/10/29
+
+* `Hint` Global methods that act on the active window session (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) now throw `imgui.<name>: no active session` when there is no active session; getComponent used to return null
+* `Hint` The plot option offset is deprecated; use valuesOffset instead (offset still works)
+* `Feature` error event of window sessions: emitted when the render callback or an event callback throws, with error, phase (render or event) and frame; with an error listener the session keeps rendering and the handler may close it, without one the session closes with render-error as before
+* `Feature` debug window option: turns on Dear ImGui's error recovery and debug log, reports usage errors such as unmatched Begin / End through console.warn, and shows the Metrics and Debug Log windows
+* `Feature` error-handling example showing the error event, debug mode and how to track down common mistakes
+* `Feature` docs/ALIASES.md lists every PascalCase alias and how it differs from the Dear ImGui C++ signature
+* `Fix` The valuesOffset and stride options of plotLines / plotHistogram had no effect
+* `Improvement` Errors in the render callback or an event callback are printed to the console with their stack trace, and a run of the same error is printed only once
+* `Improvement` The README describes the aliases as "aliases for common APIs", explains the single-session model (a new session closes the previous one) and how to use new members, and states the target SDK as 37
+
 # v1.10.0
 
 ###### 2026/10/29

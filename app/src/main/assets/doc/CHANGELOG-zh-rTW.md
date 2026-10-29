@@ -4,6 +4,20 @@
 
 ******
 
+# v1.11.0
+
+###### 2026/10/29
+
+* `提示` 依賴使用中視窗工作階段的全域方法 (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) 在沒有使用中工作階段時改為擲出 `imgui.<方法名稱>: no active session` 錯誤, 其中 getComponent 以前回傳 null
+* `提示` 繪圖選項 offset 已棄用, 請改用 valuesOffset (舊寫法仍然有效)
+* `新增` 視窗工作階段的 error 事件: 繪製回呼或事件回呼擲出錯誤時觸發, 事件含 error, phase (render 或 event) 與 frame; 有 error 監聽器時工作階段繼續繪製, 可在處理器中自行關閉工作階段, 沒有監聽器時與以前一樣以 render-error 關閉
+* `新增` 視窗選項 debug: 開啟 Dear ImGui 的錯誤復原與偵錯記錄, Begin / End 不成對等用法錯誤經 console.warn 提示, 並顯示 Metrics 與 Debug Log 視窗
+* `新增` 範例 error-handling, 示範 error 事件, debug 模式與常見錯誤的排查
+* `新增` 別名文件 docs/ALIASES.md, 列出全部 PascalCase 別名及其與 Dear ImGui C++ 簽章的差異
+* `修復` plotLines / plotHistogram 的 valuesOffset 與 stride 選項無效的問題
+* `優化` 繪製回呼或事件回呼出錯時主控台輸出含呼叫堆疊的錯誤訊息, 同一錯誤連續出現時只輸出一次
+* `優化` README 的別名說明改為 "常用 API 別名", 補充單一工作階段模型 (建立新工作階段會關閉上一個) 與新增成員的使用說明, 目標 SDK 更正為 37
+
 # v1.10.0
 
 ###### 2026/10/29

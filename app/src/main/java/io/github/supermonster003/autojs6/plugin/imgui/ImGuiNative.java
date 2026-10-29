@@ -400,6 +400,14 @@ final class ImGuiNative {
 
     static native void nativeShowDemoWindow(boolean[] open);
 
+    static native void nativeSetDebugMode(boolean enabled);
+
+    static native void nativeShowDebugWindows();
+
+    static native void nativeRecoverFrame();
+
+    static native String[] nativeTakeDebugMessages();
+
     static native void nativeSeparatorText(String label);
 
     static native void nativeBullet();
@@ -464,6 +472,7 @@ final class ImGuiNative {
         String label,
         float[] values,
         int valuesOffset,
+        int stride,
         String overlay,
         float scaleMin,
         float scaleMax,
@@ -475,6 +484,7 @@ final class ImGuiNative {
         String label,
         float[] values,
         int valuesOffset,
+        int stride,
         String overlay,
         float scaleMin,
         float scaleMax,

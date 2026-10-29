@@ -167,6 +167,7 @@ dependencies {
     implementation(libs.kotlin.parcelize.runtime)
 
     testImplementation(libs.junit)
+    testImplementation(libs.rhino)
     androidTestImplementation(libs.test.core)
     androidTestImplementation(libs.test.ext.junit)
     androidTestImplementation(libs.test.runner)
@@ -207,6 +208,7 @@ tasks {
             val requiredFiles = listOf(
                 "src/main/cpp/CMakeLists.txt",
                 "src/main/cpp/ImGuiBridge.cpp",
+                "src/main/cpp/ImGuiUserConfig.h",
                 "src/main/cpp/third_party/imgui/LICENSE.txt",
                 "src/main/cpp/third_party/imgui/UPSTREAM.md",
                 "src/main/cpp/third_party/imgui/UPSTREAM.sha256",
@@ -223,6 +225,7 @@ tasks {
                 "src/main/assets/examples/log-hud.js",
                 "src/main/assets/examples/data-table-demo.js",
                 "src/main/assets/examples/theme-gallery.js",
+                "src/main/assets/examples/error-handling.js",
                 "src/main/assets/types/imgui.d.ts",
                 "src/main/aidl/io/github/supermonster003/autojs6/plugin/imgui/IImGuiInputCallback.aidl",
                 "src/main/aidl/io/github/supermonster003/autojs6/plugin/imgui/IImGuiPrivilegeBroker.aidl",

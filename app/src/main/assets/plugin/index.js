@@ -1760,12 +1760,22 @@ module.exports = function (bridge) {
             integer(flags, 0), number(width, 0), number(height, 0)
         ));
     };
+    // valuesOffset is the documented name, offset the name 1.10.0 and earlier read; stride counts values (2 = every other value).
+    function plotValuesOffset(options) {
+        return integer(options.valuesOffset != null ? options.valuesOffset : options.offset, 0);
+    }
+
+    function plotStride(options) {
+        return Math.max(1, integer(options.stride, 1));
+    }
+
     api.plotLines = function (label, values, options) {
         options = options || {};
         bridge.plotLines(
             String(label),
             values instanceof java.lang.Object ? values : floatArray(values),
-            integer(options.offset, 0),
+            plotValuesOffset(options),
+            plotStride(options),
             options.overlay == null ? null : String(options.overlay),
             number(options.scaleMin, NaN),
             number(options.scaleMax, NaN),
@@ -1778,7 +1788,8 @@ module.exports = function (bridge) {
         bridge.plotHistogram(
             String(label),
             values instanceof java.lang.Object ? values : floatArray(values),
-            integer(options.offset, 0),
+            plotValuesOffset(options),
+            plotStride(options),
             options.overlay == null ? null : String(options.overlay),
             number(options.scaleMin, NaN),
             number(options.scaleMax, NaN),
@@ -2757,9 +2768,22 @@ module.exports = function (bridge) {
     function requireHighLevelSession(apiName, explicitSession) {
         var session = explicitSession || api._activeSession;
         if (!session || session.closed || !session._highLevel) {
-            throw new Error("imgui." + apiName + " requires an active ImGui session");
+            throw noActiveSession(apiName);
         }
         return session;
+    }
+
+    // One window session per script engine: createWindow closes the previous session, the global helpers act on the current one.
+    function requireActiveSession(apiName) {
+        var session = api._activeSession;
+        if (!session || session.closed) {
+            throw noActiveSession(apiName);
+        }
+        return session;
+    }
+
+    function noActiveSession(apiName) {
+        return new Error("imgui." + apiName + ": no active session");
     }
 
     function componentKey(type, id) {
@@ -2838,19 +2862,17 @@ module.exports = function (bridge) {
         components.length = writeIndex;
     }
 
-    function renderHighLevelComponent(component, context) {
+    function renderHighLevelComponent(session, component, context) {
         if (component.closed || !component.visible || typeof component._render !== "function") {
             return;
         }
         try {
             component._render(context || {});
         } catch (error) {
-            console.error(
-                "[imgui] " + component.type + " '" + component.id + "' render failed: " + error
-            );
-            if (error && error.stack) {
-                console.error(String(error.stack));
-            }
+            // Only the component closes; the error is still reported (and emitted as "error") by the session.
+            session._reportError("render", component.type + " '" + component.id + "' render", error, {
+                component: component
+            });
             component.close("render-error");
         }
     }
@@ -2873,10 +2895,10 @@ module.exports = function (bridge) {
                 context.stackIndex = toastIndexes[position] || 0;
                 toastIndexes[position] = context.stackIndex + 1;
             }
-            renderHighLevelComponent(component, context);
+            renderHighLevelComponent(session, component, context);
         }
         if (activeDialog) {
-            renderHighLevelComponent(activeDialog, {activeDialog: true});
+            renderHighLevelComponent(session, activeDialog, {activeDialog: true});
         }
         compactHighLevelComponents(session);
     }
@@ -4144,6 +4166,7 @@ module.exports = function (bridge) {
                 0,
                 Math.max(0, displayHeight - height)
             );
+        var debug = options.debug === true;
         var fps = clamp(integer(options.fps, 60), 15, 120);
         var frameDelay = Math.max(1, Math.round(1000 / fps));
         var collapsedFps = clamp(integer(options.collapsedFps, 5), 1, 15);
@@ -4326,6 +4349,7 @@ module.exports = function (bridge) {
             collapsedFps: collapsedFps,
             frameScheduler: "deadline-timer",
             iniPath: iniPath,
+            debug: debug,
             ready: false,
             closed: false,
             closeReason: null,
@@ -4624,6 +4648,7 @@ module.exports = function (bridge) {
             resized: "onResized",
             ready: "onReady",
             surfaceRestored: "onSurfaceRestored",
+            error: "onError",
             collapsed: "onCollapsed",
             expanded: "onExpanded",
             closed: "onClosed",
@@ -4668,13 +4693,62 @@ module.exports = function (bridge) {
                 try {
                     listeners[listenerIndex](event, session);
                 } catch (error) {
-                    console.error("[imgui] Session '" + eventName + "' listener failed: " + error);
-                    if (error && error.stack) {
-                        console.error(String(error.stack));
+                    if (eventName === "error") {
+                        printError("Session 'error' listener", error);
+                    } else {
+                        reportSessionError("event", "Session '" + eventName + "' listener", error, {
+                            event: String(eventName)
+                        });
                     }
                 }
             }
             return event;
+        }
+
+        var lastReportedError = null;
+
+        function printError(source, error) {
+            console.error("[imgui] " + source + " failed: " + error);
+            if (error && error.stack) {
+                console.error(String(error.stack));
+            }
+        }
+
+        // An exception of the render callback (phase "render") or of an event callback (phase "event") is printed with
+        // its stack, a run of the same error only once (a frame without a render error ends the run), and emitted as
+        // "error" every time it happens. Returns whether an "error" listener received it.
+        function reportSessionError(phase, source, error, details) {
+            var key = phase + "|" + source + "|" + error + "|" + (error && error.stack ? error.stack : "");
+            if (lastReportedError === null || lastReportedError.key !== key) {
+                printError(source, error);
+            }
+            lastReportedError = {phase: phase, key: key};
+            if (!eventListeners.error || eventListeners.error.length === 0) {
+                return false;
+            }
+            var event = {
+                error: error,
+                phase: phase,
+                frame: session._frameSerial,
+                message: String(error && error.message != null ? error.message : error)
+            };
+            copyOwnProperties(event, details);
+            emitSessionEvent("error", event);
+            return true;
+        }
+
+        session._reportError = reportSessionError;
+
+        // Debug mode: the usage errors Dear ImGui recovered from and the failed assertions of the frame; the native
+        // queue drops a message already seen in the previous frame, so a run of the same message prints once.
+        function printDebugMessages() {
+            var messages = bridge.takeDebugMessages();
+            if (messages == null) {
+                return;
+            }
+            for (var messageIndex = 0; messageIndex < messages.length; messageIndex += 1) {
+                console.warn("[imgui] " + messages[messageIndex]);
+            }
         }
 
         function applyHostAlpha(alpha) {
@@ -5256,10 +5330,10 @@ module.exports = function (bridge) {
                         try {
                             callback(floatingButton, session);
                         } catch (error) {
-                            console.error("[imgui] Floating button callback failed: " + error);
-                            if (error && error.stack) {
-                                console.error(String(error.stack));
-                            }
+                            reportSessionError("event", "Floating button callback", error, {
+                                event: "buttonClick",
+                                button: floatingButton
+                            });
                         }
                     }
                     return true;
@@ -5474,6 +5548,9 @@ module.exports = function (bridge) {
                 session._nativeInitialized = true;
                 session._surfaceDetached = false;
                 if (!restored) {
+                    if (session.debug) {
+                        bridge.setDebugMode(true);
+                    }
                     if (initialTheme) {
                         session.theme = api.setTheme(initialTheme);
                     } else {
@@ -5900,6 +5977,7 @@ module.exports = function (bridge) {
 
             var frameStarted = false;
             var frameRendered = false;
+            var frameFailed = false;
             session._inFrame = true;
             try {
                 dispatchFling();
@@ -5911,24 +5989,40 @@ module.exports = function (bridge) {
                     }
                 }
             } catch (error) {
-                console.error("[imgui] Render callback failed: " + error);
-                if (error && error.stack) {
-                    console.error(String(error.stack));
+                frameFailed = true;
+                if (frameStarted) {
+                    try {
+                        bridge.recoverFrame();
+                    } catch (ignored) {
+                        // The frame is still presented below; a presentation failure closes the session.
+                    }
                 }
-                session.closeReason = "render-error";
-                session._closeRequested = true;
+                // With an "error" listener the rest of the frame is skipped and the session goes on (D4).
+                if (!reportSessionError("render", "Render callback", error, null)) {
+                    session.closeReason = "render-error";
+                    session._closeRequested = true;
+                }
             } finally {
                 if (frameStarted) {
                     try {
+                        if (session.debug) {
+                            bridge.showDebugWindows();
+                        }
                         frameRendered = Boolean(bridge.render());
                         if (frameRendered) {
                             session._frameSerial += 1;
+                        }
+                        if (session.debug) {
+                            printDebugMessages();
                         }
                     } catch (error) {
                         console.error("[imgui] Frame presentation failed: " + error);
                     }
                 }
                 session._inFrame = false;
+            }
+            if (frameRendered && !frameFailed && lastReportedError !== null && lastReportedError.phase === "render") {
+                lastReportedError = null;
             }
 
             if (!frameRendered && frameStarted) {
@@ -5985,52 +6079,28 @@ module.exports = function (bridge) {
         return api.createWindow(renderCallback, resolvedOptions);
     };
     api.addButtonEx = function (label, callback, options) {
-        if (!api._activeSession || api._activeSession.closed) {
-            throw new Error("imgui.addButtonEx requires an active ImGui session");
-        }
-        return api._activeSession.addButtonEx(label, callback, options);
+        return requireActiveSession("addButtonEx").addButtonEx(label, callback, options);
     };
     api.setTouchable = function (touchMode) {
-        if (api._activeSession) {
-            api._activeSession.setTouchable(touchMode);
-        }
-        return api._activeSession;
+        return requireActiveSession("setTouchable").setTouchable(touchMode);
     };
     api.setMoreTouch = function (enabled) {
-        if (api._activeSession) {
-            api._activeSession.setMoreTouch(enabled);
-        }
-        return api._activeSession;
+        return requireActiveSession("setMoreTouch").setMoreTouch(enabled);
     };
     api.setGlobalAlpha = function (alpha) {
-        if (api._activeSession) {
-            api._activeSession.setAlpha(alpha);
-        }
-        return api._activeSession;
+        return requireActiveSession("setGlobalAlpha").setAlpha(alpha);
     };
     api.setSecure = function (secure) {
-        if (api._activeSession) {
-            api._activeSession.setSecure(secure);
-        }
-        return api._activeSession;
+        return requireActiveSession("setSecure").setSecure(secure);
     };
     api.collapseWindow = function () {
-        if (api._activeSession) {
-            api._activeSession.collapse();
-        }
-        return api._activeSession;
+        return requireActiveSession("collapseWindow").collapse();
     };
     api.expandWindow = function () {
-        if (api._activeSession) {
-            api._activeSession.expand();
-        }
-        return api._activeSession;
+        return requireActiveSession("expandWindow").expand();
     };
     api.getComponent = function (type, id) {
-        if (!api._activeSession || api._activeSession.closed) {
-            return null;
-        }
-        return findHighLevelComponent(api._activeSession, type, id);
+        return findHighLevelComponent(requireActiveSession("getComponent"), type, id);
     };
 
     var aliases = {
