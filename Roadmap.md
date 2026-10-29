@@ -134,3 +134,158 @@
 - 完成条目请将 `- [ ]` 改为 `- [x]` 并在末尾追加版本号标注, 如 `(v1.2.0)`.
 - 新需求先归入对应优先级分组, 涉及架构决策的条目须在描述中注明验收标准.
 - 每次发版前核对本文件与 CHANGELOG 的一致性: 当版本新勾选的条目应能在该版本 CHANGELOG 中找到对应记录.
+
+******
+
+### 2026-10 API 精进 (R 系列) 总览
+
+******
+
+来源: 2026-10-29 的脚本 API 设计评审 `docs/API-REVIEW-2026-10.md` (A1-A9 设计问题, Dear ImGui 分组缺口, Android 场景, 开发者体验 D1-D4). 评审的全部条目按其第 5 节的优先顺序分成 R0 - R8 九个阶段, R0 - R7 每个阶段对应一个 minor 版本 (v1.11.0 - v1.18.0), R8 只产出文档与原型补丁不发版. 决策记录见文末附录 A, 待决事项见附录 B; 调度看板为 `D:/idea-projects/.claude/boards/imgui.md`.
+
+依赖与并行: R0 -> R1 -> R2 -> R3 -> R4 -> R5 -> R6 -> R7 顺序执行 (都改 `index.js` / `ImGuiBridge.cpp` / `imgui.d.ts`, 同时只允许一个写代码的会话); R8 从 R1 起可与主线并行 (原型只在本地克隆里做, 入库文件仅 docs). 已完成的 A1 (createWindow 回调签名) 随 v1.10.0 落地, 不再列入.
+
+阶段通用验收 (每个阶段都要满足, 条目里不再重复):
+
+1. 构建与测试: 按 AGENTS.md 的 Gradle 命令跑 `:app:assembleDebug :app:testDebugUnitTest` 通过, `python .python/generate_markdown.py --check` 通过; 涉及 native 的阶段再跑 `:app:assembleDebugAndroidTest :app:lintDebug`.
+2. 声明与文档: `types/imgui.d.ts` 覆盖本阶段全部新增 / 变更成员 (现有的 d.ts 校验通过); README 源 (`.readme` 10 语言 JSON) 与 `docs/*.md` 同步; `.changelog` 10 语言 JSON 按 hint / feature / fix / improvement 记录, 破坏性变化必须有 hint 条目; 重新生成 README / CHANGELOG. 宿主文档站, TypeScript-Declarations 与 Ace 补全不在本路线图内 (附录 A D10), 由 api-coverage P5.2f 统一接入.
+3. 宿主同步: 新增或改名的脚本成员写入宿主 `AutoJs6/app/src/main/java/org/autojs/autojs/runtime/api/modules/imgui/ImguiNames.kt` (FUNCTIONS / ALIASES / CONSTANTS), 更新 `ScriptModuleInstallsTest` 的成员总数 (v1.10.0 时为 459), 重新生成 KSP (`:app:kspAppDebugKotlin`), 宿主只本地提交不推送 (共享工作区: 只提交自己的文件, 不切分支, 不碰其他会话在改的文件); 装上新宿主后 `py -3.12 AutoJs6/tools/imgui/device_global_check.py -s <serial>` 通过 (成员总数与示例数随阶段更新).
+4. 真机: 每个阶段的设备验证写成仓库内可复用脚本 (`tools/` 目录, 每项只打印 PASS / FAIL 与关键数值), 主力设备 968e9f18 (Xiaomi 23046RP50C, debug 宿主) 全部通过, 另一台 (ColorOS 63751f63 或 16 KB 模拟器, 见 `D:/idea-projects/COMMON_AGENTS.md` 可用测试设备) 抽查; 需要维护者在手机上点确认的安装或授权停下来等, 不代为点击. 特权模式条目需要 root / Shizuku 设备.
+5. 发布 (附录 A D8 / D9): `VERSION_NAME` 改为本阶段版本, `VERSION_BUILD` = `git rev-list --count HEAD` + 1, 真机通过后推送 master, 打 `v<版本>` tag 触发签名 Release, 核对 Release 产物 (四 ABI + universal) 后登记官方插件索引 (流程与 3-Macaw 等插件相同); 本 Roadmap 勾选条目并标版本号.
+
+******
+
+### R0 - 正确性与排错 (v1.11.0)
+
+******
+
+- [ ] R0.1 宿主模块与插件新增成员: 核实宿主 `ImguiModule` 对 `ImguiNames` 之外的成员是否透传 (首次加载后能否访问插件新增的函数). 不透传时在本阶段给出方案 (例如加载后把插件对象的全部成员补挂到模块对象, 或文档写明新成员需要配套宿主版本并可用 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` 取完整对象), 写进 README 与附录 B 登记. 验收: 968e9f18 上 v1.11.0 新增成员经全局 `imgui` 可调用, 或文档已写明限制.
+- [ ] R0.2 PlotOptions 的 `valuesOffset` 与 `stride` 生效 (A2): `plotLines` / `plotHistogram` 以 `valuesOffset` 为准并兼容旧的 `offset`, `stride` 传到 JNI. 验收: 单测覆盖 offset / valuesOffset / stride 三种输入到 JNI 参数的映射; 设备脚本用 8 个采样点 offset 2 stride 2 绘制并以 `getItemRect` + 截图核对曲线起点.
+- [ ] R0.3 错误事件 (A5, D4): 渲染回调或事件回调抛错时 `console.error` 输出带栈信息 (同一消息连续出现只打印一次, 事件照发), 触发 `session.on("error", e)` (`e.error`, `e.phase` 为 render / event, `e.frame`); 没有 error 监听时沿用现状关闭会话 (`closeReason` 为 render-error), 有监听时跳过本帧继续渲染, 处理器内可自行 `session.close()`. 验收: 设备脚本两种情况各一组: 无监听 closed = true 且 closeReason = render-error; 有监听时 frames 继续增长, 事件计数与抛错帧数一致.
+- [ ] R0.4 `createWindow({debug: true})` (D3): 打开 Dear ImGui 的 ErrorRecovery 断言与 DebugLog 输出 (Begin / End 不配对等错误经 `console.warn` 与 logcat 可见), 并自动显示 Metrics 与 DebugLog 窗口 (R3.1 落地前先用现有 native 调用, R3.1 后改为复用). 验收: 设备脚本构造一次 `begin` 不 `end`, debug 模式 console 出现对应警告, 非 debug 模式没有.
+- [ ] R0.5 全局 setter 与单会话 (A7): `imgui.setAlpha` 等依赖活动会话的全局方法在没有活动会话时抛 `Error("imgui.<name>: no active session")` 而非空指针或静默; d.ts 标注; README 写明单会话模型 (新会话关闭旧会话). 验收: 单测 + 设备脚本无会话时调用抛出预期错误.
+- [ ] R0.6 别名说明 (A9): README 由 "PascalCase 全量别名, 迁移零成本" 改为 "常用 API 别名", 新增 `docs/ALIASES.md`: 194 个别名清单 (脚本从 `index.js` 生成, 入库脚本放 `tools/`) 与上游 C++ 签名的差异表 (ValueRef 风格, 多分量控件与键盘查询缺失等, 随 R3 / R4 补齐后更新).
+- [ ] R0.7 README 的目标 SDK 与 changelog 一致 (D4): 全部 10 语言 README 源写 37.
+- [ ] R0.8 示例 `examples/error-handling.js` (error 事件, debug 模式, 常见错误排查) 登记到 `examples/index.json` (6 个), `runExample` 可运行.
+- [ ] R0.9 发布 v1.11.0 (连同未发布的 v1.10.0 改动一起推送, v1.10.0 不单独打 tag, changelog 保留 1.10.0 条目).
+
+******
+
+### R1 - 单位, 参数校验与线程模型 (v1.12.0, 破坏性)
+
+******
+
+- [ ] R1.1 坐标单位统一 (A3, D11): `createWindow` 的 x / y / width / height, `session.setPosition` / `setSize`, `session.x` / `y` / `width` / `height`, moved / resized 事件参数全部为 dp (x / y 由 px 改为 dp 属破坏性变化); 帧内 ImGui 坐标保持 px; 新增 `ui.dp(n)` (dp -> px), `ui.px(n)` (px -> dp) 与 `ui.density`; 示例去掉手动乘 `density`; d.ts 每个尺寸参数注明单位. 验收: 设备脚本 `createWindow({x: 100, y: 100, width: 200, height: 100})` 的实际 px 尺寸与位置 = 值 * density (误差 1 px).
+- [ ] R1.2 参数校验统一 (A4, D2): 统一校验层, 非法类型 / NaN / 越界抛 `TypeError` 或 `RangeError`, 消息含 API 名与参数名 (如 `imgui.sliderFloat: argument "max" must be a finite number`); 移除旧的 `number()` 静默强转; 颜色参数统一接受 Color (打包整数, `[r, g, b, a]`, `{r, g, b, a}`, `"#rrggbbaa"`), 位置参数 r, g, b, a 作重载保留. 验收: 单测覆盖至少 20 个代表 API 的非法输入与颜色四种写法; 设备脚本抽查 5 个.
+- [ ] R1.3 Session 状态字段只读 (A8, D2): x, y, width, height, ready, closed, closeReason, mode, collapsed 等改为只有 getter (严格模式写入抛 `TypeError`), d.ts 标 `readonly`, 写入只走 `setPosition` / `setSize` 等方法. 验收: 单测.
+- [ ] R1.4 事件统一到脚本线程 (A6, D3): ready / resized / moved / configurationChanged / surfaceRestored / collapsed / expanded / closed 以及 error / back 等全部会话事件派发到脚本线程 (与帧回调同一 Looper); 新增 `docs/THREADING.md` 线程表 (帧回调, 会话事件, Promise 对话框 resolve, 触摸与 IME 处理各在哪个线程, 回调里禁止阻塞) 与后台任务模式; 示例 `examples/background-task.js` (`threads.start` 做 http 或耗时计算, 脚本主线程 `setInterval` 取结果渲染). 验收: 设备脚本在 ready / resized / configurationChanged / error 回调里记录 `threads.currentThread()` 与帧回调相同; 回调里 `sleep(300)` 不抛 "wrong thread" 类错误.
+- [ ] R1.5 迁移说明 `docs/MIGRATION-1.12.md` (单位, 校验, 只读字段三处变化与改法), changelog hint 条目指向它.
+- [ ] R1.6 发布 v1.12.0.
+
+******
+
+### R2 - 大列表, 省电与纹理更新 (v1.13.0)
+
+******
+
+- [ ] R2.1 ListClipper (D6): `ui.listClipper(itemCount, options, callback)` 回调式 (`options` 可省略: `{itemHeight, includeItems: number[]}`; `callback(begin, end)` 每个可见区间调用一次, 内部 `seekCursorForItem` 收尾), PascalCase 别名 `ListClipper`; combo / listBox 的 512 上限不变, `docs/LIMITS.md` 补 "大数据用 beginCombo + listClipper + selectable" 并给示例 `examples/large-list.js` (100000 行). 验收: 968e9f18 上 100000 行列表的帧耗时 (statsOverlay 读数) 不超过 5 ms, 滚动到任意位置内容正确, 单测覆盖 includeItems.
+- [ ] R2.2 省电 (D5): `createWindow` 选项 `idleFps` (默认 10, 0 关闭) 与 `idleDelay` (默认 3000 ms): 无触摸 / 无 IME 输入超过 idleDelay 后按 idleFps 渲染, 任何输入立即恢复; 熄屏 (SCREEN_OFF) 或锁屏暂停帧循环, 亮屏恢复; `session.setFps` / `setIdleFps` / `getFps`; 优先级 熄屏 > 收起 (collapsedFps) > 空闲 > 正常; 事件 `idle` / `active`. 验收: 设备脚本 3 s 无输入后实际帧率 10 (误差 2), 注入触摸后 1 帧内恢复; `adb shell input keyevent 26` 熄屏后 2 s 内帧计数停止, 亮屏解锁后恢复; 文档写明帧内动画脚本需 `setIdleFps(0)`.
+- [ ] R2.3 `texture.update(source)`: 同尺寸同格式复用 GL 纹理 (`glTexSubImage2D`), 尺寸变化时重建但句柄 id 不变; `source` 与 `createTexture` 相同 (文件路径 / 字节数组 / Bitmap / `images` 模块的 Image, 核对 P2 已有能力并补齐缺的类型); 示例 `examples/texture-refresh.js` (每 500 ms 截图 -> update -> `image` 控件预览). 验收: 设备脚本连续 update 100 次, `glGetError` 为 0, 纹理数量与堆内存不增长, 帧耗时稳定.
+- [ ] R2.4 发布 v1.13.0.
+
+******
+
+### R3 - 调试窗口, 返回键, 表格排序与多分量控件 (v1.14.0)
+
+******
+
+- [ ] R3.1 调试窗口: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide` (各带可选 open 引用) 与 PascalCase 别名; R0.4 的 debug 模式改为复用这些. 验收: 设备脚本逐个调用一帧不报错, 示例 widget-overview 加 "Debug" 菜单.
+- [ ] R3.2 返回键 (D7): `session.on("back", e)` 可用 `e.preventDefault()` 拦截; 未拦截时 Activity 全屏模式关闭会话 (`closeReason` 为 back), 悬浮窗模式 IME 有焦点时先收键盘 (现状), 无焦点时系统不派发 (README 写明). 验收: 设备脚本 Activity 模式 `adb shell input keyevent 4`: 无监听关闭且 closeReason = back; 监听并 preventDefault 时会话仍在且事件计数 1.
+- [ ] R3.3 表格排序: `tableGetSortSpecs()` 返回 `{specsDirty, specs: [{columnIndex, columnUserId, sortDirection, sortOrder}]}` (只暴露上游 1.92.9 的公开 API), `TableFlags.Sortable` / `SortMulti` / `SortTristate` 与 `TableColumnFlags.DefaultSort` / `PreferSortAscending` / `PreferSortDescending` 落地; `dataTable` 组件 `opts.sortable` 自动排序 rows. 验收: data-table-demo 示例加排序, 点击表头排序正确, specsDirty 只在变化的那一帧为 true.
+- [ ] R3.4 多分量控件: `dragFloat2/3/4`, `dragInt2/3/4`, `sliderFloat2/3/4`, `sliderInt2/3/4`, `inputFloat2/3/4`, `inputInt2/3/4`, `dragFloatRange2`, `dragIntRange2`, `vSliderFloat`, `vSliderInt`, `sliderAngle` (已有的跳过); 引用用 `imgui.floats` / `ints` 数组或 `{value: [...]}`; d.ts, 别名, widget-overview 示例段, `docs/ALIASES.md` 差异表更新. 验收: 单测 + 设备脚本抽查 4 个控件的值回写 (经 `addMousePosEvent` 注入拖动).
+- [ ] R3.5 发布 v1.14.0.
+
+******
+
+### R4 - 键盘查询, 剪贴板, 拖放与 DrawList 补全 (v1.15.0)
+
+******
+
+- [ ] R4.1 键盘查询: `isKeyDown` / `isKeyPressed(key, repeat)` / `isKeyReleased` / `getKeyPressedAmount` / `getKeyName` / `isKeyChordPressed` / `shortcut(keyChord, flags)` / `setNextItemShortcut`, `Mod` 修饰常量 (Ctrl / Shift / Alt / Super) 与 `InputFlags`. 验收: 设备脚本 `sendKey` 后下一帧 `isKeyPressed` 为 true, 再下一帧为 false.
+- [ ] R4.2 剪贴板: `getClipboardText` / `setClipboardText` 对接 Android ClipboardManager (与宿主 `setClip` / `getClip` 互通), ImGui 内部 Ctrl+C / Ctrl+V 走同一通道. 验收: 设备脚本 set 后 get 一致, 宿主 `getClip()` 可见.
+- [ ] R4.3 拖放: `beginDragDropSource(flags)` / `setDragDropPayload(type, data)` (字符串, 数字或可 JSON 化对象) / `endDragDropSource` / `beginDragDropTarget` / `acceptDragDropPayload(type, flags)` (返回 payload 或 null) / `endDragDropTarget` / `getDragDropPayload`, 糖 `withDragDropSource` / `withDragDropTarget`, `DragDropFlags` 常量. 验收: 设备脚本用 `addMousePosEvent` / `addMouseButtonEvent` 序列模拟拖动, payload 到达目标; widget-overview 加拖放段.
+- [ ] R4.4 DrawList 补全: Path 系列 (`pathClear` / `pathLineTo` / `pathArcTo` / `pathArcToFast` / `pathBezierCubicCurveTo` / `pathBezierQuadraticCurveTo` / `pathRect` / `pathStroke` / `pathFillConvex` / `pathFillConcave`), `pushClipRect` / `popClipRect` (DrawList 级与窗口级), 以及缺少的图元 (`addEllipse` / `addEllipseFilled` / `addNgon` / `addNgonFilled` / `addBezierQuadratic` / `addQuad` / `addQuadFilled` / `addTriangleFilled` / `addRectFilledMultiColor` / `addImageQuad` / `addImageRounded` / `addConvexPolyFilled` / `addConcavePolyFilled`, 已有的跳过). 验收: androidTest 像素基线或设备脚本截图比对, 示例段.
+- [ ] R4.5 发布 v1.15.0.
+
+******
+
+### R5 - Android 场景补全 (v1.16.0)
+
+******
+
+- [ ] R5.1 `session.capture(options)` 返回 `images` 模块的 Image (悬浮窗与 Activity 模式经 PixelCopy, 特权模式经 `glReadPixels`), `options.region` 可选. 验收: 返回尺寸 = 窗口 px 尺寸, `images.save` 可写出, 连续 20 次无泄漏.
+- [ ] R5.2 DPI 与旋转重算: `configurationChanged` 时 density 或 fontScale 变化则重建字体图集并按新旧比例 `ScaleAllSizes`; 旋转时 dp 位置换算保持. 验收: 模拟器 `adb shell wm density` 改密度后字体与控件尺寸随之变化且不崩溃 (真机不改 density).
+- [ ] R5.3 CJK 字体回退: 核对 P1 内置裁剪版 CJK 的覆盖范围, 新增 `createWindow({systemCjkFont: true})` (或 `fonts: ["system-cjk"]`) 从 `/system/fonts` 的 Noto Sans CJK 加载完整字形 (生僻字), 缺失时回退内置. 验收: 设备截图里 "龘" 等内置子集缺字在系统字体下不是方块.
+- [ ] R5.4 特权模式 IME 回退: `WindowMode.Privileged` 下 `wantTextInput` 为 true 时弹出宿主 floaty 临时输入框 (单行 / 多行, 提交后 `addInputCharacters`, 失焦收起), README 已知限制更新. 需要 root 或 Shizuku 设备. 验收: 特权模式 `inputText` 可经临时输入框输入中文.
+- [ ] R5.5 捏合缩放手势: `createWindow({pinchZoom: true})` (默认 false) 时双指捏合调整字体缩放 (0.5 - 3 倍, `io.FontGlobalScale` 或 `setWindowFontScale`), 与已有双指滚动的判别: 两指距离变化超过阈值即捏合. 验收: 真机手动验证加日志, 设备脚本注入双指 MotionEvent 序列核对缩放值.
+- [ ] R5.6 发布 v1.16.0.
+
+******
+
+### R6 - 多选与多窗口 (v1.17.0)
+
+******
+
+- [ ] R6.1 多选: `beginMultiSelect(flags, selectionSize, itemsCount)` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection`, `MultiSelectFlags` 常量, 返回的 requests (`{type, selected, rangeFirstItem, rangeLastItem, rangeDirection}`) 由 JS 层 `imgui.selectionStorage()` 应用到 Set; 与 R2.1 listClipper 配合; `examples/large-list.js` 加多选. 验收: 100000 行 Shift / Ctrl 范围选择正确 (修饰键经 `addKeyEvent` 注入).
+- [ ] R6.2 多窗口文档与示例: `docs/MULTI-WINDOW.md` 说明单 Surface 多 ImGui 根窗口模式 (多次 `withWindow`, 各自位置 / 折叠 / 关闭按钮 / 焦点), 示例 `examples/multi-window.js`, README 写明单会话限制. 验收: 示例在 968e9f18 跑通.
+- [ ] R6.3 发布 v1.17.0.
+
+******
+
+### R7 - 开发者体验收尾 (v1.18.0)
+
+******
+
+- [ ] R7.1 d.ts 精度 (D1): 39 处 `unknown` 清零, `alert` / `confirm` / `singleChoice` / `multiChoice` 等 `...args: any[]` 改为具体重载, Options 不再继承 `Record<string, any>` (拼写错误可被 TS 捕获), `rowKey` 接受键名字符串或函数, 每个公开成员至少一行 JSDoc (含单位与线程说明). 验收: d.ts 中 `unknown` 计数 0, 全部示例以 `tsc --strict` 对照 d.ts 通过, 现有 d.ts 校验通过.
+- [ ] R7.2 示例清单核对 (D2): `examples/index.json` 含 error-handling / background-task / large-list / texture-refresh / multi-window 等各阶段新增示例 (共 10 个), 每个经 `runExample` 在 968e9f18 跑通.
+- [ ] R7.3 文档总校 (D4): 10 语言 README 与 changelog 的能力清单, SDK, 别名说明一致; `docs/` 目录索引; `docs/LIMITS.md` 更新; 写一份给 api-coverage P5.2f 的移交清单 (成员总数, d.ts 路径, 文档入口).
+- [ ] R7.4 发布 v1.18.0.
+
+******
+
+### R8 - 独立渲染线程评估 (不发版, 可与 R1 起并行)
+
+******
+
+- [ ] R8.1 原型 (D12): 在本地克隆 (`E:/.cache/imgui-render-thread`, 不是工作区仓库) 实现最小命令缓冲: 脚本线程录制 ImGui 调用或 ImDrawData 快照, 独立渲染线程回放并交换缓冲; 不改 master.
+- [ ] R8.2 实测 (968e9f18): 帧耗时 p50 / p95, 触摸到渲染延迟, 回调里 `sleep(500)` 时界面是否冻结, 线程数与内存, 与现状逐项对比表.
+- [ ] R8.3 结论写入 `docs/FRAME-LOOP.md` 新节 "独立渲染线程评估 (2026-11)", 原型以 `docs/prototypes/render-thread.patch` 入库 (不合并代码), 给出是否作为 2.0 候选的建议; 只提交 docs, 不改版本号.
+
+******
+
+### 附录 A - R 系列决策记录 (2026-10-29, 维护者选择题拍板)
+
+******
+
+- D1 范围 (非推荐项): 评审全部条目纳入 (含中低价值项与 Android 场景), 不纳入 Docking / 多视口 (沿用 P6 暂缓结论).
+- D2 兼容 (非推荐项): 破坏性修正直接进 1.11.0 起的版本 (非法参数抛 TypeError / RangeError, Session 字段只读), 不设 strict 开关, 以 changelog hint 与迁移说明告知.
+- D3 线程 (非推荐项): 会话事件统一派发到脚本线程; 另评估独立渲染线程 (R8).
+- D4 错误: 回调抛错触发 error 事件并 console.error; 无监听才关闭会话, 有监听跳过本帧继续; `options.debug` 打开断言日志与调试窗口.
+- D5 省电: 默认开启空闲降帧 (idleFps 10, idleDelay 3000 ms) 与熄屏暂停; `session.setFps` / `setIdleFps` 运行时可改.
+- D6 大列表: 回调式 `ui.listClipper`; combo / listBox 512 上限不变.
+- D7 返回键: `on("back")` 可拦截; 默认按模式处理 (Activity 关闭会话, 悬浮窗仅 IME 焦点时收键盘).
+- D8 发布: 子会话在真机测试通过后可推送 master, 打 tag 发 Release, 登记官方插件索引.
+- D9 节奏: 每阶段一个 minor 版本 (R0 = 1.11.0 ... R7 = 1.18.0); 未发布的 1.10.0 随 R0 一起推送, 不单独发.
+- D10 文档: 本路线图只维护插件内 README / docs / d.ts / changelog; 宿主文档站, TypeScript-Declarations, Ace 由 api-coverage P5.2f 接入.
+- D11 单位: 窗口级参数 (createWindow, setPosition / setSize, 会话字段与事件) 全部 dp, 帧内 ImGui 坐标 px, 提供 `ui.dp` / `ui.px` 换算.
+- D12 渲染线程评估: 产出结论文档与不合并的原型补丁.
+
+******
+
+### 附录 B - R 系列待决事项
+
+******
+
+格式: `- [状态] 编号 问题 | 选项: A (推荐) / B | 影响: 条目 | 改选返工: ... | 来源`. 状态: 需拍板 / 已按推荐先行待确认 / 已决 / 暂缓. 编号从 Q1 起.
+
+- (暂无)
