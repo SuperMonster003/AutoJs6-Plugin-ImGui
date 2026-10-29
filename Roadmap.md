@@ -173,7 +173,8 @@
 - [x] R0.7 README 的目标 SDK 与 changelog 一致 (D4): 全部 10 语言 README 源写 37.
 - [x] R0.8 示例 `examples/error-handling.js` (error 事件, debug 模式, 常见错误排查) 登记到 `examples/index.json` (6 个), `runExample` 可运行.
   完成: `listExamples()` 返回 6 个; `device_r0_check.py` 的 example 项 (`runExample("error-handling", {autoCloseMs: 3000})` 以 example-timeout 关闭, debug 默认开) 通过.
-- [ ] R0.9 发布 v1.11.0 (连同未发布的 v1.10.0 改动一起推送, v1.10.0 不单独打 tag, changelog 保留 1.10.0 条目).
+- [x] R0.9 发布 v1.11.0 (连同未发布的 v1.10.0 改动一起推送, v1.10.0 不单独打 tag, changelog 保留 1.10.0 条目).
+  完成 (v1.11.0): master 与 tag v1.11.0 (8a02109, versionCode 38) 已推送. tag 触发的 Release 工作流在 "Build and verify release APKs" 失败: 构建与签名成功, 但工作流仍在 `app/releases` 找 APK, 而 `gradle/release-archive.gradle` 输出到 `releases/v<版本>` (v1.9.3 的 tag 运行同样失败, 当时由维护者手动发布). 按 v1.9.3 先例在干净工作区本地构建 (release-manifest.json 记录 8a02109, sourceDirty false), apksigner 核对 5 个包签名者为 31a681f..., 各 ABI 包只含对应原生库, 手动创建 Release 并上传 5 个 APK 与 SHA256SUMS. 索引登记 38.json, 提交 1c871a2 已推送 (requiresHostVersion 3853 -> 5935). 工作流路径是否修正登记为附录 B Q5.
 
 ******
 
@@ -298,3 +299,4 @@
 - [已按推荐先行待确认] Q2 PlotOptions `stride` 的单位 | 选项: A (推荐, 已先行) 按值的个数 (stride 2 即每隔一个取值, JNI 内乘以 sizeof(float)) / B 按字节, 与 C++ 的 `stride` 一致 (脚本需写 8 表示每隔一个 float) | 影响: R0.2, d.ts 与 ALIASES.md 差异表 | 改选返工: B 改一行换算与单测, 文档两处, 约 0.5 小时 | 来源: imgui-r0
 - [已按推荐先行待确认] Q3 `getComponent` 没有活动会话时的行为 (1.10.0 返回 null) | 选项: A (推荐, 已先行) 与其他依赖会话的全局方法一致, 抛 `imgui.getComponent: no active session` (破坏性, changelog hint 已写) / B 保持返回 null, 只有 setter 类方法抛出 | 影响: R0.5 | 改选返工: 一行代码, 单测与 d.ts 注释各一处, 约 0.5 小时 | 来源: imgui-r0
 - [已按推荐先行待确认] Q4 有 `error` 监听时, 渲染回调抛错那一帧怎么呈现 | 选项: A (推荐, 已先行) 抛错前已提交的控件照常绘制, 未闭合的 begin / push 由 ErrorRecovery 静默收尾 (等同 Dear ImGui 的 "recoverable error" 行为), 下一帧重新调用回调 / B 丢弃这一帧 (不绘制, 保留上一帧画面) | 影响: R0.3 | 改选返工: B 需在 native 加 "结束帧但不提交绘制" 路径与插桩测试, 约 2 小时 | 来源: imgui-r0
+- [需拍板] Q5 tag 触发的 Release 工作流在 `find app/releases` 失败 (v1.9.3 与 v1.11.0 两次; `release-archive.gradle` 输出到 `releases/v<版本>`, AGENTS.md 也写明 `app/releases` 不是发布输入), 后续 R1 - R7 的发布怎么走 | 选项: A (推荐) 修正工作流: 产物路径改为 `releases/<tag>`, 正文由英文 changelog 生成 (索引的 changelogText 取自 Release 正文, `--generate-notes` 的自动正文不适合), 附 SHA256SUMS; tag 推送即由 CI 发布, 不再本地上传 / B 改为只手动发布: 去掉工作流的 release 作业, 每次本地 `appendDigestToReleasedFiles` 后 `gh release create` (v1.9.3 / v1.11.0 的做法) / C 不改, 每次 CI 失败后手动补发 | 影响: R1 - R7 的发布步骤 | 改选返工: A 约 1 小时, 在 v1.12.0 的 tag 上验证; B 约 0.5 小时; C 无 | 来源: imgui-r0
