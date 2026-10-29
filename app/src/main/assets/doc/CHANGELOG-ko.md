@@ -4,6 +4,15 @@
 
 ******
 
+# v1.10.0
+
+###### 2026/10/29
+
+* `힌트` AutoJs6 6.8.0 이상 필요 (versionCode 5935 이상)
+* `수정` TypeScript 선언에서 createWindow / launchFloaty / launch / launchPrivileged의 렌더 콜백 매개변수가 (session)으로 선언되던 문제; 실제 호출과 같은 (ui, session)으로 맞추고 RenderCallback 타입 추가
+* `개선` 플러그인을 활성화하면 전역 객체 imgui로 바로 사용할 수 있으며, AutoJs6이 등록하고 멤버를 처음 호출할 때 플러그인을 로드하므로 plugins.load가 더 이상 필요하지 않음; 기존 plugins.load("io.github.supermonster003.autojs6.plugin.imgui") 호출도 같은 객체를 반환
+* `개선` 예제 스크립트, 사용 설명, README 및 TypeScript 선언을 전역 객체 사용법에 맞게 갱신하고, 선언 파일은 더 이상 plugins.load 오버로드를 확장하지 않음
+
 # v1.9.4
 
 ###### 2026/10/05

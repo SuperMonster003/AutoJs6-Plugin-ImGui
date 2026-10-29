@@ -45,7 +45,7 @@
 
 ImGui プラグインは [Dear ImGui](https://github.com/ocornut/imgui) 即時モード GUI ライブラリを AutoJs6 に取り込み, 透明なフローティングウィンドウ内で OpenGL ES を用いてコントロールを描画します. デバッグパネル/パラメータチューナー/実行時 HUD などの軽量なフローティングインターフェースに最適で, ウィンドウ作成/フレームスケジュール/タッチ入力/ネイティブリソース解放をひとつのコンパクトな API にまとめています.
 
-最も互換性の高い入口は `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` です. AutoJs6 6.8 以降ではプラグインセンターの設定からオブジェクト名 `imgui` で自動マウントすることもできます. この設定を有効にした場合に限り, グローバルオブジェクトを直接利用できます.
+プラグインセンターでプラグインを有効にすると, スクリプトはグローバルオブジェクト `imgui` を直接使用できます (AutoJs6 が登録し, メンバーを初めて呼び出したときにプラグインを読み込みます). `plugins.load` は不要です. AutoJs6 6.8.0 以降が必要です.
 
 ******
 
@@ -55,7 +55,7 @@ ImGui プラグインは [Dear ImGui](https://github.com/ocornut/imgui) 即時�
 
 - 自動タッチ透過、折りたたみ/展開、独立フローティングボタン、透明度/セキュリティ、配置保存、ライフサイクルイベントに対応する適応型オーバーレイおよび Activity 全画面セッション.
 - `launchPrivileged` は AutoJs6 管理の Shizuku/root を利用する明示的な本番 SurfaceFlinger モードです。認証 Binder が特権 Surface を既存の完全なレンダラーへ渡し、`/dev/input` が観測型ポインター入力を提供します.
-- 安定した `plugins.load` 入口はホスト側のマウント設定なしで動作し, AutoJs6 の任意の自動マウントを有効にすると同じ API がグローバル `imgui` オブジェクトとして公開されます.
+- AutoJs6 がグローバル `imgui` オブジェクトとして直接登録するため, プラグインを有効にすれば読み込み手順は不要です. pinyin / mediainfo などの公式プラグインと同じ使い方です.
 - 透明なフローティングウィンドウ: サイズ/位置/フレームレート/フォントを設定でき, 空白領域のドラッグで移動, 二本指で慣性スクロール, 一本指の長押しで右クリックできます.
 - `inputText` ファミリーはシステム IME に完全対応し, 変換中テキスト, ソフトキーボードの自動表示/非表示, 一般的な編集キーを扱えます.
 - ウィンドウ/タブ/ツリーノード/テーブル/ポップアップ/メニュー/ツールチップのほか, モバイルスタイルの `toggle` スイッチを含む 60 以上の即時モードコントロールを提供します.
@@ -75,10 +75,10 @@ ImGui プラグインは [Dear ImGui](https://github.com/ocornut/imgui) 即時�
 
 - [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases) からデバイスのアーキテクチャに合った APK をダウンロードします. 不明な場合は `universal` パッケージを選択してください.
 - APK をインストールして AutoJs6 を開き, プラグイン管理ページで本プラグインが認識され有効になっていることを確認します.
-- `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` でプラグインを読み込み, `imgui.createWindow(...)` を呼び出します. 初回使用時には AutoJs6 にオーバーレイ (フローティングウィンドウ) 権限を付与してください.
+- スクリプトから `imgui.createWindow(...)` を直接呼び出します. 初回使用時には AutoJs6 にオーバーレイ (フローティングウィンドウ) 権限を付与してください.
 - `launchPrivileged` の前に AutoJs6 で通常どおり Root または Shizuku を設定・認可してください. プラグインはそのホスト状態を再利用し、特権モードにオーバーレイ権限は不要です.
 
-ホスト要件: AutoJs6 の versionCode 3853 以降. プラグインは `arm64-v8a`/`armeabi-v7a`/`x86_64`/`x86` のバイナリを同梱し, Android 7.0 (API 24) 以降と OpenGL ES 3.0 対応の GPU/ドライバーが必要です.
+ホスト要件: AutoJs6 の versionCode 5935 以降. プラグインは `arm64-v8a`/`armeabi-v7a`/`x86_64`/`x86` のバイナリを同梱し, Android 7.0 (API 24) 以降と OpenGL ES 3.0 対応の GPU/ドライバーが必要です.
 
 ******
 
@@ -86,10 +86,9 @@ ImGui プラグインは [Dear ImGui](https://github.com/ocornut/imgui) 即時�
 
 ******
 
-プラグインをインストールして有効化したら, API を読み込み, 可変参照を作成してフローティングウィンドウを開きます:
+プラグインをインストールして有効化したら, 可変参照を作成してフローティングウィンドウを開きます:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.ref(true);
 var volume = imgui.ref(0.5);
 var themeColor = imgui.ref([0.25, 0.55, 0.90]);
@@ -172,6 +171,15 @@ lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイ�
 
 ******
 
+#### v1.10.0
+
+###### 2026/10/29
+
+* `ヒント` AutoJs6 6.8.0 以降が必要です (versionCode 5935 以上)
+* `修正` TypeScript 宣言で createWindow / launchFloaty / launch / launchPrivileged の描画コールバックの引数が (session) と宣言されていた問題; 実際の呼び出しと同じ (ui, session) に揃え, RenderCallback 型を追加
+* `改善` プラグインを有効にするとグローバルオブジェクト imgui としてそのまま使用でき, AutoJs6 が登録してメンバーの初回呼び出し時にプラグインを読み込むため plugins.load は不要になりました; 従来の plugins.load("io.github.supermonster003.autojs6.plugin.imgui") も同じオブジェクトを返します
+* `改善` サンプルスクリプト, 使用説明, README, TypeScript 宣言をグローバルオブジェクトの使い方に合わせて更新し, 宣言ファイルは plugins.load のオーバーロードを拡張しなくなりました
+
 #### v1.9.4
 
 ###### 2026/10/05
@@ -185,14 +193,6 @@ lower camel case メソッドは同名の Dear ImGui 操作に対応し, ネイ�
 
 * `修正` 共有ビルドプラグイン 1.8.3 により, AGP 9.1 での SDK XML v4 解析警告と, JVM 単体テストの組み立て時に APK ネイティブライブラリのアラインメント検証が誤って実行される問題
 * `改善` compileSdk と targetSdk を 37 (Android 17) に引き上げ, プラグインの動作は新しいターゲットの影響を受けない
-
-#### v1.9.2
-
-###### 2026/09/13
-
-* `修正` プラグインセンターのバージョンと ABI 情報がインストール済み APK と一致
-* `修正` バージョン日付は英語の統一形式で表示されます
-* `改善` ダウンロード用ファイルの作成前に, リリース APK のバージョン, 署名, バリアントの完全性を検証
 
 ##### その他のリリース履歴
 

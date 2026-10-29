@@ -532,9 +532,6 @@ tasks {
             }
             val declarationContractTokens = listOf(
                 "declare const imgui: ImGui.Api",
-                "(name: \"io.github.supermonster003.autojs6.plugin.imgui\"): ImGui.Api",
-                "load(name: \"io.github.supermonster003.autojs6.plugin.imgui\"): ImGui.Api",
-                "declare module \"io.github.supermonster003.autojs6.plugin.imgui\"",
             )
             val missingDeclarationContract = declarationContractTokens.filterNot(
                 declarationSource::contains,

@@ -4,6 +4,15 @@
 
 ******
 
+# v1.10.0
+
+###### 2026/10/29
+
+* `ヒント` AutoJs6 6.8.0 以降が必要です (versionCode 5935 以上)
+* `修正` TypeScript 宣言で createWindow / launchFloaty / launch / launchPrivileged の描画コールバックの引数が (session) と宣言されていた問題; 実際の呼び出しと同じ (ui, session) に揃え, RenderCallback 型を追加
+* `改善` プラグインを有効にするとグローバルオブジェクト imgui としてそのまま使用でき, AutoJs6 が登録してメンバーの初回呼び出し時にプラグインを読み込むため plugins.load は不要になりました; 従来の plugins.load("io.github.supermonster003.autojs6.plugin.imgui") も同じオブジェクトを返します
+* `改善` サンプルスクリプト, 使用説明, README, TypeScript 宣言をグローバルオブジェクトの使い方に合わせて更新し, 宣言ファイルは plugins.load のオーバーロードを拡張しなくなりました
+
 # v1.9.4
 
 ###### 2026/10/05

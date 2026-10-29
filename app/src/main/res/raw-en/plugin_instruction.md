@@ -1,9 +1,8 @@
-Load the plugin explicitly for a portable script. AutoJs6 6.8 or later can optionally auto-mount it as the global `imgui` object from the Plugin Center settings.
+Once the plugin is enabled in the Plugin Center, use the global `imgui` object directly (requires AutoJs6 6.8.0 or later); there is no need to call `plugins.load`.
 
 Create mutable references before opening the floating window:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.bool(true);
 var level = imgui.float(0.5);
 

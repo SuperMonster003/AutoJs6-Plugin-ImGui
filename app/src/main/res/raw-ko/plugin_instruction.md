@@ -1,9 +1,8 @@
-서로 다른 호스트 설정에서도 동작하도록 플러그인을 명시적으로 로드하세요. AutoJs6 6.8 이상에서는 플러그인 센터 설정에서 전역 `imgui` 객체로 선택적 자동 마운트를 활성화할 수도 있습니다.
+플러그인 센터에서 플러그인을 활성화한 뒤 전역 객체 `imgui`를 바로 사용하세요 (AutoJs6 6.8.0 이상 필요). `plugins.load`를 호출할 필요가 없습니다.
 
 플로팅 창을 열기 전에 변경 가능한 참조를 만듭니다:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.bool(true);
 var level = imgui.float(0.5);
 

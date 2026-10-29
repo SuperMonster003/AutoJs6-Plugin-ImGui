@@ -45,7 +45,7 @@
 
 ImGui 插件将 [Dear ImGui](https://github.com/ocornut/imgui) 即时模式图形库带入 AutoJs6, 在透明浮动窗口中以 OpenGL ES 渲染控件, 适合为脚本编写调试面板/参数调节器/运行状态 HUD 等轻量浮动界面. 插件通过一套紧凑的 API 统一管理窗口创建/帧调度/触摸输入和原生资源清理.
 
-兼容性最好的入口是 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`. AutoJs6 6.8 及以上版本也可在插件中心设置中按需启用自动挂载, 并将对象名设为 `imgui`; 仅在启用后, 脚本才可直接使用同名全局对象.
+插件在插件中心启用后, 脚本直接使用全局对象 `imgui` (由 AutoJs6 注册, 首次调用成员时加载插件), 不需要 `plugins.load`; 需要 AutoJs6 6.8.0 及以上版本.
 
 ******
 
@@ -55,7 +55,7 @@ ImGui 插件将 [Dear ImGui](https://github.com/ocornut/imgui) 即时模式图�
 
 - 自适应悬浮窗与 Activity 全屏会话, 支持自动点击穿透、收起/展开、独立悬浮按钮、透明度/防截屏控制、布局持久化与生命周期事件.
 - `launchPrivileged` 通过 AutoJs6 已管理的 Shizuku/root 提供显式生产级 SurfaceFlinger 模式; 鉴权 Binder 将特权 Surface 交给现有完整渲染器, `/dev/input` 则提供观察式指针输入.
-- 默认通过稳定的 `plugins.load` 入口加载, 无需预先配置宿主挂载; 也可启用 AutoJs6 自动挂载, 将同一 API 暴露为全局 `imgui` 对象.
+- 由 AutoJs6 直接注册为全局 `imgui` 对象, 启用插件后无需加载步骤, 与 pinyin / mediainfo 等官方插件一致.
 - 透明浮动窗口: 尺寸/位置/帧率/字体可配置, 拖动空白区域移动窗口, 双指滑动与惯性滚动内容, 单指长按模拟右键.
 - `inputText` 系列完整接入系统输入法, 支持中文拼音组合输入、自动唤起/收起软键盘与常用编辑键.
 - 窗口/标签页/树形节点/表格/弹窗/菜单/工具提示与 60 余个即时控件, 含移动端风格 `toggle` 开关.
@@ -75,10 +75,10 @@ ImGui 插件将 [Dear ImGui](https://github.com/ocornut/imgui) 即时模式图�
 
 - 从 [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases) 下载与设备架构匹配的 APK, 不确定架构时选择 `universal` 通用包.
 - 安装 APK 后打开 AutoJs6, 在插件管理页面确认本插件已被识别并处于启用状态.
-- 在脚本中调用 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` 加载插件, 再调用 `imgui.createWindow(...)`; 首次使用需授予 AutoJs6 悬浮窗权限.
+- 在脚本中直接调用 `imgui.createWindow(...)`; 首次使用需授予 AutoJs6 悬浮窗权限.
 - 使用 `launchPrivileged` 前请照常在 AutoJs6 内配置并授权 Root 或 Shizuku; 插件直接复用该宿主状态, 特权模式无需悬浮窗权限.
 
-宿主版本要求: AutoJs6 版本号 (versionCode) 不低于 3853. 插件支持 `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` 四种架构, 最低系统版本为 Android 7.0 (API 24), 且设备 GPU/驱动须支持 OpenGL ES 3.0.
+宿主版本要求: AutoJs6 版本号 (versionCode) 不低于 5935. 插件支持 `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` 四种架构, 最低系统版本为 Android 7.0 (API 24), 且设备 GPU/驱动须支持 OpenGL ES 3.0.
 
 ******
 
@@ -86,10 +86,9 @@ ImGui 插件将 [Dear ImGui](https://github.com/ocornut/imgui) 即时模式图�
 
 ******
 
-安装并启用插件后, 加载 API, 创建可变引用对象并打开浮动窗口:
+安装并启用插件后, 创建可变引用对象并打开浮动窗口:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.ref(true);
 var volume = imgui.ref(0.5);
 var themeColor = imgui.ref([0.25, 0.55, 0.90]);
@@ -172,6 +171,15 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.10.0
+
+###### 2026/10/29
+
+* `提示` 需要 AutoJs6 6.8.0 及以上版本 (版本号 versionCode 不低于 5935)
+* `修复` TypeScript 声明中 createWindow / launchFloaty / launch / launchPrivileged 的渲染回调参数被声明为 (session) 的问题, 现与实际调用一致为 (ui, session), 并新增 RenderCallback 类型
+* `优化` 插件启用后直接以全局对象 imgui 使用, 由 AutoJs6 注册并在首次调用成员时加载插件, 不再需要 plugins.load; 原有 plugins.load("io.github.supermonster003.autojs6.plugin.imgui") 写法返回同一对象
+* `优化` 示例脚本, 使用说明, README 及 TypeScript 声明按全局对象用法更新, 声明文件不再扩展 plugins.load 的重载
+
 #### v1.9.4
 
 ###### 2026/10/05
@@ -185,14 +193,6 @@ imgui.runExample("widget-overview");
 
 * `修复` AGP 9.1 构建时的 SDK XML v4 解析警告, 以及 JVM 单元测试误触发 APK 原生库对齐检查的问题 (共享构建插件 1.8.3)
 * `优化` compileSdk/targetSdk 升级至 37 (Android 17)
-
-#### v1.9.2
-
-###### 2026/09/13
-
-* `修复` 插件中心显示的版本及 ABI 信息与实际安装包不一致的问题
-* `修复` 版本日期受构建环境语言影响, 未统一使用英文格式的问题
-* `优化` 发布前校验 APK 版本, 签名及变体完整性
 
 ##### 更多发行历史可参阅
 

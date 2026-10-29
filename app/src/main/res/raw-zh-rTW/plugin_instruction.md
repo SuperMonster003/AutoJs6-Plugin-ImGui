@@ -1,9 +1,8 @@
-為確保指令碼在不同宿主設定下均可執行, 請明確載入外掛. AutoJs6 6.8 或以上版本也可在外掛中心設定中按需將其自動掛載為 `imgui` 全域物件.
+在外掛中心啟用外掛後直接使用全域物件 `imgui` (需要 AutoJs6 6.8.0 或以上版本), 不需要呼叫 `plugins.load`.
 
 在開啟浮動視窗前建立可變參照物件:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.bool(true);
 var level = imgui.float(0.5);
 

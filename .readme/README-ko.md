@@ -45,7 +45,7 @@
 
 ImGui 플러그인은 [Dear ImGui](https://github.com/ocornut/imgui) 즉시 모드 GUI 라이브러리를 AutoJs6에 도입하여 투명한 플로팅 창 안에서 OpenGL ES로 컨트롤을 렌더링합니다. 디버그 패널, 매개변수 조정기, 실행 중 HUD 같은 가벼운 플로팅 인터페이스에 잘 어울리며 창 생성, 프레임 예약, 터치 입력, 네이티브 리소스 정리를 하나의 간결한 API로 관리합니다.
 
-가장 호환성이 높은 진입점은 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`입니다. AutoJs6 6.8 이상에서는 플러그인 센터 설정에서 객체 이름을 `imgui`로 지정해 자동 마운트를 선택적으로 활성화할 수도 있습니다. 이 옵션을 켠 경우에만 전역 객체를 바로 사용할 수 있습니다.
+플러그인 센터에서 플러그인을 활성화하면 스크립트에서 전역 객체 `imgui`를 바로 사용할 수 있습니다 (AutoJs6이 등록하며 멤버를 처음 호출할 때 플러그인을 로드합니다). `plugins.load`는 필요하지 않습니다. AutoJs6 6.8.0 이상이 필요합니다.
 
 ******
 
@@ -55,7 +55,7 @@ ImGui 플러그인은 [Dear ImGui](https://github.com/ocornut/imgui) 즉시 모�
 
 - 자동 터치 통과, 접기/펼치기, 독립 플로팅 버튼, 투명도/보안, 레이아웃 저장과 수명 주기 이벤트를 제공하는 반응형 오버레이 및 Activity 전체 화면 세션.
 - `launchPrivileged`는 AutoJs6가 관리하는 Shizuku/root를 이용하는 명시적 운영 SurfaceFlinger 모드입니다. 인증 Binder가 권한 Surface를 기존의 완전한 렌더러로 전달하고 `/dev/input`이 관찰형 포인터 입력을 제공합니다.
-- 안정적인 `plugins.load` 진입점은 호스트 마운트 설정 없이 동작하며 AutoJs6의 선택적 자동 마운트를 활성화하면 같은 API가 전역 `imgui` 객체로 제공됩니다.
+- AutoJs6이 전역 `imgui` 객체로 직접 등록하므로 플러그인을 활성화한 뒤 별도의 로드 단계가 필요 없으며, pinyin / mediainfo 등 공식 플러그인과 같은 방식입니다.
 - 크기, 위치, 프레임 속도, 글꼴을 설정할 수 있는 투명 플로팅 창을 제공하며 빈 영역 드래그로 이동하고 두 손가락 관성 스크롤과 한 손가락 길게 누르기 오른쪽 클릭을 지원합니다.
 - `inputText` 계열은 조합 중 텍스트, 소프트 키보드 자동 표시/숨김, 일반 편집 키를 포함해 시스템 IME와 완전히 연동됩니다.
 - 창, 탭, 트리 노드, 테이블, 팝업, 메뉴, 툴팁과 모바일 스타일 `toggle` 스위치를 포함한 60개 이상의 즉시 모드 컨트롤을 제공합니다.
@@ -75,10 +75,10 @@ ImGui 플러그인은 [Dear ImGui](https://github.com/ocornut/imgui) 즉시 모�
 
 - [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases)에서 기기 아키텍처에 맞는 APK를 내려받습니다. 잘 모르겠다면 `universal` 패키지를 선택하세요.
 - APK를 설치한 뒤 AutoJs6를 열고 플러그인 관리 페이지에서 이 플러그인이 인식되고 활성화되어 있는지 확인합니다.
-- `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`로 플러그인을 로드한 다음 `imgui.createWindow(...)`를 호출합니다. 처음 사용할 때 AutoJs6에 오버레이 (플로팅 창) 권한을 부여하세요.
+- 스크립트에서 `imgui.createWindow(...)`를 바로 호출합니다. 처음 사용할 때 AutoJs6에 오버레이 (플로팅 창) 권한을 부여하세요.
 - `launchPrivileged`를 사용하기 전에 AutoJs6에서 평소처럼 Root 또는 Shizuku를 설정하고 승인하세요. 플러그인은 해당 호스트 상태를 재사용하며 권한 모드에는 오버레이 권한이 필요하지 않습니다.
 
-호스트 요구 사항: versionCode 3853 이상의 AutoJs6. 플러그인은 `arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86` 바이너리를 제공하며 Android 7.0 (API 24) 이상과 OpenGL ES 3.0 지원 GPU/드라이버가 필요합니다.
+호스트 요구 사항: versionCode 5935 이상의 AutoJs6. 플러그인은 `arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86` 바이너리를 제공하며 Android 7.0 (API 24) 이상과 OpenGL ES 3.0 지원 GPU/드라이버가 필요합니다.
 
 ******
 
@@ -86,10 +86,9 @@ ImGui 플러그인은 [Dear ImGui](https://github.com/ocornut/imgui) 즉시 모�
 
 ******
 
-플러그인을 설치하고 활성화한 뒤 API를 로드하고 가변 참조를 만든 다음 플로팅 창을 엽니다:
+플러그인을 설치하고 활성화한 뒤 가변 참조를 만든 다음 플로팅 창을 엽니다:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.ref(true);
 var volume = imgui.ref(0.5);
 var themeColor = imgui.ref([0.25, 0.55, 0.90]);
@@ -172,6 +171,15 @@ lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며
 
 ******
 
+#### v1.10.0
+
+###### 2026/10/29
+
+* `힌트` AutoJs6 6.8.0 이상 필요 (versionCode 5935 이상)
+* `수정` TypeScript 선언에서 createWindow / launchFloaty / launch / launchPrivileged의 렌더 콜백 매개변수가 (session)으로 선언되던 문제; 실제 호출과 같은 (ui, session)으로 맞추고 RenderCallback 타입 추가
+* `개선` 플러그인을 활성화하면 전역 객체 imgui로 바로 사용할 수 있으며, AutoJs6이 등록하고 멤버를 처음 호출할 때 플러그인을 로드하므로 plugins.load가 더 이상 필요하지 않음; 기존 plugins.load("io.github.supermonster003.autojs6.plugin.imgui") 호출도 같은 객체를 반환
+* `개선` 예제 스크립트, 사용 설명, README 및 TypeScript 선언을 전역 객체 사용법에 맞게 갱신하고, 선언 파일은 더 이상 plugins.load 오버로드를 확장하지 않음
+
 #### v1.9.4
 
 ###### 2026/10/05
@@ -185,14 +193,6 @@ lower camel case 메서드는 같은 이름의 Dear ImGui 작업에 대응하며
 
 * `수정` 공유 빌드 플러그인 1.8.3을 통해 AGP 9.1의 SDK XML v4 파싱 경고 및 JVM 단위 테스트 조립 작업에서 APK 네이티브 라이브러리 정렬 검사가 잘못 실행되는 문제 해결
 * `개선` compileSdk 와 targetSdk 를 37 (Android 17) 로 올리며, 플러그인 동작은 새 대상 버전의 영향을 받지 않음
-
-#### v1.9.2
-
-###### 2026/09/13
-
-* `수정` 플러그인 센터의 버전과 ABI 정보가 설치된 APK와 일치
-* `수정` 버전 날짜를 일관된 영어 형식으로 표시
-* `개선` 다운로드 파일 생성 전에 릴리스 APK의 버전, 서명 및 전체 변형 구성을 검증
 
 ##### 더 많은 릴리스 기록
 

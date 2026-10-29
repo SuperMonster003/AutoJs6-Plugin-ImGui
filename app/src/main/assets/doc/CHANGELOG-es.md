@@ -4,6 +4,15 @@
 
 ******
 
+# v1.10.0
+
+###### 2026/10/29
+
+* `Aviso` Requiere AutoJs6 6.8.0 o posterior (versionCode 5935 o superior)
+* `Corrección` Los parámetros del callback de renderizado de createWindow / launchFloaty / launch / launchPrivileged se declaraban como (session) en las declaraciones TypeScript; ahora coinciden con la llamada real (ui, session) y se añade el tipo RenderCallback
+* `Mejora` Una vez habilitado, el plugin se usa directamente como objeto global imgui, que AutoJs6 registra y que carga el plugin en la primera llamada a un miembro, por lo que ya no se necesita plugins.load; la forma anterior plugins.load("io.github.supermonster003.autojs6.plugin.imgui") devuelve el mismo objeto
+* `Mejora` Scripts de ejemplo, instrucciones de uso, README y declaraciones TypeScript actualizados al uso del objeto global; el archivo de declaraciones ya no amplía plugins.load con sobrecargas
+
 # v1.9.4
 
 ###### 2026/10/05

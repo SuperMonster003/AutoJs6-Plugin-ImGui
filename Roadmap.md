@@ -20,7 +20,7 @@
 - API 规模: 190 个 JNI 绑定, 227 个可调用 JS API, 60 余个即时控件, 37 组常量表, PascalCase 全量别名; 另含 5 类会话托管高层组件与 4 类 Promise 对话框糖.
 - 已覆盖: 窗口/子区域/标签页/树形/表格/弹窗/菜单/工具提示/主题与批量样式/多字体与图标/托管纹理/图像控件/三层 DrawList 自绘/会话事件/自动点击穿透/收起气泡/独立悬浮按钮/Activity 全屏模式/分组与禁用态/滚动控制/状态查询/输入原语.
 - 交互: 空白区域拖动窗口, 双指惯性滚动, 单指长按右键, 系统 IME 中文组合输入; 触摸-渲染线程竞态已消除 (帧末快照).
-- 机制: 默认通过 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` 获取 `imgui`; AutoJs6 6.8+ 可在插件中心按需启用自动挂载, 并将对象名设为 `imgui` 后直接使用全局对象.
+- 机制: AutoJs6 6.8.0 及以上版本直接注册全局 `imgui` 对象, 首次调用成员时加载插件; 不再依赖 `plugins.load` 或插件中心自动挂载.
 - P6 生产基线: 复用 AutoJs6 现有 Root/Shizuku 授权与命令执行策略, 由 UID 0/2000 子进程创建并持有 SurfaceControl 图层, 经 256-bit token 鉴权 Binder 将 Surface 交给宿主现有完整 JS/JNI 渲染器; `/dev/input` 以非独占观察策略回传触摸. API 28 root 与 API 31 Shizuku 实机均已贯通.
 - 主要短板: 暂不支持同一脚本引擎并行运行多个独立原生渲染会话; 特权模式当前固定全屏, 不支持 IME/按键、宿主层透明度/防录屏、动态旋转重建、收起或独立 Android 悬浮按钮, 且非 SDK SurfaceControl 与 evdev 可读性仍受 OEM/SELinux 影响.
 

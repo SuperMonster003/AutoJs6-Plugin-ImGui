@@ -7,7 +7,6 @@
  * Dear ImGui facade exposed by AutoJs6 Plugin ImGui.
  *
  * @example
- * const imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
  * const enabled = imgui.bool(true);
  * imgui.createWindow(() => {
  *     imgui.begin("Typed window");
@@ -53,6 +52,7 @@ declare namespace ImGui {
     type NumericConstants<K extends string> = Readonly<Record<K, number>>;
     type StringConstants<K extends string> = Readonly<Record<K, string>>;
     type FrameBody = () => void;
+    type RenderCallback = (ui: Api, session: Session) => void;
     type TextureSource = string | readonly number[] | object;
 
     interface ValueRef<T> {
@@ -892,11 +892,11 @@ declare namespace ImGui {
         multiChoice(...args: any[]): Promise<number[]>;
         statsOverlay(id?: string | StatsOverlayOptions, options?: StatsOverlayOptions): StatsOverlay;
         dataTable<Row = any>(id: string, headers: readonly DataTableHeaderLike<Row>[], rows: readonly Row[], options?: DataTableOptions<Row>): DataTable<Row>;
-        createWindow(renderCallback: (session: Session) => void, options?: WindowOptions): Session;
+        createWindow(renderCallback: RenderCallback, options?: WindowOptions): Session;
         closeWindow(): void;
-        launchFloaty(renderCallback: (session: Session) => void, options?: WindowOptions): Session;
-        launch(renderCallback: (session: Session) => void, options?: WindowOptions): Session;
-        launchPrivileged(renderCallback: (session: Session) => void, options?: WindowOptions): Session;
+        launchFloaty(renderCallback: RenderCallback, options?: WindowOptions): Session;
+        launch(renderCallback: RenderCallback, options?: WindowOptions): Session;
+        launchPrivileged(renderCallback: RenderCallback, options?: WindowOptions): Session;
         addButtonEx(label: unknown, callback: () => void, options?: FloatingButtonOptions): FloatingButton;
         setTouchable(touchMode: TouchMode | boolean): Session;
         setMoreTouch(enabled: boolean): Session;
@@ -1108,22 +1108,3 @@ declare namespace ImGui {
 }
 
 declare const imgui: ImGui.Api;
-
-declare namespace Internal {
-    interface Plugins {
-        (name: "imgui"): ImGui.Api;
-        (name: "io.github.supermonster003.autojs6.plugin.imgui"): ImGui.Api;
-        load(name: "imgui"): ImGui.Api;
-        load(name: "io.github.supermonster003.autojs6.plugin.imgui"): ImGui.Api;
-    }
-}
-
-declare module "imgui" {
-    const plugin: ImGui.Api;
-    export = plugin;
-}
-
-declare module "io.github.supermonster003.autojs6.plugin.imgui" {
-    const plugin: ImGui.Api;
-    export = plugin;
-}

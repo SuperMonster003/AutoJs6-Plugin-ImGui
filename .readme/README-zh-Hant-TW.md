@@ -45,7 +45,7 @@
 
 ImGui 外掛將 [Dear ImGui](https://github.com/ocornut/imgui) 立即模式圖形函式庫帶入 AutoJs6, 在透明浮動視窗中以 OpenGL ES 渲染控制項, 適合為指令碼編寫除錯面板/參數調節器/執行狀態 HUD 等輕量浮動介面. 外掛透過一套精簡的 API 統一管理視窗建立/影格排程/觸控輸入和原生資源清理.
 
-相容性最佳的入口是 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`. AutoJs6 6.8 或以上版本也可在外掛中心設定中按需啟用自動掛載, 並將物件名稱設為 `imgui`; 只有啟用後, 指令碼才可直接使用同名全域物件.
+外掛在外掛中心啟用後, 指令碼直接使用全域物件 `imgui` (由 AutoJs6 註冊, 首次呼叫成員時載入外掛), 不需要 `plugins.load`; 需要 AutoJs6 6.8.0 或以上版本.
 
 ******
 
@@ -55,7 +55,7 @@ ImGui 外掛將 [Dear ImGui](https://github.com/ocornut/imgui) 立即模式圖�
 
 - 自適應懸浮窗與 Activity 全螢幕工作階段, 支援自動點擊穿透、收合/展開、獨立懸浮按鈕、透明度/防擷取控制、版面持久化與生命週期事件.
 - `launchPrivileged` 透過 AutoJs6 已管理的 Shizuku/root 提供明確正式 SurfaceFlinger 模式; 已驗證 Binder 將特權 Surface 交給現有完整渲染器, `/dev/input` 則提供觀察式指標輸入.
-- 預設透過穩定的 `plugins.load` 入口載入, 無需預先設定宿主掛載; 也可啟用 AutoJs6 自動掛載, 將相同 API 公開為全域 `imgui` 物件.
+- 由 AutoJs6 直接註冊為全域 `imgui` 物件, 啟用外掛後無需載入步驟, 與 pinyin / mediainfo 等官方外掛一致.
 - 透明浮動視窗: 尺寸/位置/影格率/字型可設定, 拖曳空白區域移動視窗, 雙指滑動與慣性捲動內容, 單指長按模擬右鍵.
 - `inputText` 系列完整整合系統輸入法, 支援中文拼音組合輸入、自動顯示/隱藏軟鍵盤與常用編輯鍵.
 - 視窗/分頁/樹狀節點/表格/彈窗/選單/工具提示與 60 餘個立即模式控制項, 含行動裝置風格 `toggle` 開關.
@@ -75,10 +75,10 @@ ImGui 外掛將 [Dear ImGui](https://github.com/ocornut/imgui) 立即模式圖�
 
 - 從 [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases) 下載與裝置架構相符的 APK, 不確定架構時選擇 `universal` 通用套件.
 - 安裝 APK 後開啟 AutoJs6, 在外掛管理頁面確認本外掛已被識別並處於啟用狀態.
-- 在指令碼中呼叫 `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` 載入外掛, 再呼叫 `imgui.createWindow(...)`; 首次使用需授予 AutoJs6 懸浮視窗權限.
+- 在指令碼中直接呼叫 `imgui.createWindow(...)`; 首次使用需授予 AutoJs6 懸浮視窗權限.
 - 使用 `launchPrivileged` 前請照常在 AutoJs6 內設定並授權 Root 或 Shizuku; 外掛直接重用該宿主狀態, 特權模式不需要懸浮視窗權限.
 
-宿主版本要求: AutoJs6 版本號 (versionCode) 不低於 3853. 外掛支援 `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` 四種架構, 最低系統版本為 Android 7.0 (API 24), 且裝置 GPU/驅動程式須支援 OpenGL ES 3.0.
+宿主版本要求: AutoJs6 版本號 (versionCode) 不低於 5935. 外掛支援 `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` 四種架構, 最低系統版本為 Android 7.0 (API 24), 且裝置 GPU/驅動程式須支援 OpenGL ES 3.0.
 
 ******
 
@@ -86,10 +86,9 @@ ImGui 外掛將 [Dear ImGui](https://github.com/ocornut/imgui) 立即模式圖�
 
 ******
 
-安裝並啟用外掛後, 載入 API, 建立可變參照物件並開啟浮動視窗:
+安裝並啟用外掛後, 建立可變參照物件並開啟浮動視窗:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.ref(true);
 var volume = imgui.ref(0.5);
 var themeColor = imgui.ref([0.25, 0.55, 0.90]);
@@ -172,6 +171,15 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.10.0
+
+###### 2026/10/29
+
+* `提示` 需要 AutoJs6 6.8.0 或以上版本 (版本號 versionCode 不低於 5935)
+* `修復` TypeScript 宣告中 createWindow / launchFloaty / launch / launchPrivileged 的渲染回呼參數被宣告為 (session) 的問題, 現與實際呼叫一致為 (ui, session), 並新增 RenderCallback 型別
+* `優化` 外掛啟用後直接以全域物件 imgui 使用, 由 AutoJs6 註冊並在首次呼叫成員時載入外掛, 不再需要 plugins.load; 原有 plugins.load("io.github.supermonster003.autojs6.plugin.imgui") 寫法回傳同一物件
+* `優化` 範例指令碼, 使用說明, README 及 TypeScript 宣告依全域物件用法更新, 宣告檔不再擴充 plugins.load 的多載
+
 #### v1.9.4
 
 ###### 2026/10/05
@@ -185,14 +193,6 @@ imgui.runExample("widget-overview");
 
 * `修復` AGP 9.1 建置時的 SDK XML v4 解析警告及 JVM 單元測試組裝工作誤觸發 APK 原生程式庫對齊檢查的問題 (共用建置外掛 1.8.3)
 * `優化` 將 compileSdk 與 targetSdk 提升到 37 (Android 17), 外掛程式行為不受新目標版本影響
-
-#### v1.9.2
-
-###### 2026/09/13
-
-* `修復` 外掛中心顯示的版本與 ABI 資訊符合實際安裝的 APK
-* `修復` 版本日期保持統一的英文格式
-* `優化` 發行下載檔案產生前驗證 APK 版本, 簽章與完整變體集合
 
 ##### 更多發行歷史可參閱
 

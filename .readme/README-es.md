@@ -45,7 +45,7 @@ El archivo README.md actual admite los siguientes idiomas:
 
 El plugin ImGui lleva la biblioteca de interfaz gráfica de modo inmediato [Dear ImGui](https://github.com/ocornut/imgui) a AutoJs6 y renderiza los controles con OpenGL ES dentro de una ventana flotante transparente. Encaja de forma natural en interfaces flotantes ligeras como paneles de depuración, ajustadores de parámetros y HUD de tiempo de ejecución, y reúne la creación de ventanas, la planificación de fotogramas, la entrada táctil y la limpieza de recursos nativos en una API compacta.
 
-El punto de entrada más compatible es `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`. AutoJs6 6.8 o posterior también puede montar el plugin automáticamente desde los ajustes del Centro de plugins con el nombre de objeto `imgui`; solo cuando se habilita esa opción se puede usar directamente el objeto global.
+Una vez habilitado el plugin en el Centro de plugins, los scripts usan directamente el objeto global `imgui` (registrado por AutoJs6, que carga el plugin en la primera llamada a uno de sus miembros); no se necesita `plugins.load`. Requiere AutoJs6 6.8.0 o posterior.
 
 ******
 
@@ -55,7 +55,7 @@ El punto de entrada más compatible es `plugins.load("io.github.supermonster003.
 
 - Sesiones adaptables superpuestas y Activity de pantalla completa con paso táctil automático, contraer/expandir, botones flotantes independientes, opacidad/seguridad, diseño persistente y eventos de ciclo de vida.
 - `launchPrivileged` ofrece un modo SurfaceFlinger de producción explícito mediante Shizuku/root gestionado por AutoJs6; Binder autenticado entrega la Surface privilegiada al renderizador completo existente y `/dev/input` aporta entrada de puntero observada.
-- El punto de entrada estable `plugins.load` funciona sin configurar el montaje del host; el montaje automático opcional de AutoJs6 expone la misma API como objeto global `imgui`.
+- AutoJs6 registra el plugin directamente como objeto global `imgui`, por lo que no hace falta ningún paso de carga tras habilitarlo, igual que en los plugins oficiales pinyin / mediainfo.
 - Ventanas flotantes transparentes con tamaño, posición, frecuencia de fotogramas y fuente configurables; arrastre un área vacía para mover la ventana, use desplazamiento inercial con dos dedos y mantenga pulsado con uno para hacer clic derecho.
 - La familia `inputText` está completamente conectada al IME del sistema, incluido el texto en composición, la visibilidad automática del teclado virtual y las teclas de edición habituales.
 - Ventanas, pestañas, nodos de árbol, tablas, ventanas emergentes, menús, tooltips y más de 60 controles de modo inmediato, incluido un interruptor `toggle` de estilo móvil.
@@ -75,10 +75,10 @@ El punto de entrada más compatible es `plugins.load("io.github.supermonster003.
 
 - Descargue desde [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases) el APK que corresponda a la arquitectura de su dispositivo; si tiene dudas, elija el paquete `universal`.
 - Instale el APK, abra AutoJs6 y confirme en la página de gestión de plugins que este plugin está reconocido y habilitado.
-- Cargue el plugin con `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")` y luego llame a `imgui.createWindow(...)`; conceda a AutoJs6 el permiso de superposición (ventana flotante) en el primer uso.
+- Llame directamente a `imgui.createWindow(...)` en el script; conceda a AutoJs6 el permiso de superposición (ventana flotante) en el primer uso.
 - Antes de `launchPrivileged`, configure y autorice Root o Shizuku normalmente en AutoJs6. El plugin reutiliza ese estado del host y el modo privilegiado no necesita permiso de superposición.
 
-Requisito del host: AutoJs6 con versionCode 3853 o posterior. El plugin incluye binarios `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` y requiere Android 7.0 (API 24) o posterior además de una GPU/controlador compatible con OpenGL ES 3.0.
+Requisito del host: AutoJs6 con versionCode 5935 o posterior. El plugin incluye binarios `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` y requiere Android 7.0 (API 24) o posterior además de una GPU/controlador compatible con OpenGL ES 3.0.
 
 ******
 
@@ -86,10 +86,9 @@ Requisito del host: AutoJs6 con versionCode 3853 o posterior. El plugin incluye 
 
 ******
 
-Con el plugin instalado y habilitado, cargue su API, cree referencias mutables y abra una ventana flotante:
+Con el plugin instalado y habilitado, cree referencias mutables y abra una ventana flotante:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.ref(true);
 var volume = imgui.ref(0.5);
 var themeColor = imgui.ref([0.25, 0.55, 0.90]);
@@ -172,6 +171,15 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 
 ******
 
+#### v1.10.0
+
+###### 2026/10/29
+
+* `Aviso` Requiere AutoJs6 6.8.0 o posterior (versionCode 5935 o superior)
+* `Corrección` Los parámetros del callback de renderizado de createWindow / launchFloaty / launch / launchPrivileged se declaraban como (session) en las declaraciones TypeScript; ahora coinciden con la llamada real (ui, session) y se añade el tipo RenderCallback
+* `Mejora` Una vez habilitado, el plugin se usa directamente como objeto global imgui, que AutoJs6 registra y que carga el plugin en la primera llamada a un miembro, por lo que ya no se necesita plugins.load; la forma anterior plugins.load("io.github.supermonster003.autojs6.plugin.imgui") devuelve el mismo objeto
+* `Mejora` Scripts de ejemplo, instrucciones de uso, README y declaraciones TypeScript actualizados al uso del objeto global; el archivo de declaraciones ya no amplía plugins.load con sobrecargas
+
 #### v1.9.4
 
 ###### 2026/10/05
@@ -185,14 +193,6 @@ Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mism
 
 * `Corrección` Advertencias de lectura de SDK XML v4 con AGP 9.1 y comprobaciones de alineación nativa de APK activadas por error al ensamblar pruebas unitarias JVM, mediante los plugins de compilación compartidos 1.8.3
 * `Mejora` compileSdk y targetSdk suben a 37 (Android 17); el comportamiento del plugin no depende del nuevo objetivo
-
-#### v1.9.2
-
-###### 2026/09/13
-
-* `Corrección` La versión y las ABI del centro de complementos coinciden con el APK instalado
-* `Corrección` Las fechas de versión mantienen un formato uniforme en inglés
-* `Mejora` Validación de las versiones, firmas y variantes completas de los APK antes de crear los archivos de descarga
 
 ##### Para consultar más versiones
 

@@ -4,6 +4,15 @@
 
 ******
 
+# v1.10.0
+
+###### 2026/10/29
+
+* `提示` 需要 AutoJs6 6.8.0 或以上版本 (版本號 versionCode 不低於 5935)
+* `修復` TypeScript 聲明中 createWindow / launchFloaty / launch / launchPrivileged 的渲染回呼參數被聲明為 (session) 的問題, 現與實際呼叫一致為 (ui, session), 並新增 RenderCallback 類型
+* `優化` 插件啟用後直接以全域物件 imgui 使用, 由 AutoJs6 註冊並在首次呼叫成員時載入插件, 不再需要 plugins.load; 原有 plugins.load("io.github.supermonster003.autojs6.plugin.imgui") 寫法傳回同一物件
+* `優化` 範例腳本, 使用說明, README 及 TypeScript 聲明按全域物件用法更新, 聲明檔不再擴充 plugins.load 的多載
+
 # v1.9.4
 
 ###### 2026/10/05

@@ -22,7 +22,7 @@ public final class ImGuiPluginContract {
     public static final String CAPABILITY_TYPESCRIPT_DECLARATION = "typescriptDeclaration";
     public static final String EXAMPLE_MANIFEST_ASSET = "examples/index.json";
     public static final String TYPESCRIPT_DECLARATION_ASSET = "types/imgui.d.ts";
-    public static final long REQUIRED_HOST_VERSION = 3853L;
+    public static final long REQUIRED_HOST_VERSION = 5935L;
 
     private static final String[] SUPPORTED_ABIS = {
         "arm64-v8a",

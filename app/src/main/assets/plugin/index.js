@@ -1,9 +1,10 @@
 /*
  * Dear ImGui runtime for AutoJs6 script engines.
  *
- * The host invokes the exported function below when a script calls plugins.load()
- * or when optional Plugin Center auto-mount is enabled. The function installs the
- * same API as the global `imgui` object and is idempotent within a script engine.
+ * AutoJs6 6.8.0+ registers the host module `imgui`, which invokes the exported
+ * function below the first time a script uses any of its members. Legacy
+ * plugins.load() calls receive the same object. The function installs the API as
+ * the global `imgui` object and is idempotent within a script engine.
  */
 
 module.exports = function (bridge) {

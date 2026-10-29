@@ -1,9 +1,8 @@
-異なるホスト設定でも動作するスクリプトにするには, プラグインを明示的に読み込んでください. AutoJs6 6.8 以降では, プラグインセンターの設定からグローバル `imgui` オブジェクトとして自動マウントすることもできます.
+プラグインセンターでプラグインを有効にした後は, グローバルオブジェクト `imgui` を直接使用できます (AutoJs6 6.8.0 以降が必要). `plugins.load` を呼び出す必要はありません.
 
 フローティングウィンドウを開く前に可変参照を作成します:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.bool(true);
 var level = imgui.float(0.5);
 

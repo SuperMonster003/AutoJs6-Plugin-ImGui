@@ -4,6 +4,15 @@
 
 ******
 
+# v1.10.0
+
+###### 2026/10/29
+
+* `تلميح` يتطلب AutoJs6 6.8.0 أو أحدث (versionCode لا يقل عن 5935)
+* `إصلاح` كانت معاملات دالة الرسم (render callback) في createWindow / launchFloaty / launch / launchPrivileged مصرحة في تصريحات TypeScript بالشكل (session); وأصبحت الآن مطابقة للاستدعاء الفعلي (ui, session) مع إضافة النوع RenderCallback
+* `تحسين` بعد تفعيل الإضافة تُستخدم مباشرة بوصفها الكائن العام imgui الذي يسجله AutoJs6 ويحمّل الإضافة عند أول استدعاء لأحد أعضائه, فلم تعد هناك حاجة إلى plugins.load; وتعيد الصيغة السابقة plugins.load("io.github.supermonster003.autojs6.plugin.imgui") الكائن نفسه
+* `تحسين` تحديث أمثلة السكربتات وتعليمات الاستخدام و README وتصريحات TypeScript وفق استخدام الكائن العام, ولم يعد ملف التصريحات يضيف تحميلات زائدة (overloads) إلى plugins.load
+
 # v1.9.4
 
 ###### 2026/10/05

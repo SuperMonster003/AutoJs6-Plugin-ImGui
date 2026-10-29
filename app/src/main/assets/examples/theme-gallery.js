@@ -5,10 +5,7 @@
         module.exports = factory;
         return;
     }
-    factory(
-        plugins.load("io.github.supermonster003.autojs6.plugin.imgui"),
-        {}
-    );
+    factory(imgui, {});
 })(function (imgui, options) {
     options = options || {};
 

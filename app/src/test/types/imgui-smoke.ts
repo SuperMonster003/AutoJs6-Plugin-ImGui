@@ -1,8 +1,6 @@
 /// <reference path="../../main/assets/types/imgui.d.ts" />
 
-declare const plugins: Internal.Plugins;
-
-const plugin = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
+const plugin: ImGui.Api = imgui;
 const enabled = plugin.bool(true);
 const count = plugin.int(3);
 const title = plugin.ref("P6");
@@ -22,10 +20,13 @@ plugin.sliderInt("Count", count, 0, 10);
 plugin.SetTheme(plugin.Themes.ModernDark);
 plugin.getForegroundDrawList().addCircleFilled([24, 24], 8, [0.2, 0.8, 1, 1]);
 
-const session: ImGui.Session = plugin.createWindow(() => {
-    plugin.begin("Typed ImGui");
-    plugin.text(`Limit: ${plugin.Limits.InputTextMaxBytes}`);
-    plugin.end();
+const session: ImGui.Session = plugin.createWindow((ui, windowSession) => {
+    const typedUi: ImGui.Api = ui;
+    const typedSession: ImGui.Session = windowSession;
+    typedUi.begin("Typed ImGui");
+    typedUi.text(`Limit: ${typedUi.Limits.InputTextMaxBytes}`);
+    typedUi.end();
+    typedSession.setMoreTouch(true);
 }, {
     mode: plugin.WindowMode.Activity,
     theme: plugin.Themes.Dark,

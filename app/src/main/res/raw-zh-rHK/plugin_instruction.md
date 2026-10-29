@@ -1,9 +1,8 @@
-為確保腳本在不同宿主設定下均可運行, 請明確載入插件. AutoJs6 6.8 或以上版本亦可在插件中心設定中按需將其自動掛載為 `imgui` 全域物件.
+在插件中心啟用插件後直接使用全域物件 `imgui` (需要 AutoJs6 6.8.0 或以上版本), 不需要呼叫 `plugins.load`.
 
 在開啟浮動視窗前建立可變參照物件:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.bool(true);
 var level = imgui.float(0.5);
 

@@ -45,7 +45,7 @@ The current README.md supports the following languages:
 
 The ImGui Plugin brings the [Dear ImGui](https://github.com/ocornut/imgui) immediate-mode GUI library to AutoJs6, rendering controls with OpenGL ES inside a transparent floating window. It is a natural fit for lightweight floating interfaces such as debug panels, parameter tuners, and runtime HUDs, and keeps window creation, frame scheduling, touch input, and native resource cleanup in one compact API.
 
-The portable entry point is `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`. AutoJs6 6.8 or later can optionally auto-mount the plugin from its Plugin Center settings under the object name `imgui`; only when that option is enabled may scripts use the global object directly.
+Once the plugin is enabled in the Plugin Center, scripts use the global `imgui` object directly (registered by AutoJs6, which loads the plugin on the first member call); `plugins.load` is not needed. Requires AutoJs6 6.8.0 or later.
 
 ******
 
@@ -55,7 +55,7 @@ The portable entry point is `plugins.load("io.github.supermonster003.autojs6.plu
 
 - Adaptive overlay and full-screen Activity sessions with automatic touch pass-through, collapse/expand, independent floating buttons, alpha/security controls, persistent layouts, and lifecycle events.
 - `launchPrivileged` provides an explicit production SurfaceFlinger mode through AutoJs6-managed Shizuku/root; authenticated Binder transfers the privileged Surface to the complete existing renderer, while `/dev/input` supplies observational pointer input.
-- A stable `plugins.load` entry point works without host-side mount configuration; optional AutoJs6 auto-mount exposes the same API as the global `imgui` object.
+- AutoJs6 registers the plugin directly as the global `imgui` object, so no loading step is needed once it is enabled, consistent with official plugins such as pinyin / mediainfo.
 - Transparent floating windows with configurable size, position, frame rate, and font; drag a blank area to move the window, use two-finger inertial scrolling, and long-press with one finger for a right click.
 - The `inputText` family is fully connected to the system IME, including composing text, automatic soft-keyboard visibility, and common editing keys.
 - Windows, tabs, tree nodes, tables, popups, menus, tooltips, and 60+ immediate-mode widgets, including a mobile-style `toggle` switch.
@@ -75,10 +75,10 @@ The portable entry point is `plugins.load("io.github.supermonster003.autojs6.plu
 
 - Download the APK matching your device architecture from [Releases](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/releases); pick the `universal` package when unsure.
 - Install the APK, open AutoJs6, and confirm on the plugin management page that this plugin is recognized and enabled.
-- Load the plugin with `plugins.load("io.github.supermonster003.autojs6.plugin.imgui")`, then call `imgui.createWindow(...)`; grant AutoJs6 the overlay (floating window) permission on first use.
+- Call `imgui.createWindow(...)` directly in your script; grant AutoJs6 the overlay (floating window) permission on first use.
 - For `launchPrivileged`, first configure and authorize Root or Shizuku in AutoJs6 as usual. The plugin reuses that host state and privileged mode does not require the overlay permission.
 
-Host requirement: AutoJs6 with versionCode 3853 or later. The plugin ships `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` binaries and requires Android 7.0 (API 24) or later plus an OpenGL ES 3.0-capable GPU/driver.
+Host requirement: AutoJs6 with versionCode 5935 or later. The plugin ships `arm64-v8a` / `armeabi-v7a` / `x86_64` / `x86` binaries and requires Android 7.0 (API 24) or later plus an OpenGL ES 3.0-capable GPU/driver.
 
 ******
 
@@ -86,10 +86,9 @@ Host requirement: AutoJs6 with versionCode 3853 or later. The plugin ships `arm6
 
 ******
 
-With the plugin installed and enabled, load its API, create mutable references, and open a floating window:
+With the plugin installed and enabled, create mutable references and open a floating window:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
 var enabled = imgui.ref(true);
 var volume = imgui.ref(0.5);
 var themeColor = imgui.ref([0.25, 0.55, 0.90]);
@@ -172,6 +171,15 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 
 ******
 
+#### v1.10.0
+
+###### 2026/10/29
+
+* `Hint` Requires AutoJs6 6.8.0 or later (versionCode 5935 or higher)
+* `Fix` Render callback parameters of createWindow / launchFloaty / launch / launchPrivileged were declared as (session) in the TypeScript declarations; they now match the actual call (ui, session), and the RenderCallback type is added
+* `Improvement` Once enabled, the plugin is used directly as the global imgui object, which AutoJs6 registers and which loads the plugin on the first member call, so plugins.load is no longer needed; existing plugins.load("io.github.supermonster003.autojs6.plugin.imgui") calls return the same object
+* `Improvement` Example scripts, usage instructions, README and TypeScript declarations follow the global object usage, and the declaration file no longer extends plugins.load with overloads
+
 #### v1.9.4
 
 ###### 2026/10/05
@@ -185,14 +193,6 @@ Lower camel case methods mirror the Dear ImGui operations of the same name, and 
 
 * `Fix` SDK XML v4 parsing warnings with AGP 9.1 and APK native alignment checks incorrectly triggered by JVM unit-test assembly tasks, using shared build plugins 1.8.3
 * `Improvement` Raise compileSdk and targetSdk to 37 (Android 17); the plugin's behavior does not depend on the new target
-
-#### v1.9.2
-
-###### 2026/09/13
-
-* `Fix` Plugin center version and ABI information matches the installed plugin APK
-* `Fix` Version dates use a consistent English format
-* `Improvement` Validate release APK versions, signing and the complete variant set before creating download artifacts
 
 ##### For more release history
 

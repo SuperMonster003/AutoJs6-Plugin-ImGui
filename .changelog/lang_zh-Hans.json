@@ -5,6 +5,19 @@
   "changelog_label_improvement": "优化",
   "changelog_label_dependency": "依赖",
   "$data": {
+    "v1.10.0": {
+      "released_date": "2026/10/29",
+      "hint": [
+        "需要 AutoJs6 6.8.0 及以上版本 (版本号 versionCode 不低于 5935)"
+      ],
+      "fix": [
+        "TypeScript 声明中 createWindow / launchFloaty / launch / launchPrivileged 的渲染回调参数被声明为 (session) 的问题, 现与实际调用一致为 (ui, session), 并新增 RenderCallback 类型"
+      ],
+      "improvement": [
+        "插件启用后直接以全局对象 imgui 使用, 由 AutoJs6 注册并在首次调用成员时加载插件, 不再需要 plugins.load; 原有 plugins.load(\"io.github.supermonster003.autojs6.plugin.imgui\") 写法返回同一对象",
+        "示例脚本, 使用说明, README 及 TypeScript 声明按全局对象用法更新, 声明文件不再扩展 plugins.load 的重载"
+      ]
+    },
     "v1.9.4": {
       "released_date": "2026/10/05",
       "improvement": [

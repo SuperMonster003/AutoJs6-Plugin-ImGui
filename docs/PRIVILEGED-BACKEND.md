@@ -30,8 +30,6 @@ Privileged mode is explicit. It is never selected by `createWindow`, `launchFloa
 the script asks for it:
 
 ```js
-var imgui = plugins.load("io.github.supermonster003.autojs6.plugin.imgui");
-
 var session = imgui.launchPrivileged(function (ui, window) {
     ui.setNextWindowPos(32, 96, ui.Cond.Always);
     ui.setNextWindowSize(window.width - 64, 360, ui.Cond.Always);
