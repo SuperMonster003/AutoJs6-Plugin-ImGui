@@ -8,7 +8,7 @@ var level = imgui.float(0.5);
 
 var overlay = imgui.createWindow(function (ui, window) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(window.width, window.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(window.width), ui.dp(window.height), ui.Cond.Always);
     ui.withWindow(
         "Controles ImGui",
         null,
@@ -32,7 +32,7 @@ var overlay = imgui.createWindow(function (ui, window) {
 });
 ```
 
-`width`, `height` y `fontSize` usan unidades independientes de la densidad. Al enfocar `inputText` se abre automáticamente el IME del sistema con composición. Arrastre un área vacía para mover la ventana; el deslizamiento vertical con dos dedos tiene inercia y una pulsación larga con uno emite un clic derecho. Pase `movable: false` para desactivar el arrastre. Use `fontPath` para cargar un archivo TTF u OTF legible cuando la fuente del sistema no cubra los caracteres necesarios.
+Los tamaños y posiciones de la ventana (`width`, `height`, `x`, `y`, campos y eventos de la sesión) y `fontSize` están en dp; las coordenadas dentro de un fotograma están en px, conviértalas con `ui.dp()` / `ui.px()`. Las devoluciones de llamada de eventos y botones se ejecutan en el hilo del script. Al enfocar `inputText` se abre automáticamente el IME del sistema con composición. Arrastre un área vacía para mover la ventana; el deslizamiento vertical con dos dedos tiene inercia y una pulsación larga con uno emite un clic derecho. Pase `movable: false` para desactivar el arrastre. Use `fontPath` para cargar un archivo TTF u OTF legible cuando la fuente del sistema no cubra los caracteres necesarios.
 
 Use `Themes` / `setTheme`, `setStyleProperties` y `Appearance` como ajustes visuales. `createWindow.fonts` precarga fuentes de assets o archivos para `pushFont` / `withFont`; el respaldo CJK y los iconos Material se fusionan automáticamente y están disponibles mediante `Icons` / `icon(name)`.
 
@@ -46,6 +46,6 @@ Hay disponibles tablas, ventanas contextuales, menús, tooltips, pilas de estilo
 
 Los controles con estado también aceptan referencias ligeras de `imgui.ref(value)` u objetos `{ value: ... }`; los ayudantes anteriores `bool`, `float`, `int`, `string` y de matrices de color siguen siendo compatibles. Los componentes `logWindow`, `toast`, diálogos Promise, `statsOverlay` y `dataTable` administrados por la sesión se dibujan después del callback del usuario y se cierran automáticamente con ella.
 
-Ejecute cualquiera de los cinco ejemplos con `imgui.runExample("widget-overview")`, `"parameter-panel"`, `"log-hud"`, `"data-table-demo"` o `"theme-gallery"`; descúbralos mediante `listExamples` y consulte su código con `getExampleSource`. El Centro de plugins de AutoJs6 6.8 todavía no muestra una acción genérica para ejecutar un ejemplo con un clic.
+Ejecute cualquiera de los siete ejemplos con `imgui.runExample("widget-overview")`, `"parameter-panel"`, `"log-hud"`, `"data-table-demo"`, `"theme-gallery"`, `"error-handling"` o `"background-task"`; descúbralos mediante `listExamples` y consulte su código con `getExampleSource`. El Centro de plugins de AutoJs6 6.8 todavía no muestra una acción genérica para ejecutar un ejemplo con un clic.
 
 La versión 1.7 también publica declaraciones completas para el editor en `types/imgui.d.ts`. Los límites están en `imgui.Limits` (64 KiB de texto, 512 elementos de selección y 2.048 eventos en cola); la API rechaza la entrada fuera del límite sin truncarla silenciosamente.

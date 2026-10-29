@@ -5,6 +5,31 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.12.0": {
+      "released_date": "2026/10/29",
+      "hint": [
+        "互換性のない変更: ウィンドウの位置とサイズはすべて dp になりました. createWindow の x / y, Session の x / y / width / height / displayWidth / displayHeight, setPosition / setSize, イベントデータ, フローティングボタンの x / y は以前 px でした. フレーム内の座標は引き続き px です. スクリプトの直し方は docs/MIGRATION-1.12.md を参照してください",
+        "互換性のない変更: 引数が不正なとき (型の誤り, NaN, 数値の文字列, 範囲外の値), 黙って変換や切り詰めをせず, メソッド名と引数名を含む TypeError または RangeError を投げるようになりました. 例: `imgui.sliderFloat: argument \"max\" must be a finite number`. fps, alpha, fontSize などのウィンドウオプションも同様に検査します",
+        "互換性のない変更: Session とフローティングボタンのフィールドは読み取り専用になりました (strict モードでは代入すると例外). 代わりに set メソッドを使ってください. FloatingButton.setPosition は source 引数を受け取らなくなり, フローティングボタンの色に数値を渡すと Android の ARGB ではなく, ほかの imgui の色と同じ 0xAABBGGRR (colorU32 の戻り値) として解釈します",
+        "互換性のない変更: セッションイベント, フローティングボタンのコールバック, ダイアログの結果は Android の UI スレッドではなく, 描画コールバックと同じスクリプトスレッドで実行されます. 詳しくは docs/THREADING.md を参照してください"
+      ],
+      "feature": [
+        "imgui.dp() / imgui.px() (エイリアス Dp / Px) で dp と px を換算でき, imgui.density で 1 dp あたりの px 数を取得できます",
+        "色はすべての API でパック済み整数, [r, g, b, a], {r, g, b, a}, \"#rrggbbaa\" のいずれでも指定できます (textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor を含む). r, g, b, a を個別に渡す書き方も引き続き使えます",
+        "サンプル background-task: ワーカースレッドで重い処理を行い, その間もウィンドウは描画を続けます. 進捗表示とキャンセル付き",
+        "docs/THREADING.md で各コールバックを実行するスレッドと重い処理をバックグラウンドで行う方法を, docs/MIGRATION-1.12.md でこのバージョンに必要なスクリプトの変更を説明します"
+      ],
+      "fix": [
+        "イベントやフローティングボタンのコールバックが描画コールバックと同時に実行されることがあり, その中で sleep を呼ぶとエラーになる問題",
+        "imgui.setTheme を呼んでも Session.theme が変わらない問題",
+        "ウィンドウをドラッグしたときの moved イベントの source が drag ではなく api になる問題"
+      ],
+      "improvement": [
+        "サンプルは window.density を掛ける代わりに ui.dp() を使うようになりました",
+        "TypeScript 宣言にすべてのサイズ, 位置, オプションの単位と範囲を記載し, Session とフローティングボタンのフィールドを readonly にしました",
+        "各 GitHub リリースに, ダウンロードした APK を検証するための SHA256SUMS ファイルを添付します"
+      ]
+    },
     "v1.11.0": {
       "released_date": "2026/10/29",
       "hint": [

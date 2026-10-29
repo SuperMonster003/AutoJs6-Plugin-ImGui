@@ -71,7 +71,7 @@ var themeColor = imgui.ref([0.25, 0.55, 0.90]);
 
 imgui.createWindow(function (ui, overlay) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(overlay.width, overlay.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(overlay.width), ui.dp(overlay.height), ui.Cond.Always);
     ui.withWindow(
         "ImGui Panel",
         null,

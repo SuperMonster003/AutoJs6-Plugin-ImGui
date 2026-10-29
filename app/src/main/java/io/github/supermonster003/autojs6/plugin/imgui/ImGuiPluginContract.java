@@ -38,6 +38,7 @@ public final class ImGuiPluginContract {
         "data-table-demo",
         "theme-gallery",
         "error-handling",
+        "background-task",
     };
 
     private ImGuiPluginContract() {

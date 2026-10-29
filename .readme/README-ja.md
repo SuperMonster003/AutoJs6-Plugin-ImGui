@@ -64,7 +64,7 @@ ImGui プラグインは [Dear ImGui](https://github.com/ocornut/imgui) 即時�
 - 軽量な `imgui.ref(value)` / `{value: x}` 参照はすべての状態付きコントロールで使用でき、従来の Java 配列参照ヘルパーも完全互換です.
 - セッション管理の `logWindow`、積み重ね可能な `toast`、Promise ダイアログ、しきい値色付き `statsOverlay`、選択/CRUD 対応 `dataTable` でデバッグ UI をすぐ構築できます.
 - よく使う API と定数列挙には PascalCase エイリアス (例: `ui.Button`) があり, 引数はプラグインの形式に従います. エイリアス一覧と上流 C++ シグネチャとの違いは [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md) を参照してください.
-- 完全な TypeScript 宣言、実行可能な 6 サンプル、Android 描画計装テスト、ロックフリー入力キュー、検証可能な上流更新ツール、CI リリース自動化を提供します.
+- 完全な TypeScript 宣言, 実行可能な 7 サンプル, Android 描画計装テスト, ロックフリー入力キュー, 検証可能な上流更新ツール, CI リリース自動化を提供します.
 - プラグイン情報/使用説明/README/CHANGELOG を 10 言語にローカライズします.
 
 ******
@@ -95,7 +95,7 @@ var themeColor = imgui.ref([0.25, 0.55, 0.90]);
 
 imgui.createWindow(function (ui, overlay) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(overlay.width, overlay.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(overlay.width), ui.dp(overlay.height), ui.Cond.Always);
     ui.withWindow(
         "ImGui Panel",
         null,
@@ -120,7 +120,7 @@ imgui.createWindow(function (ui, overlay) {
 });
 ```
 
-可変コントロールは `imgui.ref(value)` で作る軽量参照や通常の `{ value: ... }` オブジェクトを受け付け、従来の `imgui.bool`/`imgui.int`/`imgui.float`/`imgui.string`/`imgui.floats` ヘルパーとも互換性があります. `inputText` にフォーカスすると変換中テキスト対応のシステム IME が自動表示されます (`ime: false` で無効化). `width`/`height`/`fontSize` は画面密度に依存しない単位です. 空白領域をドラッグするとウィンドウを移動でき (`movable: false` で固定), 二本指の縦スワイプには設定可能な慣性 (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`) が付き, 一本指の長押しは右クリックを送ります (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). システムフォントが必要な文字をカバーしていない場合は `fontPath` に TTF または OTF フォントファイルを指定してください.
+可変コントロールは `imgui.ref(value)` で作る軽量参照や通常の `{ value: ... }` オブジェクトを受け付け, 従来の `imgui.bool`/`imgui.int`/`imgui.float`/`imgui.string`/`imgui.floats` ヘルパーとも互換性があります. `inputText` にフォーカスすると変換中テキスト対応のシステム IME が自動表示されます (`ime: false` で無効化). ウィンドウのサイズと位置は dp です. `width`, `height`, `x`, `y` オプション, セッションのフィールド, イベントデータのすべてが該当し, `fontSize` も dp です. フレーム内の座標は px なので `ui.dp()` / `ui.px()` で換算します. イベントとボタンのコールバックはスクリプトスレッドで実行されます ([THREADING.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/THREADING.md) を参照). 以前のバージョンからの変更点は [MIGRATION-1.12.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/MIGRATION-1.12.md) にまとめています. 空白領域をドラッグするとウィンドウを移動でき (`movable: false` で固定), 二本指の縦スワイプには設定可能な慣性 (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`) が付き, 一本指の長押しは右クリックを送ります (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). システムフォントが必要な文字をカバーしていない場合は `fontPath` に TTF または OTF フォントファイルを指定してください.
 
 テーマとフォント: `setTheme` は 11 種類の `Themes` を受け取り、`setStyleProperties` は複数の `StyleVar` を一括更新します. `createWindow` には `theme` / `appearance` / `style` / `shadow` も指定できます. `fonts` 配列で assets (`asset://...`) またはファイルフォントを読み込み、`pushFont` / `withFont` で切り替えます. CJK フォールバックとアイコンは自動マージされ、`Icons` / `icon(name)` でアイコングリフを取得できます.
 
@@ -128,7 +128,7 @@ imgui.createWindow(function (ui, overlay) {
 
 ウィンドウセッション: オーバーレイは既定で `TouchMode.Auto` を使い、ImGui ルートウィンドウを操作可能に保ちながら Surface の空白領域を背後のアプリへ渡します。固定する場合は `Touchable` または `Passthrough` を選択します。セッションは透明度/セキュリティ/タッチモードの変更、低 FPS ミニバブルへの折りたたみ、独立した `addButtonEx`、`AlwaysAutoResize` 追従、`iniPath` による配置保存、`on` / `once` / `off` またはオプションのコールバックによるイベント購読に対応します。`imgui.launch(...)` は現在 resumed の AutoJs6 Activity に全画面 Surface を作り、`launchFloaty(...)` はオーバーレイを明示します。スクリプトエンジンごとのネイティブレンダーセッションは 1 つですが、同じコールバックで任意の数の `begin` / `withWindow` ImGui ルートを作成できます。新しいセッションは以前のセッションを閉じます。 描画コールバックやイベントコールバックが例外を投げると, `console.error` にエラーとスタックを出力し (同じエラーが続く場合は 1 回だけ), `error` イベント (`error` / `phase` / `frame`) を発行します. `error` リスナーがない場合, 描画エラーはセッションを閉じます (`closeReason` は `render-error`). リスナーがある場合はそのフレームの残りを飛ばして描画を続けます. オプション `debug: true` は `begin` に対応する `end` がないなどの使い方の誤りを `console.warn` と logcat に報告し, Metrics と Debug Log ウィンドウを表示します. `setTouchable` / `setGlobalAlpha` / `getComponent` などのグローバルメソッドは現在のセッションに作用し, アクティブなセッションがない場合は `imgui.<name>: no active session` を投げます.
 
-高レベルコンポーネントはアクティブなセッションに接続され、ユーザーの描画コールバック後に描画されます. `logWindow` はレベル色分け、消去、エクスポート、オートスクロール、`toast` は位置指定付き時間通知、`alert` / `confirm` / `singleChoice` / `multiChoice` は Promise、`statsOverlay` はフレーム時間グラフ、`dataTable` は選択と CRUD を提供します. 6 つの内蔵例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling`) は `listExamples` / `getExampleSource` で確認し、`runExample` で実行できます. AutoJs6 6.8 のプラグインセンターは汎用サンプルメタデータをまだ利用しないため、ホスト対応までは次の呼び出しを直接実行してください:
+高レベルコンポーネントはアクティブなセッションに接続され, ユーザーの描画コールバック後に描画されます. `logWindow` はレベル色分け, 消去, エクスポート, オートスクロール, `toast` は位置指定付き時間通知, `alert` / `confirm` / `singleChoice` / `multiChoice` は Promise, `statsOverlay` はフレーム時間グラフ, `dataTable` は選択と CRUD を提供します. 7 つの内蔵例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling` / `background-task`) は `listExamples` / `getExampleSource` で確認し, `runExample` で実行できます. AutoJs6 6.8 のプラグインセンターは汎用サンプルメタデータをまだ利用しないため, ホスト対応までは次の呼び出しを直接実行してください:
 
 ```js
 imgui.runExample("widget-overview");
@@ -142,7 +142,7 @@ imgui.runExample("widget-overview");
 
 よく使う API には PascalCase エイリアスもあります (例: `ui.Button` は `ui.button` と等価). エイリアスの引数はプラグインの形式 (可変値は `imgui.ref` など) に従い, 上流 C++ シグネチャと 1 対 1 には対応しません. 一覧と違いは [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md) を参照してください. lower camel case メソッドは同名の Dear ImGui 操作に対応し, 機能別に次のように分類されます:
 
-- セッションランタイム: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, セッション版を含む `on` / `once` / `off`, コールバックのエラーを伝えるセッションの `error` イベント, デバッグモードを有効にする `debug` オプション.
+- セッションランタイム: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 単位換算の `density` / `dp` / `px`, セッション版を含む `on` / `once` / `off`, コールバックのエラーを伝えるセッションの `error` イベント, デバッグモードを有効にする `debug` オプション.
 - バックエンドの検出: `getBackendCapabilities` / `BackendStatus` は, ウィンドウ, split-touch, 特権プロセス, direct input, Docking, Multi-Viewport の利用可否と本番運用への対応状況を報告します. 権限昇格は行いません.
 - セッションとウィンドウ: `createWindow`/`closeWindow`/`withWindow`/`withChild`/`setNextWindowPos`/`setNextWindowSize`/`setNextWindowBgAlpha` に加え, `isWindowHovered` などのウィンドウ状態クエリ.
 - テキストとコントロール: `text`/`textColored`/`textWrapped`/`separatorText`/`bulletText`/`labelText`/`button`/`arrowButton`/`invisibleButton`/`checkbox`/`toggle`/`radioButton`/`sliderFloat`/`sliderInt`/`vSliderFloat`/`dragFloat`/`dragInt`/`inputText`/`inputInt`/`inputFloat`/`inputTextMultiline`/`colorEdit3`/`colorEdit4`/`colorPicker4`/`colorButton`/`progressBar`/`plotLines`/`plotHistogram` など.
@@ -171,6 +171,25 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.12.0
+
+###### 2026/10/29
+
+* `ヒント` 互換性のない変更: ウィンドウの位置とサイズはすべて dp になりました. createWindow の x / y, Session の x / y / width / height / displayWidth / displayHeight, setPosition / setSize, イベントデータ, フローティングボタンの x / y は以前 px でした. フレーム内の座標は引き続き px です. スクリプトの直し方は docs/MIGRATION-1.12.md を参照してください
+* `ヒント` 互換性のない変更: 引数が不正なとき (型の誤り, NaN, 数値の文字列, 範囲外の値), 黙って変換や切り詰めをせず, メソッド名と引数名を含む TypeError または RangeError を投げるようになりました. 例: `imgui.sliderFloat: argument "max" must be a finite number`. fps, alpha, fontSize などのウィンドウオプションも同様に検査します
+* `ヒント` 互換性のない変更: Session とフローティングボタンのフィールドは読み取り専用になりました (strict モードでは代入すると例外). 代わりに set メソッドを使ってください. FloatingButton.setPosition は source 引数を受け取らなくなり, フローティングボタンの色に数値を渡すと Android の ARGB ではなく, ほかの imgui の色と同じ 0xAABBGGRR (colorU32 の戻り値) として解釈します
+* `ヒント` 互換性のない変更: セッションイベント, フローティングボタンのコールバック, ダイアログの結果は Android の UI スレッドではなく, 描画コールバックと同じスクリプトスレッドで実行されます. 詳しくは docs/THREADING.md を参照してください
+* `機能` imgui.dp() / imgui.px() (エイリアス Dp / Px) で dp と px を換算でき, imgui.density で 1 dp あたりの px 数を取得できます
+* `機能` 色はすべての API でパック済み整数, [r, g, b, a], {r, g, b, a}, "#rrggbbaa" のいずれでも指定できます (textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor を含む). r, g, b, a を個別に渡す書き方も引き続き使えます
+* `機能` サンプル background-task: ワーカースレッドで重い処理を行い, その間もウィンドウは描画を続けます. 進捗表示とキャンセル付き
+* `機能` docs/THREADING.md で各コールバックを実行するスレッドと重い処理をバックグラウンドで行う方法を, docs/MIGRATION-1.12.md でこのバージョンに必要なスクリプトの変更を説明します
+* `修正` イベントやフローティングボタンのコールバックが描画コールバックと同時に実行されることがあり, その中で sleep を呼ぶとエラーになる問題
+* `修正` imgui.setTheme を呼んでも Session.theme が変わらない問題
+* `修正` ウィンドウをドラッグしたときの moved イベントの source が drag ではなく api になる問題
+* `改善` サンプルは window.density を掛ける代わりに ui.dp() を使うようになりました
+* `改善` TypeScript 宣言にすべてのサイズ, 位置, オプションの単位と範囲を記載し, Session とフローティングボタンのフィールドを readonly にしました
+* `改善` 各 GitHub リリースに, ダウンロードした APK を検証するための SHA256SUMS ファイルを添付します
+
 #### v1.11.0
 
 ###### 2026/10/29
@@ -193,13 +212,6 @@ imgui.runExample("widget-overview");
 * `修正` TypeScript 宣言で createWindow / launchFloaty / launch / launchPrivileged の描画コールバックの引数が (session) と宣言されていた問題; 実際の呼び出しと同じ (ui, session) に揃え, RenderCallback 型を追加
 * `改善` プラグインを有効にするとグローバルオブジェクト imgui としてそのまま使用でき, AutoJs6 が登録してメンバーの初回呼び出し時にプラグインを読み込むため plugins.load は不要になりました; 従来の plugins.load("io.github.supermonster003.autojs6.plugin.imgui") も同じオブジェクトを返します
 * `改善` サンプルスクリプト, 使用説明, README, TypeScript 宣言をグローバルオブジェクトの使い方に合わせて更新し, 宣言ファイルは plugins.load のオーバーロードを拡張しなくなりました
-
-#### v1.9.4
-
-###### 2026/10/05
-
-* `改善` プラグインセンターのアイコンに Icon Studio で調整したサイズ, 位置, 明暗の図稿と円形背景を適用し, 再生成可能な原稿とパラメーターを保持
-* `改善` Android のアプリ情報アイコンに Icon Studio と共通の図案と明暗の背景色を使用し, プラグインセンターの透明な図案と既存のランチャー設定を維持
 
 ##### その他のリリース履歴
 

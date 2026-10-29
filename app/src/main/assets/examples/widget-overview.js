@@ -87,8 +87,8 @@
             window.toast(text, 2200, {level: level || ui.LogLevel.Info});
         }
 
-        ui.setNextWindowPos(14 * window.density, 14 * window.density, ui.Cond.FirstUseEver);
-        ui.setNextWindowSize(520 * window.density, 520 * window.density, ui.Cond.FirstUseEver);
+        ui.setNextWindowPos(ui.dp(14), ui.dp(14), ui.Cond.FirstUseEver);
+        ui.setNextWindowSize(ui.dp(520), ui.dp(520), ui.Cond.FirstUseEver);
         ui.withWindow("ImGui P4 Widget Overview", mainOpen, 0, function () {
             ui.separatorText("Lightweight references");
             ui.checkbox("Enabled", enabled);
@@ -191,8 +191,8 @@
     }, {
         width: numberOption(options.width, 760),
         height: numberOption(options.height, 640),
-        x: numberOption(options.x, 20),
-        y: numberOption(options.y, 60),
+        x: numberOption(options.x, 6),
+        y: numberOption(options.y, 24),
         fps: numberOption(options.fps, 60),
         theme: options.theme || imgui.Themes.ModernDark,
         touchMode: imgui.TouchMode.Auto,

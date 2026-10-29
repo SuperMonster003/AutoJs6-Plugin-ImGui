@@ -64,7 +64,7 @@ ImGui 插件将 [Dear ImGui](https://github.com/ocornut/imgui) 即时模式图�
 - 轻量 `imgui.ref(value)` / `{value: x}` 引用可用于全部有状态控件, 现有 Java 数组引用辅助方法保持完全兼容.
 - 会话托管的 `logWindow`、堆叠 `toast`、Promise 对话框、阈值变色 `statsOverlay` 与可选择 CRUD `dataTable` 可直接组成调试界面.
 - 常用 API 与常量枚举提供 PascalCase 别名 (如 `ui.Button`), 参数沿用插件风格; 别名清单及与上游 C++ 签名的差异见 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
-- 工程支持包含完整 TypeScript 声明、六个可运行示例、Android 渲染仪器测试、无锁输入队列、可验证的上游更新工具与 CI 发布自动化.
+- 工程支持包含完整 TypeScript 声明, 七个可运行示例, Android 渲染仪器测试, 无锁输入队列, 可验证的上游更新工具与 CI 发布自动化.
 - 插件信息/使用说明/README 和 CHANGELOG 的十种语言本地化.
 
 ******
@@ -95,7 +95,7 @@ var themeColor = imgui.ref([0.25, 0.55, 0.90]);
 
 imgui.createWindow(function (ui, overlay) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(overlay.width, overlay.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(overlay.width), ui.dp(overlay.height), ui.Cond.Always);
     ui.withWindow(
         "ImGui Panel",
         null,
@@ -120,7 +120,7 @@ imgui.createWindow(function (ui, overlay) {
 });
 ```
 
-可变控件支持由 `imgui.ref(value)` 创建的轻量引用或普通 `{ value: ... }` 对象; 原有 `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` 辅助方法保持兼容. `inputText` 聚焦后会自动唤起系统输入法并支持中文组合输入; 可用 `ime: false` 关闭自动 IME. `width` / `height` 和 `fontSize` 使用与屏幕密度无关的单位. 拖动空白区域可移动窗口 (传入 `movable: false` 可固定); 双指纵向滑动支持惯性滚动 (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`), 单指长按模拟右键 (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). 如果系统字体无法覆盖所需字符, 可通过 `fontPath` 指定 TTF 或 OTF 字体文件.
+可变控件支持由 `imgui.ref(value)` 创建的轻量引用或普通 `{ value: ... }` 对象; 原有 `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` 辅助方法保持兼容. `inputText` 聚焦后会自动唤起系统输入法并支持中文组合输入; 可用 `ime: false` 关闭自动 IME. 窗口的尺寸与位置使用 dp: `width`, `height`, `x`, `y` 选项, 会话字段与事件数据都是如此, `fontSize` 也是 dp. 帧内坐标是 px, 可用 `ui.dp()` / `ui.px()` 换算. 事件与按钮回调在脚本线程执行 (见 [THREADING.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/THREADING.md)), 与旧版本的差异见 [MIGRATION-1.12.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/MIGRATION-1.12.md). 拖动空白区域可移动窗口 (传入 `movable: false` 可固定); 双指纵向滑动支持惯性滚动 (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`), 单指长按模拟右键 (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). 如果系统字体无法覆盖所需字符, 可通过 `fontPath` 指定 TTF 或 OTF 字体文件.
 
 主题与字体: `setTheme` 接受 `Themes` 的 11 套预设, `setStyleProperties` 可批量设置 `StyleVar`; `createWindow` 也可传入 `theme` / `appearance` / `style` / `shadow`. `fonts` 数组可预载 assets (`asset://...`) 或文件字体并以 `pushFont` / `withFont` 切换. 插件自动合并内置 CJK 兜底和图标子集, 可用 `Icons` / `icon(name)` 取得图标字形.
 
@@ -128,7 +128,7 @@ imgui.createWindow(function (ui, overlay) {
 
 窗口会话: 悬浮窗默认采用 `TouchMode.Auto`, ImGui 根窗口保持可交互, Surface 空白区域则直接触达下层应用; 也可用 `Touchable` 或 `Passthrough` 固定策略. 会话支持动态透明度/防截屏/触摸模式、收起为低帧率迷你悬浮球、创建独立可拖动 `addButtonEx`、跟随 `AlwaysAutoResize` 内容、通过 `iniPath` 持久化布局, 并以 `on` / `once` / `off` 或 options 回调订阅事件. `imgui.launch(...)` 会在当前前台 AutoJs6 Activity 中创建全屏 Surface, `launchFloaty(...)` 则显式选择悬浮窗. 每个脚本引擎仅拥有一个原生渲染会话, 但可在同一渲染回调中用 `begin` / `withWindow` 创建任意多个 ImGui 根窗口; 新建会话会关闭旧会话. 渲染回调或事件回调抛错时以 `console.error` 输出错误与调用栈 (同一错误连续出现只输出一次) 并触发 `error` 事件 (含 `error` / `phase` / `frame`); 没有 `error` 监听时渲染错误会关闭会话 (`closeReason` 为 `render-error`), 有监听时跳过本帧剩余部分并继续渲染. 选项 `debug: true` 以 `console.warn` 与 logcat 报告 `begin` 未配对 `end` 等用法错误, 并显示 Metrics 与 Debug Log 窗口. `setTouchable` / `setGlobalAlpha` / `getComponent` 等全局方法作用于当前会话, 没有活动会话时抛出 `imgui.<name>: no active session`.
 
-高层组件会挂接到当前会话并在用户渲染回调后绘制: `logWindow` 提供等级着色、清空、导出回调与自动滚底; `toast` 提供定时定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 返回 Promise; `statsOverlay` 绘制帧耗时; `dataTable` 提供行选择与 CRUD. 六个内置示例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling`) 可通过 `listExamples` / `getExampleSource` 发现并用 `runExample` 启动. AutoJs6 6.8 插件中心尚未消费通用示例元数据, 在宿主支持前可直接运行下方调用:
+高层组件会挂接到当前会话并在用户渲染回调后绘制: `logWindow` 提供等级着色, 清空, 导出回调与自动滚底; `toast` 提供定时定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 返回 Promise; `statsOverlay` 绘制帧耗时; `dataTable` 提供行选择与 CRUD. 七个内置示例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling` / `background-task`) 可通过 `listExamples` / `getExampleSource` 发现并用 `runExample` 启动. AutoJs6 6.8 插件中心尚未消费通用示例元数据, 在宿主支持前可直接运行下方调用:
 
 ```js
 imgui.runExample("widget-overview");
@@ -142,7 +142,7 @@ imgui.runExample("widget-overview");
 
 常用 API 另有 PascalCase 别名 (如 `ui.Button` 等价于 `ui.button`), 别名沿用插件的参数风格 (例如可变值使用 `imgui.ref`), 与上游 C++ 签名并非一一对应, 清单与差异见 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). 小驼峰方法对应同名 Dear ImGui 操作, 按功能分组如下:
 
-- 会话运行时: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 以及会话级 `on` / `once` / `off` 与对应实例方法; 会话 `error` 事件报告回调错误, `debug` 选项开启调试模式.
+- 会话运行时: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, `density` / `dp` / `px` 单位换算, 以及会话级 `on` / `once` / `off` 与对应实例方法; 会话 `error` 事件报告回调错误, `debug` 选项开启调试模式.
 - 后端探测: `getBackendCapabilities` / `BackendStatus` 报告窗口、split-touch、特权进程、direct input、Docking 与 Multi-Viewport 的可用性和生产就绪状态, 不执行提权操作.
 - 会话与窗口: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` 以及 `isWindowHovered` 等窗口状态查询.
 - 文本与控件: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等.
@@ -171,6 +171,25 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.12.0
+
+###### 2026/10/29
+
+* `提示` 不兼容变更: 窗口的位置与尺寸统一改用 dp. createWindow 的 x / y, Session 的 x / y / width / height / displayWidth / displayHeight, setPosition / setSize, 事件数据以及悬浮按钮的 x / y 以前是 px; 帧内坐标仍是 px. 脚本的改法见 docs/MIGRATION-1.12.md
+* `提示` 不兼容变更: 参数有误 (类型不对, NaN, 数字字符串或超出范围) 时改为抛出 TypeError 或 RangeError, 消息写明方法名与参数名, 例如 `imgui.sliderFloat: argument "max" must be a finite number`, 不再静默转换或截断; fps, alpha, fontSize 等窗口选项同样检查
+* `提示` 不兼容变更: Session 与悬浮按钮的字段改为只读 (严格模式下赋值会抛错), 请改用对应的 set 方法. FloatingButton.setPosition 不再接受 source 参数; 悬浮按钮颜色传数字时与其他 imgui 颜色一样按 0xAABBGGRR (即 colorU32 的返回值) 解释, 不再按 Android ARGB 解释
+* `提示` 不兼容变更: 会话事件, 悬浮按钮回调与对话框结果改在脚本线程 (渲染回调所在的线程) 执行, 不再在 Android UI 线程执行, 详见 docs/THREADING.md
+* `新增` imgui.dp() / imgui.px() (别名 Dp / Px) 在 dp 与 px 之间换算, imgui.density 给出每 dp 对应的 px 数
+* `新增` 所有颜色参数都接受打包整数, [r, g, b, a], {r, g, b, a} 或 "#rrggbbaa", 包括 textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; 分别传入 r, g, b, a 的写法仍然可用
+* `新增` 示例 background-task: 工作线程执行耗时任务, 窗口照常绘制, 带进度显示与取消
+* `新增` 文档 docs/THREADING.md 说明各回调在哪个线程执行以及如何在后台执行耗时任务, docs/MIGRATION-1.12.md 列出升级到本版本时脚本需要的改动
+* `修复` 事件回调与悬浮按钮回调可能与渲染回调同时执行, 且在其中调用 sleep 会报错的问题
+* `修复` 调用 imgui.setTheme 后 Session.theme 不变的问题
+* `修复` 拖动窗口时 moved 事件的 source 为 api 而不是 drag 的问题
+* `优化` 示例改用 ui.dp(), 不再手动乘以 window.density
+* `优化` TypeScript 声明写明每个尺寸, 位置与选项的单位和取值范围, 并把 Session 与悬浮按钮的字段标为只读
+* `优化` 每个 GitHub Release 附带 SHA256SUMS 文件, 便于校验下载的 APK
+
 #### v1.11.0
 
 ###### 2026/10/29
@@ -193,13 +212,6 @@ imgui.runExample("widget-overview");
 * `修复` TypeScript 声明中 createWindow / launchFloaty / launch / launchPrivileged 的渲染回调参数被声明为 (session) 的问题, 现与实际调用一致为 (ui, session), 并新增 RenderCallback 类型
 * `优化` 插件启用后直接以全局对象 imgui 使用, 由 AutoJs6 注册并在首次调用成员时加载插件, 不再需要 plugins.load; 原有 plugins.load("io.github.supermonster003.autojs6.plugin.imgui") 写法返回同一对象
 * `优化` 示例脚本, 使用说明, README 及 TypeScript 声明按全局对象用法更新, 声明文件不再扩展 plugins.load 的重载
-
-#### v1.9.4
-
-###### 2026/10/05
-
-* `优化` 插件中心图标采用统一工作台调整后的尺寸, 位置, 亮暗图稿与圆形底色, 保留可重建原稿和参数
-* `优化` Android 系统应用信息图标与图标工作台共用图稿和亮暗底色, 保留插件中心透明图稿及现有启动器选项
 
 ##### 更多发行历史可参阅
 

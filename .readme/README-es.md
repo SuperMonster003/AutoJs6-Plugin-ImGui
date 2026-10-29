@@ -64,7 +64,7 @@ Una vez habilitado el plugin en el Centro de plugins, los scripts usan directame
 - Las referencias ligeras `imgui.ref(value)` / `{value: x}` funcionan con todos los controles con estado y los helpers de arrays Java existentes siguen siendo totalmente compatibles.
 - Los componentes de sesión `logWindow`, `toast` apilados, diálogos Promise, `statsOverlay` con umbrales y `dataTable` CRUD seleccionable ofrecen interfaces de depuración listas para usar.
 - Las API comunes y las enumeraciones de constantes tienen alias en PascalCase (p. ej., `ui.Button`) que conservan el estilo de argumentos del plugin; la lista de alias y las diferencias con las firmas C++ originales están en [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
-- El soporte de ingeniería incluye declaraciones TypeScript completas, seis ejemplos ejecutables, pruebas Android de renderizado, cola de entrada sin bloqueo, actualización upstream verificable y automatización CI de versiones.
+- El soporte de ingeniería incluye declaraciones TypeScript completas, siete ejemplos ejecutables, pruebas Android de renderizado, cola de entrada sin bloqueo, actualización upstream verificable y automatización CI de versiones.
 - Metadatos del plugin, instrucciones de uso, README y CHANGELOG localizados en diez idiomas.
 
 ******
@@ -95,7 +95,7 @@ var themeColor = imgui.ref([0.25, 0.55, 0.90]);
 
 imgui.createWindow(function (ui, overlay) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(overlay.width, overlay.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(overlay.width), ui.dp(overlay.height), ui.Cond.Always);
     ui.withWindow(
         "ImGui Panel",
         null,
@@ -120,7 +120,7 @@ imgui.createWindow(function (ui, overlay) {
 });
 ```
 
-Los controles mutables aceptan referencias ligeras creadas con `imgui.ref(value)` u objetos `{ value: ... }`; los ayudantes anteriores `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` siguen siendo compatibles. Al enfocar `inputText` se abre automáticamente el IME del sistema con composición; pase `ime: false` para desactivarlo. `width`, `height` y `fontSize` usan unidades independientes de la densidad. Arrastre un área vacía para mover la ventana (`movable: false` la fija); el deslizamiento vertical con dos dedos tiene inercia configurable (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`) y una pulsación larga con un dedo emite un clic derecho (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). Cuando la fuente del sistema no cubra los caracteres necesarios, apunte `fontPath` a un archivo de fuente TTF u OTF.
+Los controles mutables aceptan referencias ligeras creadas con `imgui.ref(value)` u objetos `{ value: ... }`; los ayudantes anteriores `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` siguen siendo compatibles. Al enfocar `inputText` se abre automáticamente el IME del sistema con composición; pase `ime: false` para desactivarlo. Los tamaños y posiciones de la ventana están en dp: las opciones `width`, `height`, `x` e `y`, los campos de la sesión y los datos de los eventos; `fontSize` también está en dp. Las coordenadas dentro de un fotograma están en px; conviértalas con `ui.dp()` / `ui.px()`. Las devoluciones de llamada de eventos y botones se ejecutan en el hilo del script (consulte [THREADING.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/THREADING.md)), y [MIGRATION-1.12.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/MIGRATION-1.12.md) enumera los cambios respecto a versiones anteriores. Arrastre un área vacía para mover la ventana (`movable: false` la fija); el deslizamiento vertical con dos dedos tiene inercia configurable (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`) y una pulsación larga con un dedo emite un clic derecho (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). Cuando la fuente del sistema no cubra los caracteres necesarios, apunte `fontPath` a un archivo de fuente TTF u OTF.
 
 Temas y fuentes: `setTheme` acepta los 11 valores de `Themes` y `setStyleProperties` actualiza varios `StyleVar`; `createWindow` también admite `theme`, `appearance`, `style` y `shadow`. El arreglo `fonts` precarga fuentes de assets (`asset://...`) o archivos para `pushFont` / `withFont`. El respaldo CJK y los iconos se fusionan automáticamente; use `Icons` / `icon(name)` para obtener glifos de iconos.
 
@@ -128,7 +128,7 @@ Texturas y dibujo personalizado: llame a `createTexture` solo cuando la sesión 
 
 Sesiones de ventana: las superposiciones usan `TouchMode.Auto` por defecto, manteniendo interactivas las raíces ImGui y pasando las zonas vacías del Surface a la aplicación inferior; elija `Touchable` o `Passthrough` para una política fija. Una sesión puede cambiar opacidad/seguridad/modo táctil, reducirse a una miniburbuja de pocos FPS, crear `addButtonEx` arrastrables, seguir contenido `AlwaysAutoResize`, guardar el diseño con `iniPath` y emitir eventos mediante `on` / `once` / `off` o callbacks de opciones. `imgui.launch(...)` crea un Surface de pantalla completa en la Activity AutoJs6 actualmente reanudada y `launchFloaty(...)` selecciona explícitamente una superposición. Cada motor de scripts tiene una sesión de renderizado nativa, pero su callback puede crear todas las raíces ImGui `begin` / `withWindow` necesarias; una sesión nueva cierra la anterior. Una excepción del callback de renderizado o de un callback de evento se imprime con su pila mediante `console.error` (una sola vez para una racha del mismo error) y se emite como evento `error` (`error` / `phase` / `frame`); sin un listener de `error`, un error de renderizado cierra la sesión (`closeReason` es `render-error`), y con uno se omite el resto del fotograma y el renderizado continúa. La opción `debug: true` informa con `console.warn` y logcat de errores de uso como un `begin` sin `end`, y muestra las ventanas Metrics y Debug Log. Los métodos globales como `setTouchable` / `setGlobalAlpha` / `getComponent` actúan sobre la sesión actual y lanzan `imgui.<name>: no active session` si no hay ninguna activa.
 
-Los componentes de alto nivel se adjuntan a la sesión activa y se dibujan después del callback del usuario: `logWindow` ofrece niveles con color, limpieza, exportación y desplazamiento automático; `toast` muestra avisos temporizados; `alert` / `confirm` / `singleChoice` / `multiChoice` resuelven Promises; `statsOverlay` grafica el tiempo de cuadro; y `dataTable` ofrece selección y CRUD. Los seis ejemplos (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery` y `error-handling`) se descubren con `listExamples` / `getExampleSource` y se ejecutan con `runExample`. AutoJs6 6.8 aún no consume los metadatos genéricos de ejemplos en su centro de plugins; hasta que el host lo admita, ejecute directamente la llamada siguiente:
+Los componentes de alto nivel se adjuntan a la sesión activa y se dibujan después del callback del usuario: `logWindow` ofrece niveles con color, limpieza, exportación y desplazamiento automático; `toast` muestra avisos temporizados; `alert` / `confirm` / `singleChoice` / `multiChoice` resuelven Promises; `statsOverlay` grafica el tiempo de cuadro; y `dataTable` ofrece selección y CRUD. Los siete ejemplos (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling` y `background-task`) se descubren con `listExamples` / `getExampleSource` y se ejecutan con `runExample`. AutoJs6 6.8 aún no consume los metadatos genéricos de ejemplos en su centro de plugins; hasta que el host lo admita, ejecute directamente la llamada siguiente:
 
 ```js
 imgui.runExample("widget-overview");
@@ -142,7 +142,7 @@ imgui.runExample("widget-overview");
 
 Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equivale a `ui.button`). Los alias mantienen el estilo de argumentos del plugin (valores mutables con `imgui.ref`, etc.) y no corresponden uno a uno con las firmas C++ originales; la lista y las diferencias están en [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mismo nombre y se agrupan así:
 
-- Ejecución de sesión: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, `on` / `once` / `off` junto con sus formas por sesión, el evento de sesión `error` que informa de los errores de los callbacks y la opción `debug` que activa el modo de depuración.
+- Ejecución de sesión: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, conversión de unidades `density` / `dp` / `px`, `on` / `once` / `off` junto con sus formas por sesión, el evento de sesión `error` que informa de los errores de los callbacks y la opción `debug` que activa el modo de depuración.
 - Detección del backend: `getBackendCapabilities` / `BackendStatus` informa de la disponibilidad y preparación para producción de las ventanas, el toque dividido, el proceso privilegiado, la entrada directa, Docking y Multi-Viewport, sin elevar privilegios.
 - Sesión y ventanas: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, además de consultas de estado de ventana como `isWindowHovered`.
 - Texto y controles: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram`, entre otros.
@@ -171,6 +171,25 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 
 ******
 
+#### v1.12.0
+
+###### 2026/10/29
+
+* `Aviso` Cambio incompatible: las posiciones y tamaños de la ventana están ahora en dp en todas partes. Antes estaban en px los x / y de createWindow, los x / y / width / height / displayWidth / displayHeight de Session, setPosition / setSize, los datos de los eventos y los x / y de los botones flotantes; las coordenadas dentro de un fotograma siguen en px. Cómo actualizar los scripts se explica en docs/MIGRATION-1.12.md
+* `Aviso` Cambio incompatible: un argumento incorrecto (tipo erróneo, NaN, número como cadena o valor fuera de rango) ahora lanza TypeError o RangeError con el nombre del método y del argumento, por ejemplo `imgui.sliderFloat: argument "max" must be a finite number`, en lugar de convertirse o limitarse en silencio; las opciones de ventana como fps, alpha y fontSize se comprueban igual
+* `Aviso` Cambio incompatible: los campos de Session y de los botones flotantes son de solo lectura (asignar uno lanza una excepción en modo estricto); use los métodos set. FloatingButton.setPosition ya no acepta el argumento source, y un número como color de un botón flotante se interpreta como cualquier otro color de imgui (0xAABBGGRR, como devuelve colorU32) y no como un color ARGB de Android
+* `Aviso` Cambio incompatible: los eventos de sesión, las devoluciones de llamada de los botones flotantes y los resultados de los diálogos se ejecutan en el hilo del script, donde se ejecuta la función de renderizado, y no en el hilo de interfaz de Android; consulte docs/THREADING.md
+* `Función` imgui.dp() / imgui.px() (alias Dp / Px) convierten entre dp y px, e imgui.density da el número de px por dp
+* `Función` Los colores aceptan en todas partes un número empaquetado, [r, g, b, a], {r, g, b, a} o "#rrggbbaa", incluidos textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; los argumentos r, g, b, a por separado siguen funcionando
+* `Función` Ejemplo background-task: un hilo de trabajo realiza una tarea lenta mientras la ventana sigue dibujándose, con progreso y cancelación
+* `Función` docs/THREADING.md explica en qué hilo se ejecuta cada devolución de llamada y cómo hacer trabajo lento en segundo plano, y docs/MIGRATION-1.12.md enumera los cambios en los scripts necesarios para esta versión
+* `Corrección` Las devoluciones de llamada de eventos y de botones flotantes podían ejecutarse a la vez que la función de renderizado, y llamar a sleep en ellas producía un error
+* `Corrección` Session.theme no cambiaba después de imgui.setTheme
+* `Corrección` Al arrastrar la ventana, el evento moved informaba la fuente api en lugar de drag
+* `Mejora` Los ejemplos usan ui.dp() en lugar de multiplicar por window.density
+* `Mejora` Las declaraciones TypeScript indican la unidad y el rango permitido de cada tamaño, posición y opción, y marcan como readonly los campos de Session y de los botones flotantes
+* `Mejora` Cada versión de GitHub incluye un archivo SHA256SUMS para comprobar los APK descargados
+
 #### v1.11.0
 
 ###### 2026/10/29
@@ -193,13 +212,6 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 * `Corrección` Los parámetros del callback de renderizado de createWindow / launchFloaty / launch / launchPrivileged se declaraban como (session) en las declaraciones TypeScript; ahora coinciden con la llamada real (ui, session) y se añade el tipo RenderCallback
 * `Mejora` Una vez habilitado, el plugin se usa directamente como objeto global imgui, que AutoJs6 registra y que carga el plugin en la primera llamada a un miembro, por lo que ya no se necesita plugins.load; la forma anterior plugins.load("io.github.supermonster003.autojs6.plugin.imgui") devuelve el mismo objeto
 * `Mejora` Scripts de ejemplo, instrucciones de uso, README y declaraciones TypeScript actualizados al uso del objeto global; el archivo de declaraciones ya no amplía plugins.load con sobrecargas
-
-#### v1.9.4
-
-###### 2026/10/05
-
-* `Mejora` Los iconos del centro de plugins usan los tamaños, posiciones, imágenes claras y oscuras y fondos circulares ajustados en Icon Studio, conservando fuentes y parámetros reproducibles
-* `Mejora` Los iconos de información de la aplicación de Android comparten las imágenes y los fondos claros y oscuros de Icon Studio, conservando las imágenes transparentes del centro de plugins y las opciones del lanzador
 
 ##### Para consultar más versiones
 

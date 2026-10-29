@@ -8,7 +8,7 @@ var level = imgui.float(0.5);
 
 var overlay = imgui.createWindow(function (ui, window) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(window.width, window.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(window.width), ui.dp(window.height), ui.Cond.Always);
     ui.withWindow(
         "Панель ImGui",
         null,
@@ -32,7 +32,7 @@ var overlay = imgui.createWindow(function (ui, window) {
 });
 ```
 
-`width`, `height` и `fontSize` используют единицы без привязки к плотности экрана. Фокус на `inputText` автоматически открывает системный IME с поддержкой составления. Перетаскивайте пустую область для перемещения окна; вертикальный жест двумя пальцами прокручивает с инерцией, а долгое нажатие одним пальцем создаёт правый клик. Передайте `movable: false`, чтобы отключить перетаскивание. Используйте `fontPath`, чтобы загрузить подходящий файл TTF или OTF, если системный шрифт не покрывает нужные символы.
+Размеры и положение окна (`width`, `height`, `x`, `y`, поля и события сессии) и `fontSize` задаются в dp; координаты внутри кадра задаются в px, переводите их через `ui.dp()` / `ui.px()`. Обработчики событий и кнопок выполняются в потоке скрипта. Фокус на `inputText` автоматически открывает системный IME с поддержкой составления. Перетаскивайте пустую область для перемещения окна; вертикальный жест двумя пальцами прокручивает с инерцией, а долгое нажатие одним пальцем создаёт правый клик. Передайте `movable: false`, чтобы отключить перетаскивание. Используйте `fontPath`, чтобы загрузить подходящий файл TTF или OTF, если системный шрифт не покрывает нужные символы.
 
 Для оформления используйте `Themes` / `setTheme`, `setStyleProperties` и `Appearance`. `createWindow.fonts` загружает шрифты из assets или файлов для `pushFont` / `withFont`; CJK-резерв и Material Icons объединяются автоматически и доступны через `Icons` / `icon(name)`.
 
@@ -46,6 +46,6 @@ var overlay = imgui.createWindow(function (ui, window) {
 
 Элементы управления с состоянием также принимают лёгкие ссылки из `imgui.ref(value)` и обычные объекты `{ value: ... }`; прежние помощники `bool`, `float`, `int`, `string` и массивов цветов остаются совместимыми. Управляемые сессией компоненты `logWindow`, `toast`, диалоги Promise, `statsOverlay` и `dataTable` отрисовываются после пользовательского callback и автоматически закрываются вместе с сессией.
 
-Запускайте любой из пяти примеров через `imgui.runExample("widget-overview")`, `"parameter-panel"`, `"log-hud"`, `"data-table-demo"` или `"theme-gallery"`; получите список через `listExamples`, а исходный код — через `getExampleSource`. Центр плагинов AutoJs6 6.8 пока не предоставляет универсального запуска примера одним нажатием.
+Запускайте любой из семи примеров через `imgui.runExample("widget-overview")`, `"parameter-panel"`, `"log-hud"`, `"data-table-demo"`, `"theme-gallery"`, `"error-handling"` или `"background-task"`; получите список через `listExamples`, а исходный код - через `getExampleSource`. Центр плагинов AutoJs6 6.8 пока не предоставляет универсального запуска примера одним нажатием.
 
 Версия 1.7 также публикует полные декларации редактора в `types/imgui.d.ts`. Пределы доступны через `imgui.Limits` (64 КиБ текста, 512 элементов выбора и 2 048 входных событий); превышающие вводы отклоняются без скрытого усечения.

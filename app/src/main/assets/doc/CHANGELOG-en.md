@@ -4,6 +4,25 @@
 
 ******
 
+# v1.12.0
+
+###### 2026/10/29
+
+* `Hint` Breaking change: positions and sizes of the window are now dp everywhere. createWindow x / y, Session x / y / width / height / displayWidth / displayHeight, setPosition / setSize, event data and floating button x / y used to be px; coordinates inside a frame stay px. See docs/MIGRATION-1.12.md for how to update scripts
+* `Hint` Breaking change: a wrong argument (wrong type, NaN, numeric string or value out of range) now throws TypeError or RangeError naming the method and the argument, for example `imgui.sliderFloat: argument "max" must be a finite number`, instead of being converted or clamped silently; window options such as fps, alpha and fontSize are checked the same way
+* `Hint` Breaking change: Session and floating button fields are read-only (assigning one throws in strict mode); use the set methods instead. FloatingButton.setPosition no longer takes a source argument, and a number given as a floating button color is read like any other imgui color (0xAABBGGRR, as returned by colorU32) instead of as an Android ARGB color
+* `Hint` Breaking change: session events, floating button callbacks and dialog results run on the script thread, where the render callback runs, instead of the Android UI thread; see docs/THREADING.md
+* `Feature` imgui.dp() / imgui.px() (aliases Dp / Px) convert between dp and px, and imgui.density gives the number of px per dp
+* `Feature` Colors can be given as a packed number, [r, g, b, a], {r, g, b, a} or "#rrggbbaa" everywhere, including textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; separate r, g, b, a arguments still work
+* `Feature` background-task example: a worker thread does slow work while the window keeps drawing, with progress and cancel
+* `Feature` docs/THREADING.md explains which thread runs each callback and how to do slow work in the background, and docs/MIGRATION-1.12.md lists the script changes needed for this version
+* `Fix` Event and floating button callbacks could run at the same time as the render callback, and calling sleep in them threw an error
+* `Fix` Session.theme did not change after imgui.setTheme
+* `Fix` Dragging the window reported the moved event with source api instead of drag
+* `Improvement` Examples use ui.dp() instead of multiplying by window.density
+* `Improvement` TypeScript declarations give the unit and allowed range of every size, position and option, and mark Session and floating button fields readonly
+* `Improvement` Each GitHub release includes a SHA256SUMS file for checking the downloaded APKs
+
 # v1.11.0
 
 ###### 2026/10/29

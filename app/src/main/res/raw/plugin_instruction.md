@@ -8,7 +8,7 @@ var level = imgui.float(0.5);
 
 var overlay = imgui.createWindow(function (ui, window) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(window.width, window.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(window.width), ui.dp(window.height), ui.Cond.Always);
     ui.withWindow(
         "ImGui controls",
         null,
@@ -32,7 +32,7 @@ var overlay = imgui.createWindow(function (ui, window) {
 });
 ```
 
-`width`, `height`, and `fontSize` use density-independent units. Focusing `inputText` automatically opens the system IME with composing-text support. Drag a blank area to move the floating window; a two-finger vertical swipe scrolls with inertia, and a one-finger long press emits a right click. Pass `movable: false` to disable dragging. Use `fontPath` to load a readable TTF or OTF file when the system font does not cover the required characters.
+Window sizes and positions (`width`, `height`, `x`, `y`, session fields and events) and `fontSize` are dp; coordinates inside a frame are px, so convert with `ui.dp()` / `ui.px()`. Event and button callbacks run on the script thread. Focusing `inputText` automatically opens the system IME with composing-text support. Drag a blank area to move the floating window; a two-finger vertical swipe scrolls with inertia, and a one-finger long press emits a right click. Pass `movable: false` to disable dragging. Use `fontPath` to load a readable TTF or OTF file when the system font does not cover the required characters.
 
 Use `Themes` / `setTheme`, `setStyleProperties`, and `Appearance` for visual presets. `createWindow.fonts` preloads asset or file fonts for `pushFont` / `withFont`; the bundled CJK fallback and Material icon subset are merged automatically, with icons available through `Icons` / `icon(name)`.
 
@@ -46,6 +46,6 @@ Tables, context popups, menus, tooltips, style stacks, and 60+ widgets are avail
 
 Stateful controls also accept lightweight references from `imgui.ref(value)` or plain `{ value: ... }` objects; the legacy `bool`, `float`, `int`, `string`, and color-array helpers remain compatible. Session-managed `logWindow`, `toast`, Promise dialogs, `statsOverlay`, and `dataTable` components render after the user callback and close automatically with their session.
 
-Run any of the five bundled examples with `imgui.runExample("widget-overview")`, `"parameter-panel"`, `"log-hud"`, `"data-table-demo"`, or `"theme-gallery"`; discover them through `listExamples` and inspect their source through `getExampleSource`. AutoJs6 6.8 Plugin Center does not yet expose a generic one-click example action.
+Run any of the seven bundled examples with `imgui.runExample("widget-overview")`, `"parameter-panel"`, `"log-hud"`, `"data-table-demo"`, `"theme-gallery"`, `"error-handling"`, or `"background-task"`; discover them through `listExamples` and inspect their source through `getExampleSource`. AutoJs6 6.8 Plugin Center does not yet expose a generic one-click example action.
 
 Version 1.7 also publishes complete editor declarations at `types/imgui.d.ts`. Runtime safety limits are available as `imgui.Limits` (64 KiB text input, 512 selection items, and 2,048 queued input events); over-limit API input is rejected instead of silently truncated.

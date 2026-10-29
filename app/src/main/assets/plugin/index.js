@@ -29,13 +29,73 @@ module.exports = function (bridge) {
     var SurfaceHolderCallback = android.view.SurfaceHolder.Callback;
     var arrayFactory = java.lang.reflect.Array;
 
-    function number(value, fallback) {
-        var result = Number(value);
-        return isFinite(result) ? result : fallback;
+    var INT32_MIN = -2147483648;
+    var INT32_MAX = 2147483647;
+    var BOOLEAN_ARRAY_CLASS = java.lang.Class.forName("[Z");
+    var FLOAT_ARRAY_CLASS = java.lang.Class.forName("[F");
+    var INT_ARRAY_CLASS = java.lang.Class.forName("[I");
+    var STRING_ARRAY_CLASS = java.lang.Class.forName("[Ljava.lang.String;");
+
+    // Argument validation (R1.2): every message names the API and the argument, as in
+    // `imgui.sliderFloat: argument "max" must be a finite number`. A wrong type or a non-finite
+    // number throws TypeError, a finite value out of range RangeError.
+    function argumentLabel(fn, name) {
+        return "imgui." + fn + ": argument \"" + name + "\"";
     }
 
-    function integer(value, fallback) {
-        return Math.round(number(value, fallback));
+    function isNumberLike(value) {
+        return typeof value === "number" || value instanceof java.lang.Number;
+    }
+
+    function isStringLike(value) {
+        return typeof value === "string" || value instanceof java.lang.String;
+    }
+
+    function isBooleanLike(value) {
+        return typeof value === "boolean" || value instanceof java.lang.Boolean;
+    }
+
+    function checkRange(fn, name, value, min, max) {
+        if ((min != null && value < min) || (max != null && value > max)) {
+            var expected = min != null && max != null
+                ? "between " + min + " and " + max
+                : (min != null ? ">= " + min : "<= " + max);
+            throw new RangeError(argumentLabel(fn, name) + " must be " + expected + ", got " + value);
+        }
+        return value;
+    }
+
+    // null and undefined take the fallback; without a fallback (undefined) the argument is required.
+    function argNumber(fn, name, value, fallback, min, max) {
+        if (value == null && fallback !== undefined) {
+            return fallback;
+        }
+        var result = isNumberLike(value) ? Number(value) : NaN;
+        if (!isFinite(result)) {
+            throw new TypeError(argumentLabel(fn, name) + " must be a finite number");
+        }
+        return checkRange(fn, name, result, min, max);
+    }
+
+    // A finite number rounded to the nearest integer, within the 32-bit range unless narrowed.
+    function argInt(fn, name, value, fallback, min, max) {
+        if (value == null && fallback !== undefined) {
+            return fallback;
+        }
+        return checkRange(
+            fn,
+            name,
+            Math.round(argNumber(fn, name, value)),
+            min == null ? INT32_MIN : min,
+            max == null ? INT32_MAX : max
+        );
+    }
+
+    function argFunction(fn, name, value) {
+        if (typeof value !== "function") {
+            throw new TypeError(argumentLabel(fn, name) + " must be a function");
+        }
+        return value;
     }
 
     function clamp(value, min, max) {
@@ -56,11 +116,11 @@ module.exports = function (bridge) {
     }
 
     function floatRef(value) {
-        return javaArray(FloatType, [number(value, 0)]);
+        return javaArray(FloatType, [argNumber("float", "value", value, 0)]);
     }
 
     function intRef(value) {
-        return javaArray(IntegerType, [integer(value, 0)]);
+        return javaArray(IntegerType, [argInt("int", "value", value, 0)]);
     }
 
     function stringRef(value) {
@@ -78,68 +138,155 @@ module.exports = function (bridge) {
             Object.prototype.hasOwnProperty.call(value, "value");
     }
 
-    function withScalarRef(value, factory, converter, callback, nullable) {
-        if (value == null && nullable) {
-            return callback(null);
-        }
-        if (!isValueRef(value)) {
-            return callback(value);
-        }
-        var nativeRef = factory(value.value);
-        try {
-            return callback(nativeRef);
-        } finally {
-            value.value = converter(nativeRef[0]);
-        }
-    }
-
-    function withBoolRef(value, callback, nullable) {
-        if (nullable && value === false) {
-            return callback(null);
-        }
-        return withScalarRef(value, boolRef, Boolean, callback, nullable);
-    }
-
-    function withFloatRef(value, callback) {
-        return withScalarRef(value, floatRef, Number, callback, false);
-    }
-
-    function withIntRef(value, callback) {
-        return withScalarRef(value, intRef, Number, callback, false);
-    }
-
-    function withStringRef(value, callback) {
-        return withScalarRef(value, stringRef, String, callback, false);
-    }
-
-    function withFloatArrayRef(value, callback) {
-        if (!isValueRef(value)) {
-            return callback(value);
-        }
-        var source = value.value == null ? [] : value.value;
-        if (typeof source.length !== "number") {
-            throw new TypeError("ImGui float reference value must be an array-like object");
-        }
-        var nativeRef = floatArray(source);
-        try {
-            return callback(nativeRef);
-        } finally {
-            for (var i = 0; i < nativeRef.length; i += 1) {
-                source[i] = Number(nativeRef[i]);
+    // A mutable argument is a one-element Java array from imgui.bool() / float() / int() / string()
+    // or a {value} object whose value is checked like a plain argument and written back afterwards.
+    var BOOL_REF = {
+        nativeClass: BOOLEAN_ARRAY_CLASS,
+        expectation: "imgui.bool() or {value: boolean}",
+        check: function (fn, name, value) {
+            if (value == null) {
+                return false;
             }
-            value.value = source;
+            if (!isBooleanLike(value)) {
+                throw new TypeError(argumentLabel(fn, name) + " must be a boolean");
+            }
+            return Boolean(value);
+        },
+        create: boolRef,
+        read: Boolean
+    };
+    var FLOAT_REF = {
+        nativeClass: FLOAT_ARRAY_CLASS,
+        expectation: "imgui.float() or {value: number}",
+        check: function (fn, name, value) {
+            return argNumber(fn, name, value);
+        },
+        create: floatRef,
+        read: Number
+    };
+    var INT_REF = {
+        nativeClass: INT_ARRAY_CLASS,
+        expectation: "imgui.int() or {value: number}",
+        check: function (fn, name, value) {
+            return argInt(fn, name, value);
+        },
+        create: intRef,
+        read: Number
+    };
+    var STRING_REF = {
+        nativeClass: STRING_ARRAY_CLASS,
+        expectation: "imgui.string() or {value: string}",
+        check: function (fn, name, value) {
+            if (value == null) {
+                return "";
+            }
+            if (!isStringLike(value)) {
+                throw new TypeError(argumentLabel(fn, name) + " must be a string");
+            }
+            return String(value);
+        },
+        create: stringRef,
+        read: String
+    };
+
+    function withScalarRef(fn, name, value, kind, callback) {
+        if (isValueRef(value)) {
+            var nativeRef = kind.create(kind.check(fn, name + ".value", value.value));
+            try {
+                return callback(nativeRef);
+            } finally {
+                value.value = kind.read(nativeRef[0]);
+            }
         }
+        if (value != null && kind.nativeClass.isInstance(value) && value.length >= 1) {
+            return callback(value);
+        }
+        throw new TypeError(argumentLabel(fn, name) + " must be " + kind.expectation);
+    }
+
+    // The optional p_open / p_selected of Dear ImGui: null, undefined and false pass no reference.
+    function withOptionalBoolRef(fn, name, value, callback) {
+        if (value == null || value === false) {
+            return callback(null);
+        }
+        if (value === true) {
+            throw new TypeError(
+                argumentLabel(fn, name) + " must be imgui.bool(), {value: boolean}, false, or null"
+            );
+        }
+        return withScalarRef(fn, name, value, BOOL_REF, callback);
+    }
+
+    function withBoolRef(fn, name, value, callback) {
+        return withScalarRef(fn, name, value, BOOL_REF, callback);
+    }
+
+    function withFloatRef(fn, name, value, callback) {
+        return withScalarRef(fn, name, value, FLOAT_REF, callback);
+    }
+
+    function withIntRef(fn, name, value, callback) {
+        return withScalarRef(fn, name, value, INT_REF, callback);
+    }
+
+    function withStringRef(fn, name, value, callback) {
+        return withScalarRef(fn, name, value, STRING_REF, callback);
+    }
+
+    function withFloatArrayRef(fn, name, value, minimumLength, callback) {
+        if (isValueRef(value)) {
+            var source = value.value;
+            if (source == null || isStringLike(source) || typeof source.length !== "number" ||
+                source.length < minimumLength
+            ) {
+                throw new TypeError(
+                    argumentLabel(fn, name + ".value") + " must be an array of at least " +
+                    minimumLength + " numbers"
+                );
+            }
+            var values = [];
+            for (var index = 0; index < source.length; index += 1) {
+                values.push(argNumber(fn, name + ".value[" + index + "]", source[index]));
+            }
+            var nativeRef = floatArray(values);
+            try {
+                return callback(nativeRef);
+            } finally {
+                for (var i = 0; i < nativeRef.length; i += 1) {
+                    source[i] = Number(nativeRef[i]);
+                }
+                value.value = source;
+            }
+        }
+        if (value != null && FLOAT_ARRAY_CLASS.isInstance(value) && value.length >= minimumLength) {
+            return callback(value);
+        }
+        throw new TypeError(
+            argumentLabel(fn, name) + " must be imgui.floats([...]) or {value: [...]} with at least " +
+            minimumLength + " numbers"
+        );
     }
 
     function floatArray(values) {
         return javaArray(FloatType, values);
     }
 
+    function numberList(fn, name, values) {
+        if (values == null || isStringLike(values) || typeof values.length !== "number") {
+            throw new TypeError(argumentLabel(fn, name) + " must be an array of numbers");
+        }
+        var result = [];
+        for (var index = 0; index < values.length; index += 1) {
+            result.push(argNumber(fn, name + "[" + index + "]", values[index]));
+        }
+        return result;
+    }
+
     function byteArray(values) {
         var source = values || [];
         var bytes = [];
         for (var i = 0; i < source.length; i += 1) {
-            var value = integer(source[i], 0) & 0xFF;
+            var value = argInt("bytes", "values[" + i + "]", source[i]) & 0xFF;
             bytes.push(value > 127 ? value - 256 : value);
         }
         return javaArray(ByteType, bytes);
@@ -165,6 +312,7 @@ module.exports = function (bridge) {
         __pluginId: PLUGIN_ID,
         _activeSession: null,
         _density: 1,
+        _displayDensity: null,
         _theme: null,
         _fontAliases: null,
 
@@ -173,7 +321,9 @@ module.exports = function (bridge) {
         int: intRef,
         string: stringRef,
         ref: valueRef,
-        floats: floatArray,
+        floats: function (values) {
+            return floatArray(numberList("floats", "values", values));
+        },
         bytes: byteArray,
         strings: stringArray,
 
@@ -253,7 +403,8 @@ module.exports = function (bridge) {
         }
 
         function capabilityInteger(key) {
-            return integer(capabilityString(key, "0"), 0);
+            var value = parseInt(capabilityString(key, "0"), 10);
+            return isFinite(value) ? value : 0;
         }
 
         return freeze({
@@ -318,23 +469,21 @@ module.exports = function (bridge) {
         });
     };
 
-    function inputTextCapacity(value, fallback) {
-        var capacity = Math.max(2, integer(value, fallback));
-        if (capacity > api.Limits.InputTextMaxBytes) {
-            throw new RangeError(
-                "inputText capacity exceeds " + api.Limits.InputTextMaxBytes + " bytes"
-            );
-        }
-        return capacity;
+    function inputTextCapacity(fn, value, fallback) {
+        return Math.max(
+            2,
+            argInt(fn, "maxLength", value, fallback, 0, api.Limits.InputTextMaxBytes)
+        );
     }
 
-    function selectionItems(items, controlName) {
-        if (items == null || typeof items.length !== "number") {
-            throw new TypeError(controlName + " items must be an array-like value");
+    function selectionItems(items, fn) {
+        if (items == null || isStringLike(items) || typeof items.length !== "number") {
+            throw new TypeError(argumentLabel(fn, "items") + " must be an array");
         }
         if (items.length > api.Limits.SelectionMaxItems) {
             throw new RangeError(
-                controlName + " accepts at most " + api.Limits.SelectionMaxItems + " items"
+                argumentLabel(fn, "items") + " accepts at most " +
+                api.Limits.SelectionMaxItems + " items, got " + items.length
             );
         }
         return stringArray(items);
@@ -892,15 +1041,7 @@ module.exports = function (bridge) {
         return String(value == null ? "" : value).replace(/[^A-Za-z0-9]/g, "").toLowerCase();
     }
 
-    function requiredNumber(value, label) {
-        var result = Number(value);
-        if (!isFinite(result)) {
-            throw new TypeError(label + " must be a finite number");
-        }
-        return result;
-    }
-
-    function resolveWindowMode(value) {
+    function resolveWindowMode(value, fn, name) {
         var key = normalizedKey(value == null ? api.WindowMode.Overlay : value);
         if (key === "overlay" || key === "floaty" || key === "floating") {
             return api.WindowMode.Overlay;
@@ -911,10 +1052,12 @@ module.exports = function (bridge) {
         if (key === "privileged" || key === "shizuku" || key === "root") {
             return api.WindowMode.Privileged;
         }
-        throw new RangeError("Unknown ImGui window mode: " + value);
+        throw new RangeError(
+            argumentLabel(fn, name) + " must be 'overlay', 'activity', or 'privileged', got " + value
+        );
     }
 
-    function resolveTouchMode(value) {
+    function resolveTouchMode(value, fn, name) {
         if (value == null || value === true) {
             return api.TouchMode.Touchable;
         }
@@ -931,7 +1074,9 @@ module.exports = function (bridge) {
         if (key === "auto" || key === "automatic") {
             return api.TouchMode.Auto;
         }
-        throw new RangeError("Unknown ImGui touch mode: " + value);
+        throw new RangeError(
+            argumentLabel(fn, name) + " must be a boolean, 'touchable', 'passthrough', or 'auto', got " + value
+        );
     }
 
     function resolveIniPath(value) {
@@ -947,11 +1092,10 @@ module.exports = function (bridge) {
         return String(resolved.getAbsolutePath());
     }
 
-    function androidColor(value, fallback, label) {
-        if (typeof value === "number") {
-            return integer(value, 0);
-        }
-        var components = color4(value, fallback, label || "Android color");
+    // Android view colors (floating buttons) take the same Color values as ImGui; a number is a packed
+    // imgui.colorU32() value, converted to Android's ARGB layout.
+    function androidColor(value, fallback, fn, name) {
+        var components = color4(value, fallback, fn, name);
         return AndroidColor.argb(
             Math.round(components[3] * 255),
             Math.round(components[0] * 255),
@@ -960,31 +1104,29 @@ module.exports = function (bridge) {
         );
     }
 
-    function point(value, label) {
-        if (value != null && value.length >= 2) {
+    function point(value, fn, name) {
+        if (value != null && !isStringLike(value) && typeof value.length === "number" && value.length >= 2) {
             return [
-                requiredNumber(value[0], label + ".x"),
-                requiredNumber(value[1], label + ".y")
+                argNumber(fn, name + "[0]", value[0]),
+                argNumber(fn, name + "[1]", value[1])
             ];
         }
-        if (value != null && value.x != null && value.y != null) {
+        if (value != null && typeof value === "object" && value.x != null && value.y != null) {
             return [
-                requiredNumber(value.x, label + ".x"),
-                requiredNumber(value.y, label + ".y")
+                argNumber(fn, name + ".x", value.x),
+                argNumber(fn, name + ".y", value.y)
             ];
         }
-        throw new TypeError(label + " expects [x, y] or {x, y}");
+        throw new TypeError(argumentLabel(fn, name) + " must be [x, y] or {x, y}");
     }
 
-    function colorComponent(value, label) {
-        var component = requiredNumber(value, label);
-        if (component > 1) {
-            component /= 255;
-        }
-        return clamp(component, 0, 1);
+    // A component in 0..1, or in 0..255 when greater than 1.
+    function colorComponent(fn, name, value) {
+        var component = argNumber(fn, name, value, undefined, 0, 255);
+        return component > 1 ? component / 255 : component;
     }
 
-    function hexColor(value, label) {
+    function hexColor(value, fn, name) {
         var hex = String(value).replace(/^#/, "");
         if (hex.length === 3 || hex.length === 4) {
             var expanded = "";
@@ -993,13 +1135,13 @@ module.exports = function (bridge) {
             }
             hex = expanded;
         }
-        if (hex.length !== 6 && hex.length !== 8) {
-            throw new TypeError(label + " expects #RGB, #RGBA, #RRGGBB, or #RRGGBBAA");
+        if ((hex.length !== 6 && hex.length !== 8) || !/^[0-9A-Fa-f]+$/.test(hex)) {
+            throw new TypeError(
+                argumentLabel(fn, name) + " must be #RGB, #RGBA, #RRGGBB, or #RRGGBBAA, got '" +
+                value + "'"
+            );
         }
         var parsed = parseInt(hex, 16);
-        if (!isFinite(parsed)) {
-            throw new TypeError(label + " contains an invalid hexadecimal color");
-        }
         if (hex.length === 6) {
             return [
                 ((parsed >>> 16) & 0xFF) / 255,
@@ -1016,16 +1158,20 @@ module.exports = function (bridge) {
         ];
     }
 
-    function color4(value, fallback, label) {
-        label = label || "Color";
+    // Color: a packed imgui.colorU32() integer, [r, g, b, a], {r, g, b, a}, or "#rrggbbaa". A null
+    // value takes the fallback; without a fallback the color is required.
+    function color4(value, fallback, fn, name) {
         if (value == null) {
-            value = fallback || [1, 1, 1, 1];
+            if (fallback == null) {
+                throw new TypeError(argumentLabel(fn, name) + " must be a color");
+            }
+            return fallback.slice();
         }
-        if (typeof value === "string") {
-            return hexColor(value, label);
+        if (isStringLike(value)) {
+            return hexColor(value, fn, name);
         }
-        if (typeof value === "number") {
-            var packed = value >>> 0;
+        if (isNumberLike(value)) {
+            var packed = argNumber(fn, name, value, undefined, INT32_MIN, 0xFFFFFFFF) >>> 0;
             return [
                 (packed & 0xFF) / 255,
                 ((packed >>> 8) & 0xFF) / 255,
@@ -1033,36 +1179,42 @@ module.exports = function (bridge) {
                 ((packed >>> 24) & 0xFF) / 255
             ];
         }
-        var red;
-        var green;
-        var blue;
-        var alpha;
-        if (value.length >= 3) {
-            red = value[0];
-            green = value[1];
-            blue = value[2];
-            alpha = value.length > 3 && value[3] != null ? value[3] : 1;
-        } else if (value.r != null && value.g != null && value.b != null) {
-            red = value.r;
-            green = value.g;
-            blue = value.b;
-            alpha = value.a == null ? 1 : value.a;
-        } else {
-            throw new TypeError(label + " expects [r, g, b, a], {r, g, b, a}, or a hex color");
+        if (typeof value === "object" && typeof value.length === "number" && value.length >= 3) {
+            return [
+                colorComponent(fn, name + "[0]", value[0]),
+                colorComponent(fn, name + "[1]", value[1]),
+                colorComponent(fn, name + "[2]", value[2]),
+                value.length > 3 && value[3] != null ? colorComponent(fn, name + "[3]", value[3]) : 1
+            ];
         }
+        if (typeof value === "object" && value.r != null && value.g != null && value.b != null) {
+            return [
+                colorComponent(fn, name + ".r", value.r),
+                colorComponent(fn, name + ".g", value.g),
+                colorComponent(fn, name + ".b", value.b),
+                value.a == null ? 1 : colorComponent(fn, name + ".a", value.a)
+            ];
+        }
+        throw new TypeError(
+            argumentLabel(fn, name) + " must be a packed color, [r, g, b, a], {r, g, b, a}, or a hex color"
+        );
+    }
+
+    // The r, g, b[, a] overload kept beside one Color argument: chosen when the first three are numbers.
+    function isComponentColor(red, green, blue) {
+        return isNumberLike(red) && isNumberLike(green) && isNumberLike(blue);
+    }
+
+    function componentColor(fn, red, green, blue, alpha) {
         return [
-            colorComponent(red, label + ".r"),
-            colorComponent(green, label + ".g"),
-            colorComponent(blue, label + ".b"),
-            colorComponent(alpha, label + ".a")
+            colorComponent(fn, "red", red),
+            colorComponent(fn, "green", green),
+            colorComponent(fn, "blue", blue),
+            alpha == null ? 1 : colorComponent(fn, "alpha", alpha)
         ];
     }
 
-    function packColor(value, fallback, label) {
-        if (typeof value === "number") {
-            return value | 0;
-        }
-        var components = color4(value, fallback, label);
+    function packComponents(components) {
         var red = Math.round(components[0] * 255) & 0xFF;
         var green = Math.round(components[1] * 255) & 0xFF;
         var blue = Math.round(components[2] * 255) & 0xFF;
@@ -1070,54 +1222,65 @@ module.exports = function (bridge) {
         return (red | (green << 8) | (blue << 16) | (alpha << 24)) | 0;
     }
 
+    function packColor(value, fallback, fn, name) {
+        if (isNumberLike(value)) {
+            return argNumber(fn, name, value, undefined, INT32_MIN, 0xFFFFFFFF) | 0;
+        }
+        return packComponents(color4(value, fallback, fn, name));
+    }
+
     api.colorU32 = function (red, green, blue, alpha) {
         if (arguments.length > 1) {
-            return packColor([red, green, blue, alpha == null ? 1 : alpha], null, "Color");
+            return packComponents(componentColor("colorU32", red, green, blue, alpha));
         }
-        return packColor(red, [1, 1, 1, 1], "Color");
+        return packColor(red, null, "colorU32", "color");
     };
 
-    function flattenPoints(points, label) {
-        if (points == null || typeof points.length !== "number" || points.length < 2) {
-            throw new TypeError(label + " expects at least two points");
+    function flattenPoints(points, fn, name) {
+        if (points == null || isStringLike(points) || typeof points.length !== "number" || points.length < 2) {
+            throw new TypeError(argumentLabel(fn, name) + " must be an array of at least two points");
         }
         if (points.length > 4096) {
-            throw new RangeError(label + " accepts at most 4096 points");
+            throw new RangeError(
+                argumentLabel(fn, name) + " accepts at most 4096 points, got " + points.length
+            );
         }
         var flattened = [];
         for (var i = 0; i < points.length; i += 1) {
-            var resolved = point(points[i], label + "[" + i + "]");
+            var resolved = point(points[i], fn, name + "[" + i + "]");
             flattened.push(resolved[0], resolved[1]);
         }
         return floatArray(flattened);
     }
 
-    function resolveFontIndex(font, allowCurrent) {
+    function resolveFontIndex(font, allowCurrent, fn, name) {
         if (font == null && allowCurrent) {
             return -1;
         }
         var index;
         if (font == null) {
             index = api.Fonts.Default;
-        } else if (typeof font === "number") {
-            index = integer(font, -1);
-        } else if (typeof font === "string") {
+        } else if (isNumberLike(font)) {
+            index = argInt(fn, name, font);
+        } else if (isStringLike(font)) {
             index = api._fontAliases[normalizedKey(font)];
-        } else if (font.index != null) {
-            index = integer(font.index, -1);
+        } else if (typeof font === "object" && font.index != null) {
+            index = argInt(fn, name + ".index", font.index);
+        } else {
+            throw new TypeError(argumentLabel(fn, name) + " must be a font handle, index, or id");
         }
         if (index == null || index < 0) {
-            throw new RangeError("Unknown ImGui font handle: " + font);
+            throw new RangeError(argumentLabel(fn, name) + " is an unknown font: " + font);
         }
         return index;
     }
 
-    function resolveTextureFlags(options) {
-        if (typeof options === "number") {
-            return integer(options, 0);
+    function resolveTextureFlags(options, fn) {
+        if (isNumberLike(options)) {
+            return argInt(fn, "options", options);
         }
         options = options || {};
-        var flags = integer(options.flags, 0);
+        var flags = argInt(fn, "options.flags", options.flags, 0);
         if (options.nearest === true || normalizedKey(options.filter) === "nearest") {
             flags |= api.TextureFlags.Nearest;
         }
@@ -1140,7 +1303,7 @@ module.exports = function (bridge) {
         var glyph = ICON_NAME_TO_GLYPH[normalizedKey(name)];
         if (!glyph) {
             throw new RangeError(
-                "Unknown ImGui icon '" + name + "'. Use a name from imgui.Icons"
+                argumentLabel("icon", "name") + " is an unknown icon: " + name + ". Use a name from imgui.Icons"
             );
         }
         return label == null ? glyph : glyph + " " + String(label);
@@ -1317,11 +1480,12 @@ module.exports = function (bridge) {
         }
     }
 
-    function resolveThemeName(name) {
+    function resolveThemeName(name, fn, argumentName) {
         var resolved = THEME_ALIASES[normalizedKey(name)];
         if (!resolved) {
             throw new RangeError(
-                "Unknown ImGui theme '" + name + "'. Use one of the imgui.Themes values"
+                argumentLabel(fn, argumentName) + " is an unknown theme: " + name +
+                ". Use one of the imgui.Themes values"
             );
         }
         return resolved;
@@ -1410,7 +1574,7 @@ module.exports = function (bridge) {
 
         for (var index in colors) {
             if (colors.hasOwnProperty(index)) {
-                api.setStyleColor(integer(index, 0), colors[index]);
+                api.setStyleColor(Number(index), colors[index]);
             }
         }
     }
@@ -1444,13 +1608,14 @@ module.exports = function (bridge) {
         }
     };
 
-    function resolveAppearanceName(name) {
+    function resolveAppearanceName(name, fn, argumentName) {
         var key = normalizedKey(name);
         if (key === "flat") return "flat";
         if (key === "rounded") return "rounded";
         if (key === "card") return "card";
         throw new RangeError(
-            "Unknown ImGui appearance '" + name + "'. Use one of the imgui.Appearance values"
+            argumentLabel(fn, argumentName) + " is an unknown appearance: " + name +
+            ". Use one of the imgui.Appearance values"
         );
     }
 
@@ -1499,58 +1664,103 @@ module.exports = function (bridge) {
         ModSuper: 1 << 15
     });
 
+    var MOUSE_BUTTON_MAX = 4;
+    var TABLE_MAX_COLUMNS = 512;
+    var STYLE_VAR_MAX_INDEX = api.StyleVar.SeparatorTextPadding;
+
+    function mouseButton(fn, value) {
+        return argInt(fn, "button", value, 0, 0, MOUSE_BUTTON_MAX);
+    }
+
+    function argFlags(fn, value) {
+        return argInt(fn, "flags", value, 0);
+    }
+
+    function resolveColorIndex(fn, value) {
+        var colorIndex;
+        if (isStringLike(value)) {
+            colorIndex = COLOR_NAME_TO_INDEX[normalizedKey(value)];
+            if (colorIndex == null) {
+                throw new RangeError(
+                    argumentLabel(fn, "index") + " is an unknown style color: " + value +
+                    ". Use a name from imgui.Col"
+                );
+            }
+            return colorIndex;
+        }
+        return argInt(fn, "index", value, undefined, 0, api.Col.ModalWindowDimBg);
+    }
+
+    function resolveStyleVarIndex(fn, value) {
+        if (isStringLike(value)) {
+            var info = STYLE_PROPERTY_INFO[normalizedKey(value)];
+            if (!info) {
+                throw new RangeError(
+                    argumentLabel(fn, "index") + " is an unknown style variable: " + value +
+                    ". Use a name from imgui.StyleVar"
+                );
+            }
+            return info.index;
+        }
+        return argInt(fn, "index", value, undefined, 0, STYLE_VAR_MAX_INDEX);
+    }
+
     api.setNextWindowPos = function (x, y, condition, pivotX, pivotY) {
         bridge.setNextWindowPos(
-            number(x, 0),
-            number(y, 0),
-            integer(condition, 0),
-            number(pivotX, 0),
-            number(pivotY, 0)
+            argNumber("setNextWindowPos", "x", x),
+            argNumber("setNextWindowPos", "y", y),
+            argInt("setNextWindowPos", "condition", condition, 0),
+            argNumber("setNextWindowPos", "pivotX", pivotX, 0),
+            argNumber("setNextWindowPos", "pivotY", pivotY, 0)
         );
     };
 
     api.setNextWindowSize = function (width, height, condition) {
-        bridge.setNextWindowSize(number(width, 0), number(height, 0), integer(condition, 0));
+        bridge.setNextWindowSize(
+            argNumber("setNextWindowSize", "width", width),
+            argNumber("setNextWindowSize", "height", height),
+            argInt("setNextWindowSize", "condition", condition, 0)
+        );
     };
 
     api.setNextWindowSizeConstraints = function (minWidth, minHeight, maxWidth, maxHeight) {
         bridge.setNextWindowSizeConstraints(
-            number(minWidth, 0),
-            number(minHeight, 0),
-            number(maxWidth, 0),
-            number(maxHeight, 0)
+            argNumber("setNextWindowSizeConstraints", "minWidth", minWidth),
+            argNumber("setNextWindowSizeConstraints", "minHeight", minHeight),
+            argNumber("setNextWindowSizeConstraints", "maxWidth", maxWidth),
+            argNumber("setNextWindowSizeConstraints", "maxHeight", maxHeight)
         );
     };
 
     api.setNextWindowBgAlpha = function (alpha) {
-        bridge.setNextWindowBgAlpha(number(alpha, 1));
+        bridge.setNextWindowBgAlpha(argNumber("setNextWindowBgAlpha", "alpha", alpha, undefined, 0, 1));
     };
     api.setKeyboardFocusHere = function (offset) {
-        bridge.setKeyboardFocusHere(integer(offset, 0));
+        bridge.setKeyboardFocusHere(argInt("setKeyboardFocusHere", "offset", offset, 0));
     };
 
     api.begin = function (name, open, flags) {
-        return withBoolRef(open, function (nativeRef) {
-            return Boolean(bridge.begin(String(name), nativeRef, integer(flags, 0)));
-        }, true);
+        return withOptionalBoolRef("begin", "open", open, function (nativeRef) {
+            return Boolean(bridge.begin(String(name), nativeRef, argFlags("begin", flags)));
+        });
     };
     api.end = function () { bridge.end(); };
     api.beginChild = function (id, width, height, borders, flags) {
-        if (typeof borders === "number") {
+        if (isNumberLike(borders)) {
             return Boolean(bridge.beginChildEx(
                 String(id),
-                number(width, 0),
-                number(height, 0),
-                integer(borders, 0),
-                integer(flags, 0)
+                argNumber("beginChild", "width", width, 0),
+                argNumber("beginChild", "height", height, 0),
+                argInt("beginChild", "childFlags", borders),
+                argFlags("beginChild", flags)
             ));
         }
         return Boolean(bridge.beginChild(
             String(id),
-            number(width, 0),
-            number(height, 0),
+            argNumber("beginChild", "width", width, 0),
+            argNumber("beginChild", "height", height, 0),
             Boolean(borders),
-            integer(flags, 0)
+            argFlags("beginChild", flags)
         ));
     };
     api.endChild = function () { bridge.endChild(); };
@@ -1559,132 +1769,174 @@ module.exports = function (bridge) {
     api.getWindowSize = function () { return bridge.getWindowSize(); };
     api.getContentRegionAvail = function () { return bridge.getContentRegionAvail(); };
     api.getCursorPos = function () { return bridge.getCursorPos(); };
-    api.setCursorPos = function (x, y) { bridge.setCursorPos(number(x, 0), number(y, 0)); };
+    api.setCursorPos = function (x, y) {
+        bridge.setCursorPos(argNumber("setCursorPos", "x", x), argNumber("setCursorPos", "y", y));
+    };
 
     api.text = function (value) { bridge.text(String(value)); };
     api.textWrapped = function (value) { bridge.textWrapped(String(value)); };
+    // textColored(color, text) or textColored(red, green, blue, alpha, text).
     api.textColored = function (red, green, blue, alpha, value) {
-        bridge.textColored(
-            number(red, 1),
-            number(green, 1),
-            number(blue, 1),
-            number(alpha, 1),
-            String(value)
-        );
+        var color;
+        var text;
+        if (isComponentColor(red, green, blue)) {
+            color = componentColor("textColored", red, green, blue, alpha);
+            text = value;
+        } else {
+            color = color4(red, null, "textColored", "color");
+            text = green;
+        }
+        bridge.textColored(color[0], color[1], color[2], color[3], String(text));
     };
 
     api.button = function (label, width, height) {
-        return Boolean(bridge.button(String(label), number(width, 0), number(height, 0)));
+        return Boolean(bridge.button(
+            String(label),
+            argNumber("button", "width", width, 0),
+            argNumber("button", "height", height, 0)
+        ));
     };
     api.smallButton = function (label) { return Boolean(bridge.smallButton(String(label))); };
     api.checkbox = function (label, value) {
-        return withBoolRef(value, function (nativeRef) {
+        return withBoolRef("checkbox", "value", value, function (nativeRef) {
             return Boolean(bridge.checkbox(String(label), nativeRef));
-        }, false);
+        });
     };
     api.radioButton = function (label, value, buttonValue) {
-        return withIntRef(value, function (nativeRef) {
-            return Boolean(bridge.radioButton(String(label), nativeRef, integer(buttonValue, 0)));
+        var resolvedButtonValue = argInt("radioButton", "buttonValue", buttonValue);
+        return withIntRef("radioButton", "value", value, function (nativeRef) {
+            return Boolean(bridge.radioButton(String(label), nativeRef, resolvedButtonValue));
         });
     };
     api.sliderFloat = function (label, value, min, max, format, flags) {
-        return withFloatRef(value, function (nativeRef) {
+        var resolvedMin = argNumber("sliderFloat", "min", min, 0);
+        var resolvedMax = argNumber("sliderFloat", "max", max, 1);
+        var resolvedFlags = argFlags("sliderFloat", flags);
+        return withFloatRef("sliderFloat", "value", value, function (nativeRef) {
             return Boolean(bridge.sliderFloat(
-                String(label), nativeRef, number(min, 0), number(max, 1),
-                String(format || "%.3f"), integer(flags, 0)
+                String(label), nativeRef, resolvedMin, resolvedMax,
+                String(format || "%.3f"), resolvedFlags
             ));
         });
     };
     api.sliderInt = function (label, value, min, max, format, flags) {
-        return withIntRef(value, function (nativeRef) {
+        var resolvedMin = argInt("sliderInt", "min", min, 0);
+        var resolvedMax = argInt("sliderInt", "max", max, 100);
+        var resolvedFlags = argFlags("sliderInt", flags);
+        return withIntRef("sliderInt", "value", value, function (nativeRef) {
             return Boolean(bridge.sliderInt(
-                String(label), nativeRef, integer(min, 0), integer(max, 100),
-                String(format || "%d"), integer(flags, 0)
+                String(label), nativeRef, resolvedMin, resolvedMax,
+                String(format || "%d"), resolvedFlags
             ));
         });
     };
     api.dragFloat = function (label, value, speed, min, max, format, flags) {
-        return withFloatRef(value, function (nativeRef) {
+        var resolvedSpeed = argNumber("dragFloat", "speed", speed, 1);
+        var resolvedMin = argNumber("dragFloat", "min", min, 0);
+        var resolvedMax = argNumber("dragFloat", "max", max, 0);
+        var resolvedFlags = argFlags("dragFloat", flags);
+        return withFloatRef("dragFloat", "value", value, function (nativeRef) {
             return Boolean(bridge.dragFloat(
-                String(label), nativeRef, number(speed, 1), number(min, 0), number(max, 0),
-                String(format || "%.3f"), integer(flags, 0)
+                String(label), nativeRef, resolvedSpeed, resolvedMin, resolvedMax,
+                String(format || "%.3f"), resolvedFlags
             ));
         });
     };
     api.dragInt = function (label, value, speed, min, max, format, flags) {
-        return withIntRef(value, function (nativeRef) {
+        var resolvedSpeed = argNumber("dragInt", "speed", speed, 1);
+        var resolvedMin = argInt("dragInt", "min", min, 0);
+        var resolvedMax = argInt("dragInt", "max", max, 0);
+        var resolvedFlags = argFlags("dragInt", flags);
+        return withIntRef("dragInt", "value", value, function (nativeRef) {
             return Boolean(bridge.dragInt(
-                String(label), nativeRef, number(speed, 1), integer(min, 0), integer(max, 0),
-                String(format || "%d"), integer(flags, 0)
+                String(label), nativeRef, resolvedSpeed, resolvedMin, resolvedMax,
+                String(format || "%d"), resolvedFlags
             ));
         });
     };
     api.inputText = function (label, value, maxLength, flags) {
-        return withStringRef(value, function (nativeRef) {
-            return Boolean(bridge.inputText(
-                String(label), nativeRef, inputTextCapacity(maxLength, 256), integer(flags, 0)
-            ));
+        var capacity = inputTextCapacity("inputText", maxLength, 256);
+        var resolvedFlags = argFlags("inputText", flags);
+        return withStringRef("inputText", "value", value, function (nativeRef) {
+            return Boolean(bridge.inputText(String(label), nativeRef, capacity, resolvedFlags));
         });
     };
     api.colorEdit3 = function (label, value, flags) {
-        return withFloatArrayRef(value, function (nativeRef) {
-            return Boolean(bridge.colorEdit3(String(label), nativeRef, integer(flags, 0)));
+        var resolvedFlags = argFlags("colorEdit3", flags);
+        return withFloatArrayRef("colorEdit3", "value", value, 3, function (nativeRef) {
+            return Boolean(bridge.colorEdit3(String(label), nativeRef, resolvedFlags));
         });
     };
     api.colorEdit4 = function (label, value, flags) {
-        return withFloatArrayRef(value, function (nativeRef) {
-            return Boolean(bridge.colorEdit4(String(label), nativeRef, integer(flags, 0)));
+        var resolvedFlags = argFlags("colorEdit4", flags);
+        return withFloatArrayRef("colorEdit4", "value", value, 4, function (nativeRef) {
+            return Boolean(bridge.colorEdit4(String(label), nativeRef, resolvedFlags));
         });
     };
     api.progressBar = function (fraction, width, height, overlay) {
         bridge.progressBar(
-            number(fraction, 0), number(width, -1), number(height, 0),
+            argNumber("progressBar", "fraction", fraction),
+            argNumber("progressBar", "width", width, -1),
+            argNumber("progressBar", "height", height, 0),
             overlay == null ? null : String(overlay)
         );
     };
     api.combo = function (label, currentItem, items, popupHeight) {
-        return withIntRef(currentItem, function (nativeRef) {
-            return Boolean(bridge.combo(
-                String(label), nativeRef, selectionItems(items, "combo"), integer(popupHeight, -1)
-            ));
+        var nativeItems = selectionItems(items, "combo");
+        var resolvedPopupHeight = argInt("combo", "popupHeight", popupHeight, -1);
+        return withIntRef("combo", "currentItem", currentItem, function (nativeRef) {
+            return Boolean(bridge.combo(String(label), nativeRef, nativeItems, resolvedPopupHeight));
         });
     };
     api.selectable = function (label, selected, flags, width, height) {
         return Boolean(bridge.selectable(
-            String(label), Boolean(selected), integer(flags, 0),
-            number(width, 0), number(height, 0)
+            String(label), Boolean(selected), argFlags("selectable", flags),
+            argNumber("selectable", "width", width, 0),
+            argNumber("selectable", "height", height, 0)
         ));
     };
     api.collapsingHeader = function (label, flags) {
-        return Boolean(bridge.collapsingHeader(String(label), integer(flags, 0)));
+        return Boolean(bridge.collapsingHeader(String(label), argFlags("collapsingHeader", flags)));
     };
     api.treeNode = function (label) { return Boolean(bridge.treeNode(String(label))); };
     api.treePop = function () { bridge.treePop(); };
     api.beginTabBar = function (id, flags) {
-        return Boolean(bridge.beginTabBar(String(id), integer(flags, 0)));
+        return Boolean(bridge.beginTabBar(String(id), argFlags("beginTabBar", flags)));
     };
     api.endTabBar = function () { bridge.endTabBar(); };
     api.beginTabItem = function (label, open, flags) {
-        return withBoolRef(open, function (nativeRef) {
-            return Boolean(bridge.beginTabItem(String(label), nativeRef, integer(flags, 0)));
-        }, true);
+        var resolvedFlags = argFlags("beginTabItem", flags);
+        return withOptionalBoolRef("beginTabItem", "open", open, function (nativeRef) {
+            return Boolean(bridge.beginTabItem(String(label), nativeRef, resolvedFlags));
+        });
     };
     api.endTabItem = function () { bridge.endTabItem(); };
 
     api.sameLine = function (offsetFromStartX, spacing) {
-        bridge.sameLine(number(offsetFromStartX, 0), number(spacing, -1));
+        bridge.sameLine(
+            argNumber("sameLine", "offsetFromStartX", offsetFromStartX, 0),
+            argNumber("sameLine", "spacing", spacing, -1)
+        );
     };
     api.separator = function () { bridge.separator(); };
     api.spacing = function () { bridge.spacing(); };
     api.newLine = function () { bridge.newLine(); };
-    api.dummy = function (width, height) { bridge.dummy(number(width, 0), number(height, 0)); };
-    api.setNextItemWidth = function (width) { bridge.setNextItemWidth(number(width, 0)); };
-    api.pushItemWidth = function (width) { bridge.pushItemWidth(number(width, 0)); };
-    api.popItemWidth = function () { bridge.popItemWidth(); };
-    api.isItemClicked = function (mouseButton) {
-        return Boolean(bridge.isItemClicked(integer(mouseButton, 0)));
+    api.dummy = function (width, height) {
+        bridge.dummy(argNumber("dummy", "width", width), argNumber("dummy", "height", height));
     };
-    api.isItemHovered = function (flags) { return Boolean(bridge.isItemHovered(integer(flags, 0))); };
+    api.setNextItemWidth = function (width) {
+        bridge.setNextItemWidth(argNumber("setNextItemWidth", "width", width));
+    };
+    api.pushItemWidth = function (width) {
+        bridge.pushItemWidth(argNumber("pushItemWidth", "width", width));
+    };
+    api.popItemWidth = function () { bridge.popItemWidth(); };
+    api.isItemClicked = function (mouseButtonValue) {
+        return Boolean(bridge.isItemClicked(mouseButton("isItemClicked", mouseButtonValue)));
+    };
+    api.isItemHovered = function (flags) {
+        return Boolean(bridge.isItemHovered(argFlags("isItemHovered", flags)));
+    };
     api.wantCaptureMouse = function () { return Boolean(bridge.wantCaptureMouse()); };
     api.isAnyItemHovered = function () { return Boolean(bridge.isAnyItemHovered()); };
     api.isAnyItemActive = function () { return Boolean(bridge.isAnyItemActive()); };
@@ -1692,9 +1944,9 @@ module.exports = function (bridge) {
     api.styleColorsLight = function () { bridge.styleColorsLight(); };
     api.styleColorsClassic = function () { bridge.styleColorsClassic(); };
     api.showDemoWindow = function (open) {
-        return withBoolRef(open, function (nativeRef) {
+        return withOptionalBoolRef("showDemoWindow", "open", open, function (nativeRef) {
             bridge.showDemoWindow(nativeRef);
-        }, true);
+        });
     };
 
     api.separatorText = function (label) { bridge.separatorText(String(label)); };
@@ -1703,155 +1955,201 @@ module.exports = function (bridge) {
     api.labelText = function (label, text) { bridge.labelText(String(label), String(text)); };
     api.textDisabled = function (text) { bridge.textDisabled(String(text)); };
     api.arrowButton = function (id, direction) {
-        return Boolean(bridge.arrowButton(String(id), integer(direction, api.Dir.Down)));
+        return Boolean(bridge.arrowButton(
+            String(id),
+            argInt("arrowButton", "direction", direction, api.Dir.Down, api.Dir.Left, api.Dir.Down)
+        ));
     };
     api.invisibleButton = function (id, width, height, flags) {
         return Boolean(bridge.invisibleButton(
-            String(id), number(width, 1), number(height, 1), integer(flags, 0)
+            String(id),
+            argNumber("invisibleButton", "width", width, undefined, 1),
+            argNumber("invisibleButton", "height", height, undefined, 1),
+            argFlags("invisibleButton", flags)
         ));
     };
     api.inputInt = function (label, value, step, stepFast, flags) {
-        return withIntRef(value, function (nativeRef) {
+        var resolvedStep = argInt("inputInt", "step", step, 1);
+        var resolvedStepFast = argInt("inputInt", "stepFast", stepFast, 100);
+        var resolvedFlags = argFlags("inputInt", flags);
+        return withIntRef("inputInt", "value", value, function (nativeRef) {
             return Boolean(bridge.inputInt(
-                String(label), nativeRef, integer(step, 1), integer(stepFast, 100), integer(flags, 0)
+                String(label), nativeRef, resolvedStep, resolvedStepFast, resolvedFlags
             ));
         });
     };
     api.inputFloat = function (label, value, step, stepFast, format, flags) {
-        return withFloatRef(value, function (nativeRef) {
+        var resolvedStep = argNumber("inputFloat", "step", step, 0);
+        var resolvedStepFast = argNumber("inputFloat", "stepFast", stepFast, 0);
+        var resolvedFlags = argFlags("inputFloat", flags);
+        return withFloatRef("inputFloat", "value", value, function (nativeRef) {
             return Boolean(bridge.inputFloat(
-                String(label), nativeRef, number(step, 0), number(stepFast, 0),
-                String(format || "%.3f"), integer(flags, 0)
+                String(label), nativeRef, resolvedStep, resolvedStepFast,
+                String(format || "%.3f"), resolvedFlags
             ));
         });
     };
     api.inputTextMultiline = function (label, value, maxLength, width, height, flags) {
-        return withStringRef(value, function (nativeRef) {
+        var capacity = inputTextCapacity("inputTextMultiline", maxLength, 4096);
+        var resolvedWidth = argNumber("inputTextMultiline", "width", width, 0);
+        var resolvedHeight = argNumber("inputTextMultiline", "height", height, 0);
+        var resolvedFlags = argFlags("inputTextMultiline", flags);
+        return withStringRef("inputTextMultiline", "value", value, function (nativeRef) {
             return Boolean(bridge.inputTextMultiline(
-                String(label), nativeRef, inputTextCapacity(maxLength, 4096),
-                number(width, 0), number(height, 0), integer(flags, 0)
+                String(label), nativeRef, capacity, resolvedWidth, resolvedHeight, resolvedFlags
             ));
         });
     };
     api.beginListBox = function (label, width, height) {
-        return Boolean(bridge.beginListBox(String(label), number(width, 0), number(height, 0)));
+        return Boolean(bridge.beginListBox(
+            String(label),
+            argNumber("beginListBox", "width", width, 0),
+            argNumber("beginListBox", "height", height, 0)
+        ));
     };
     api.endListBox = function () { bridge.endListBox(); };
     api.listBox = function (label, currentItem, items, heightInItems) {
-        return withIntRef(currentItem, function (nativeRef) {
-            return Boolean(bridge.listBox(
-                String(label), nativeRef, selectionItems(items, "listBox"), integer(heightInItems, -1)
-            ));
+        var nativeItems = selectionItems(items, "listBox");
+        var resolvedHeight = argInt("listBox", "heightInItems", heightInItems, -1);
+        return withIntRef("listBox", "currentItem", currentItem, function (nativeRef) {
+            return Boolean(bridge.listBox(String(label), nativeRef, nativeItems, resolvedHeight));
         });
     };
     api.colorPicker3 = function (label, value, flags) {
-        return withFloatArrayRef(value, function (nativeRef) {
-            return Boolean(bridge.colorPicker3(String(label), nativeRef, integer(flags, 0)));
+        var resolvedFlags = argFlags("colorPicker3", flags);
+        return withFloatArrayRef("colorPicker3", "value", value, 3, function (nativeRef) {
+            return Boolean(bridge.colorPicker3(String(label), nativeRef, resolvedFlags));
         });
     };
     api.colorPicker4 = function (label, value, flags) {
-        return withFloatArrayRef(value, function (nativeRef) {
-            return Boolean(bridge.colorPicker4(String(label), nativeRef, integer(flags, 0)));
+        var resolvedFlags = argFlags("colorPicker4", flags);
+        return withFloatArrayRef("colorPicker4", "value", value, 4, function (nativeRef) {
+            return Boolean(bridge.colorPicker4(String(label), nativeRef, resolvedFlags));
         });
     };
+    // colorButton(id, color, flags | {flags, width, height}, width, height) or
+    // colorButton(id, red, green, blue, alpha, flags, width, height).
     api.colorButton = function (id, red, green, blue, alpha, flags, width, height) {
+        var color;
+        var options;
+        if (isComponentColor(red, green, blue)) {
+            color = componentColor("colorButton", red, green, blue, alpha);
+            options = {flags: flags, width: width, height: height};
+        } else {
+            color = color4(red, null, "colorButton", "color");
+            options = green != null && typeof green === "object"
+                ? green
+                : {flags: green, width: blue, height: alpha};
+        }
         return Boolean(bridge.colorButton(
-            String(id), number(red, 1), number(green, 1), number(blue, 1), number(alpha, 1),
-            integer(flags, 0), number(width, 0), number(height, 0)
+            String(id), color[0], color[1], color[2], color[3],
+            argFlags("colorButton", options.flags),
+            argNumber("colorButton", "width", options.width, 0),
+            argNumber("colorButton", "height", options.height, 0)
         ));
     };
     // valuesOffset is the documented name, offset the name 1.10.0 and earlier read; stride counts values (2 = every other value).
-    function plotValuesOffset(options) {
-        return integer(options.valuesOffset != null ? options.valuesOffset : options.offset, 0);
+    function plotValuesOffset(fn, options) {
+        return options.valuesOffset != null
+            ? argInt(fn, "options.valuesOffset", options.valuesOffset, undefined, 0)
+            : argInt(fn, "options.offset", options.offset, 0, 0);
     }
 
-    function plotStride(options) {
-        return Math.max(1, integer(options.stride, 1));
+    function plotStride(fn, options) {
+        return argInt(fn, "options.stride", options.stride, 1, 1);
+    }
+
+    function plotValues(fn, values) {
+        return FLOAT_ARRAY_CLASS.isInstance(values) ? values : floatArray(numberList(fn, "values", values));
+    }
+
+    function plot(fn, label, values, options) {
+        options = options || {};
+        bridge[fn](
+            String(label),
+            plotValues(fn, values),
+            plotValuesOffset(fn, options),
+            plotStride(fn, options),
+            options.overlay == null ? null : String(options.overlay),
+            argNumber(fn, "options.scaleMin", options.scaleMin, NaN),
+            argNumber(fn, "options.scaleMax", options.scaleMax, NaN),
+            argNumber(fn, "options.width", options.width, 0),
+            argNumber(fn, "options.height", options.height, 0)
+        );
     }
 
     api.plotLines = function (label, values, options) {
-        options = options || {};
-        bridge.plotLines(
-            String(label),
-            values instanceof java.lang.Object ? values : floatArray(values),
-            plotValuesOffset(options),
-            plotStride(options),
-            options.overlay == null ? null : String(options.overlay),
-            number(options.scaleMin, NaN),
-            number(options.scaleMax, NaN),
-            number(options.width, 0),
-            number(options.height, 0)
-        );
+        plot("plotLines", label, values, options);
     };
     api.plotHistogram = function (label, values, options) {
-        options = options || {};
-        bridge.plotHistogram(
-            String(label),
-            values instanceof java.lang.Object ? values : floatArray(values),
-            plotValuesOffset(options),
-            plotStride(options),
-            options.overlay == null ? null : String(options.overlay),
-            number(options.scaleMin, NaN),
-            number(options.scaleMax, NaN),
-            number(options.width, 0),
-            number(options.height, 0)
-        );
+        plot("plotHistogram", label, values, options);
     };
     api.treeNodeEx = function (label, flags) {
-        return Boolean(bridge.treeNodeEx(String(label), integer(flags, 0)));
+        return Boolean(bridge.treeNodeEx(String(label), argFlags("treeNodeEx", flags)));
     };
     api.vSliderFloat = function (label, width, height, value, min, max, format, flags) {
-        return withFloatRef(value, function (nativeRef) {
+        var resolvedWidth = argNumber("vSliderFloat", "width", width, 24);
+        var resolvedHeight = argNumber("vSliderFloat", "height", height, 120);
+        var resolvedMin = argNumber("vSliderFloat", "min", min, 0);
+        var resolvedMax = argNumber("vSliderFloat", "max", max, 1);
+        var resolvedFlags = argFlags("vSliderFloat", flags);
+        return withFloatRef("vSliderFloat", "value", value, function (nativeRef) {
             return Boolean(bridge.vSliderFloat(
-                String(label), number(width, 24), number(height, 120), nativeRef,
-                number(min, 0), number(max, 1), String(format || "%.3f"), integer(flags, 0)
+                String(label), resolvedWidth, resolvedHeight, nativeRef,
+                resolvedMin, resolvedMax, String(format || "%.3f"), resolvedFlags
             ));
         });
     };
     api.vSliderInt = function (label, width, height, value, min, max, format, flags) {
-        return withIntRef(value, function (nativeRef) {
+        var resolvedWidth = argNumber("vSliderInt", "width", width, 24);
+        var resolvedHeight = argNumber("vSliderInt", "height", height, 120);
+        var resolvedMin = argInt("vSliderInt", "min", min, 0);
+        var resolvedMax = argInt("vSliderInt", "max", max, 100);
+        var resolvedFlags = argFlags("vSliderInt", flags);
+        return withIntRef("vSliderInt", "value", value, function (nativeRef) {
             return Boolean(bridge.vSliderInt(
-                String(label), number(width, 24), number(height, 120), nativeRef,
-                integer(min, 0), integer(max, 100), String(format || "%d"), integer(flags, 0)
+                String(label), resolvedWidth, resolvedHeight, nativeRef,
+                resolvedMin, resolvedMax, String(format || "%d"), resolvedFlags
             ));
         });
     };
     api.toggle = function (label, value) {
-        return withBoolRef(value, function (nativeRef) {
+        return withBoolRef("toggle", "value", value, function (nativeRef) {
             return Boolean(bridge.toggle(String(label), nativeRef));
-        }, false);
+        });
     };
     api.toggleSwitch = api.toggle;
     api.beginCombo = function (label, preview, flags) {
         return Boolean(bridge.beginCombo(
-            String(label), String(preview == null ? "" : preview), integer(flags, 0)
+            String(label), String(preview == null ? "" : preview), argFlags("beginCombo", flags)
         ));
     };
     api.endCombo = function () { bridge.endCombo(); };
 
-    api.openPopup = function (id, flags) { bridge.openPopup(String(id), integer(flags, 0)); };
+    api.openPopup = function (id, flags) { bridge.openPopup(String(id), argFlags("openPopup", flags)); };
     api.beginPopup = function (id, flags) {
-        return Boolean(bridge.beginPopup(String(id), integer(flags, 0)));
+        return Boolean(bridge.beginPopup(String(id), argFlags("beginPopup", flags)));
     };
     api.beginPopupModal = function (name, open, flags) {
-        return withBoolRef(open, function (nativeRef) {
-            return Boolean(bridge.beginPopupModal(String(name), nativeRef, integer(flags, 0)));
-        }, true);
+        var resolvedFlags = argFlags("beginPopupModal", flags);
+        return withOptionalBoolRef("beginPopupModal", "open", open, function (nativeRef) {
+            return Boolean(bridge.beginPopupModal(String(name), nativeRef, resolvedFlags));
+        });
     };
     api.beginPopupContextItem = function (id, flags) {
         return Boolean(bridge.beginPopupContextItem(
-            id == null ? null : String(id), integer(flags, 0)
+            id == null ? null : String(id), argFlags("beginPopupContextItem", flags)
         ));
     };
     api.beginPopupContextWindow = function (id, flags) {
         return Boolean(bridge.beginPopupContextWindow(
-            id == null ? null : String(id), integer(flags, 0)
+            id == null ? null : String(id), argFlags("beginPopupContextWindow", flags)
         ));
     };
     api.endPopup = function () { bridge.endPopup(); };
     api.closeCurrentPopup = function () { bridge.closeCurrentPopup(); };
     api.isPopupOpen = function (id, flags) {
-        return Boolean(bridge.isPopupOpen(String(id), integer(flags, 0)));
+        return Boolean(bridge.isPopupOpen(String(id), argFlags("isPopupOpen", flags)));
     };
     api.beginMenuBar = function () { return Boolean(bridge.beginMenuBar()); };
     api.endMenuBar = function () { bridge.endMenuBar(); };
@@ -1859,15 +2157,19 @@ module.exports = function (bridge) {
         return Boolean(bridge.beginMenu(String(label), enabled !== false));
     };
     api.endMenu = function () { bridge.endMenu(); };
+    // selected: a reference toggled by the item, or a plain boolean that only draws the check mark.
     api.menuItem = function (label, shortcut, selected, enabled) {
-        return withBoolRef(selected, function (nativeRef) {
+        if (isBooleanLike(selected)) {
+            selected = boolRef(selected);
+        }
+        return withOptionalBoolRef("menuItem", "selected", selected, function (nativeRef) {
             return Boolean(bridge.menuItem(
                 String(label),
                 shortcut == null ? null : String(shortcut),
                 nativeRef,
                 enabled !== false
             ));
-        }, true);
+        });
     };
     api.setTooltip = function (text) { bridge.setTooltip(String(text)); };
     api.setItemTooltip = function (text) { bridge.setItemTooltip(String(text)); };
@@ -1877,71 +2179,83 @@ module.exports = function (bridge) {
 
     api.beginTable = function (id, columns, flags, outerWidth, outerHeight) {
         return Boolean(bridge.beginTable(
-            String(id), Math.max(1, integer(columns, 1)), integer(flags, 0),
-            number(outerWidth, 0), number(outerHeight, 0)
+            String(id),
+            argInt("beginTable", "columns", columns, undefined, 1, TABLE_MAX_COLUMNS),
+            argFlags("beginTable", flags),
+            argNumber("beginTable", "outerWidth", outerWidth, 0),
+            argNumber("beginTable", "outerHeight", outerHeight, 0)
         ));
     };
     api.endTable = function () { bridge.endTable(); };
     api.tableNextRow = function (rowFlags, minRowHeight) {
-        bridge.tableNextRow(integer(rowFlags, 0), number(minRowHeight, 0));
+        bridge.tableNextRow(
+            argInt("tableNextRow", "rowFlags", rowFlags, 0),
+            argNumber("tableNextRow", "minRowHeight", minRowHeight, 0)
+        );
     };
     api.tableNextColumn = function () { return Boolean(bridge.tableNextColumn()); };
     api.tableSetColumnIndex = function (columnIndex) {
-        return Boolean(bridge.tableSetColumnIndex(integer(columnIndex, 0)));
+        return Boolean(bridge.tableSetColumnIndex(
+            argInt("tableSetColumnIndex", "columnIndex", columnIndex, undefined, 0, TABLE_MAX_COLUMNS - 1)
+        ));
     };
     api.tableSetupColumn = function (label, flags, initWidthOrWeight) {
-        bridge.tableSetupColumn(String(label), integer(flags, 0), number(initWidthOrWeight, 0));
+        bridge.tableSetupColumn(
+            String(label),
+            argFlags("tableSetupColumn", flags),
+            argNumber("tableSetupColumn", "initWidthOrWeight", initWidthOrWeight, 0)
+        );
     };
     api.tableSetupScrollFreeze = function (columns, rows) {
-        bridge.tableSetupScrollFreeze(integer(columns, 0), integer(rows, 0));
+        bridge.tableSetupScrollFreeze(
+            argInt("tableSetupScrollFreeze", "columns", columns, 0, 0, TABLE_MAX_COLUMNS),
+            argInt("tableSetupScrollFreeze", "rows", rows, 0, 0, 128)
+        );
     };
     api.tableHeadersRow = function () { bridge.tableHeadersRow(); };
+    // tableSetBgColor(target, color, columnIndex) or tableSetBgColor(target, red, green, blue, alpha, columnIndex).
     api.tableSetBgColor = function (target, red, green, blue, alpha, columnIndex) {
+        var resolvedTarget = argInt(
+            "tableSetBgColor", "target", target, undefined,
+            api.TableBgTarget.RowBg0, api.TableBgTarget.CellBg
+        );
+        var color;
+        if (isComponentColor(red, green, blue)) {
+            color = componentColor("tableSetBgColor", red, green, blue, alpha);
+        } else {
+            color = color4(red, null, "tableSetBgColor", "color");
+            columnIndex = green;
+        }
         bridge.tableSetBgColor(
-            integer(target, 0), number(red, 0), number(green, 0), number(blue, 0),
-            number(alpha, 1), integer(columnIndex, -1)
+            resolvedTarget, color[0], color[1], color[2], color[3],
+            argInt("tableSetBgColor", "columnIndex", columnIndex, -1, -1, TABLE_MAX_COLUMNS - 1)
         );
     };
 
+    // pushStyleColor(index, color) or pushStyleColor(index, red, green, blue, alpha); index is an
+    // imgui.Col value or name.
     api.pushStyleColor = function (index, red, green, blue, alpha) {
-        bridge.pushStyleColor(
-            integer(index, 0), number(red, 1), number(green, 1), number(blue, 1), number(alpha, 1)
-        );
+        var colorIndex = resolveColorIndex("pushStyleColor", index);
+        var color = isComponentColor(red, green, blue)
+            ? componentColor("pushStyleColor", red, green, blue, alpha)
+            : color4(red, null, "pushStyleColor", "color");
+        bridge.pushStyleColor(colorIndex, color[0], color[1], color[2], color[3]);
     };
-    api.popStyleColor = function (count) { bridge.popStyleColor(integer(count, 1)); };
+    api.popStyleColor = function (count) {
+        bridge.popStyleColor(argInt("popStyleColor", "count", count, 1, 0));
+    };
+    // setStyleColor(index, color) or setStyleColor(index, red, green, blue, alpha).
     api.setStyleColor = function (index, red, green, blue, alpha) {
-        var colorIndex;
-        if (typeof index === "string") {
-            colorIndex = COLOR_NAME_TO_INDEX[normalizedKey(index)];
-        } else {
-            colorIndex = integer(index, -1);
-        }
-        if (colorIndex == null || colorIndex < 0 || colorIndex > api.Col.ModalWindowDimBg) {
-            throw new RangeError("ImGui style color index is out of range: " + index);
-        }
-
-        var values;
-        if (red != null && typeof red === "object") {
-            values = red;
-        } else {
-            values = [red, green, blue, alpha];
-        }
-        if (values == null || values.length < 3) {
-            throw new TypeError("ImGui style color expects [red, green, blue, alpha]");
-        }
-        var resolvedAlpha = values.length > 3 && values[3] != null ? values[3] : 1;
-        bridge.setStyleColor(
-            colorIndex,
-            requiredNumber(values[0], "Style color red"),
-            requiredNumber(values[1], "Style color green"),
-            requiredNumber(values[2], "Style color blue"),
-            requiredNumber(resolvedAlpha, "Style color alpha")
-        );
+        var colorIndex = resolveColorIndex("setStyleColor", index);
+        var color = isComponentColor(red, green, blue)
+            ? componentColor("setStyleColor", red, green, blue, alpha)
+            : color4(red, null, "setStyleColor", "color");
+        bridge.setStyleColor(colorIndex, color[0], color[1], color[2], color[3]);
         return api;
     };
     api.setStyleProperties = function (properties) {
         if (properties == null || typeof properties !== "object") {
-            throw new TypeError("imgui.setStyleProperties expects an object");
+            throw new TypeError(argumentLabel("setStyleProperties", "properties") + " must be an object");
         }
         for (var propertyName in properties) {
             if (!properties.hasOwnProperty(propertyName)) {
@@ -1950,11 +2264,26 @@ module.exports = function (bridge) {
             if (normalizedKey(propertyName) === "colors") {
                 var colorProperties = properties[propertyName];
                 if (colorProperties == null || typeof colorProperties !== "object") {
-                    throw new TypeError("setStyleProperties.colors expects an object");
+                    throw new TypeError(
+                        argumentLabel("setStyleProperties", propertyName) + " must be an object"
+                    );
                 }
                 for (var styleColorName in colorProperties) {
                     if (colorProperties.hasOwnProperty(styleColorName)) {
-                        api.setStyleColor(styleColorName, colorProperties[styleColorName]);
+                        var styleColorIndex = COLOR_NAME_TO_INDEX[normalizedKey(styleColorName)];
+                        if (styleColorIndex == null) {
+                            throw new RangeError(
+                                argumentLabel("setStyleProperties", propertyName + "." + styleColorName) +
+                                " is an unknown style color. Use a name from imgui.Col"
+                            );
+                        }
+                        var styleColor = color4(
+                            colorProperties[styleColorName], null,
+                            "setStyleProperties", propertyName + "." + styleColorName
+                        );
+                        bridge.setStyleColor(
+                            styleColorIndex, styleColor[0], styleColor[1], styleColor[2], styleColor[3]
+                        );
                     }
                 }
                 continue;
@@ -1963,39 +2292,33 @@ module.exports = function (bridge) {
             var info = STYLE_PROPERTY_INFO[normalizedKey(propertyName)];
             if (!info) {
                 throw new RangeError(
-                    "Unknown ImGui style property '" + propertyName +
-                    "'. Use a name from imgui.StyleVar or the colors property"
+                    argumentLabel("setStyleProperties", propertyName) +
+                    " is an unknown style property. Use a name from imgui.StyleVar or the colors property"
                 );
             }
             var value = properties[propertyName];
             var x;
             var y;
             if (info.vector) {
-                if (typeof value === "number") {
-                    x = requiredNumber(value, info.name);
+                if (isNumberLike(value)) {
+                    x = argNumber("setStyleProperties", propertyName, value);
                     y = x;
-                } else if (value != null && value.length >= 2) {
-                    x = requiredNumber(value[0], info.name + ".x");
-                    y = requiredNumber(value[1], info.name + ".y");
-                } else if (value != null && value.x != null && value.y != null) {
-                    x = requiredNumber(value.x, info.name + ".x");
-                    y = requiredNumber(value.y, info.name + ".y");
                 } else {
-                    throw new TypeError(
-                        "ImGui style property '" + propertyName + "' expects [x, y]"
-                    );
+                    var vector = point(value, "setStyleProperties", propertyName);
+                    x = vector[0];
+                    y = vector[1];
                 }
             } else {
-                x = requiredNumber(value, info.name);
+                x = argNumber("setStyleProperties", propertyName, value);
                 y = 0;
             }
-            var scale = info.scaled ? clamp(number(api._density, 1), 0.5, 4) : 1;
+            var scale = info.scaled ? clamp(api._density, 0.5, 4) : 1;
             bridge.setStyleVar(info.index, x * scale, y * scale);
         }
         return api;
     };
     api.setTheme = function (name) {
-        var resolvedName = resolveThemeName(name == null ? api.Themes.Dark : name);
+        var resolvedName = resolveThemeName(name == null ? api.Themes.Dark : name, "setTheme", "name");
         var definition = THEME_DEFINITIONS[resolvedName];
         bridge.resetStyle(definition.preset);
         if (definition.accent) {
@@ -2007,20 +2330,31 @@ module.exports = function (bridge) {
         api._theme = resolvedName;
         return resolvedName;
     };
+    // index is an imgui.StyleVar value or name; two-component variables take y or a Point as x.
     api.pushStyleVar = function (index, x, y) {
-        if (y == null) {
-            bridge.pushStyleVar(integer(index, 0), number(x, 0));
+        var styleIndex = resolveStyleVarIndex("pushStyleVar", index);
+        if (x != null && !isNumberLike(x)) {
+            var vector = point(x, "pushStyleVar", "x");
+            bridge.pushStyleVar2(styleIndex, vector[0], vector[1]);
+        } else if (y == null) {
+            bridge.pushStyleVar(styleIndex, argNumber("pushStyleVar", "x", x));
         } else {
-            bridge.pushStyleVar2(integer(index, 0), number(x, 0), number(y, 0));
+            bridge.pushStyleVar2(
+                styleIndex, argNumber("pushStyleVar", "x", x), argNumber("pushStyleVar", "y", y)
+            );
         }
     };
-    api.popStyleVar = function (count) { bridge.popStyleVar(integer(count, 1)); };
-    api.setWindowFontScale = function (scale) { bridge.setWindowFontScale(number(scale, 1)); };
+    api.popStyleVar = function (count) {
+        bridge.popStyleVar(argInt("popStyleVar", "count", count, 1, 0));
+    };
+    api.setWindowFontScale = function (scale) {
+        bridge.setWindowFontScale(argNumber("setWindowFontScale", "scale", scale, undefined, 0.25, 4));
+    };
     api.pushFont = function (font, fontSize) {
-        var index = resolveFontIndex(font, false);
+        var index = resolveFontIndex(font, false, "pushFont", "font");
         bridge.pushFont(
             index,
-            fontSize == null ? 0 : requiredNumber(fontSize, "Font size")
+            argNumber("pushFont", "fontSize", fontSize, 0, 0)
         );
         return index;
     };
@@ -2042,17 +2376,17 @@ module.exports = function (bridge) {
 
     var TEXTURE_TOKEN = {};
 
-    function resolveTexture(texture) {
+    function resolveTexture(fn, texture) {
         if (texture == null || texture._textureToken !== TEXTURE_TOKEN ||
             typeof texture.isDisposed !== "function"
         ) {
-            throw new TypeError("Expected a texture returned by imgui.createTexture");
+            throw new TypeError(argumentLabel(fn, "texture") + " must be a texture returned by imgui.createTexture");
         }
         if (texture.isDisposed()) {
-            throw new Error("The ImGui texture has already been disposed");
+            throw new Error("imgui." + fn + ": the texture has already been disposed");
         }
         if (texture._session !== api._activeSession || texture._session.closed) {
-            throw new Error("The ImGui texture belongs to an inactive session");
+            throw new Error("imgui." + fn + ": the texture belongs to an inactive session");
         }
         return texture;
     }
@@ -2077,7 +2411,7 @@ module.exports = function (bridge) {
         if (!owner || owner.closed || !owner.ready || !bridge.isOwner()) {
             throw new Error("imgui.createTexture requires a ready createWindow session");
         }
-        var result = bridge.createTexture(resolveTextureSource(source), resolveTextureFlags(options));
+        var result = bridge.createTexture(resolveTextureSource(source), resolveTextureFlags(options, "createTexture"));
         if (result == null || result.length < 3) {
             throw new Error("Unable to create the ImGui texture");
         }
@@ -2130,45 +2464,55 @@ module.exports = function (bridge) {
         if (texture == null || texture._textureToken !== TEXTURE_TOKEN ||
             typeof texture.dispose !== "function"
         ) {
-            throw new TypeError("imgui.destroyTexture expects an ImGui texture");
+            throw new TypeError(
+                argumentLabel("destroyTexture", "texture") + " must be a texture returned by imgui.createTexture"
+            );
         }
         return texture.dispose();
     };
 
-    function imageParameters(texture, width, height, options) {
+    function imageParameters(fn, texture, width, height, options) {
+        var widthName = "width";
+        var heightName = "height";
         if (width != null && typeof width === "object") {
             options = width;
             width = options.width;
             height = options.height;
+            widthName = "options.width";
+            heightName = "options.height";
         }
         options = options || {};
-        var resolvedWidth = width == null ? texture.width : requiredNumber(width, "Image width");
+        var resolvedWidth = width == null ? texture.width : argNumber(fn, widthName, width);
         var resolvedHeight;
         if (height == null && width != null) {
             resolvedHeight = resolvedWidth * texture.height / texture.width;
         } else {
-            resolvedHeight = height == null ? texture.height : requiredNumber(height, "Image height");
+            resolvedHeight = height == null ? texture.height : argNumber(fn, heightName, height);
         }
-        if (resolvedWidth <= 0 || resolvedHeight <= 0) {
-            throw new RangeError("Image dimensions must be positive");
+        if (resolvedWidth <= 0) {
+            throw new RangeError(argumentLabel(fn, widthName) + " must be > 0, got " + resolvedWidth);
+        }
+        if (resolvedHeight <= 0) {
+            throw new RangeError(argumentLabel(fn, heightName) + " must be > 0, got " + resolvedHeight);
         }
         return {
             width: resolvedWidth,
             height: resolvedHeight,
-            uv0: point(options.uv0 || [0, 0], "Image uv0"),
-            uv1: point(options.uv1 || [1, 1], "Image uv1"),
+            uv0: point(options.uv0 || [0, 0], fn, "options.uv0"),
+            uv1: point(options.uv1 || [1, 1], fn, "options.uv1"),
             background: color4(
                 options.background == null ? options.bg : options.background,
                 [0, 0, 0, 0],
-                "Image background"
+                fn,
+                "options.background"
             ),
-            tint: color4(options.tint, [1, 1, 1, 1], "Image tint")
+            tint: color4(options.tint, [1, 1, 1, 1], fn, "options.tint")
         };
     }
 
     api.image = function (texture, width, height, options) {
-        var resolvedTexture = resolveTexture(texture);
-        var parameters = imageParameters(resolvedTexture, width, height, options);
+        var resolvedTexture = resolveTexture("image", texture);
+        var parameters = imageParameters("image", resolvedTexture, width, height, options);
         bridge.image(
             resolvedTexture._nativeHandle,
             parameters.width,
@@ -2189,8 +2533,8 @@ module.exports = function (bridge) {
     };
 
     api.imageButton = function (id, texture, width, height, options) {
-        var resolvedTexture = resolveTexture(texture);
-        var parameters = imageParameters(resolvedTexture, width, height, options);
+        var resolvedTexture = resolveTexture("imageButton", texture);
+        var parameters = imageParameters("imageButton", resolvedTexture, width, height, options);
         return Boolean(bridge.imageButton(
             String(id),
             resolvedTexture._nativeHandle,
@@ -2211,89 +2555,100 @@ module.exports = function (bridge) {
         ));
     };
 
+    var WHITE = [1, 1, 1, 1];
+    // Native drawing clamps segment counts to 0..512.
+    var DRAW_MAX_SEGMENTS = 512;
+
     function createDrawListFacade(layer) {
         var facade = {
             layer: layer,
 
             addLine: function (first, second, color, thickness) {
-                var p1 = point(first, "addLine p1");
-                var p2 = point(second, "addLine p2");
+                var fn = "DrawList.addLine";
+                var p1 = point(first, fn, "first");
+                var p2 = point(second, fn, "second");
                 bridge.drawLine(
                     layer, p1[0], p1[1], p2[0], p2[1],
-                    packColor(color, [1, 1, 1, 1], "addLine color"),
-                    requiredNumber(thickness == null ? 1 : thickness, "addLine thickness")
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "thickness", thickness, 1, 0)
                 );
                 return facade;
             },
 
             addRect: function (minimum, maximum, color, rounding, thickness, flags) {
-                var pMin = point(minimum, "addRect min");
-                var pMax = point(maximum, "addRect max");
+                var fn = "DrawList.addRect";
+                var pMin = point(minimum, fn, "minimum");
+                var pMax = point(maximum, fn, "maximum");
                 bridge.drawRect(
                     layer, pMin[0], pMin[1], pMax[0], pMax[1],
-                    packColor(color, [1, 1, 1, 1], "addRect color"),
-                    requiredNumber(rounding == null ? 0 : rounding, "addRect rounding"),
-                    requiredNumber(thickness == null ? 1 : thickness, "addRect thickness"),
-                    integer(flags, 0)
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "rounding", rounding, 0, 0),
+                    argNumber(fn, "thickness", thickness, 1, 0),
+                    argFlags(fn, flags)
                 );
                 return facade;
             },
 
             addRectFilled: function (minimum, maximum, color, rounding, flags) {
-                var pMin = point(minimum, "addRectFilled min");
-                var pMax = point(maximum, "addRectFilled max");
+                var fn = "DrawList.addRectFilled";
+                var pMin = point(minimum, fn, "minimum");
+                var pMax = point(maximum, fn, "maximum");
                 bridge.drawRectFilled(
                     layer, pMin[0], pMin[1], pMax[0], pMax[1],
-                    packColor(color, [1, 1, 1, 1], "addRectFilled color"),
-                    requiredNumber(rounding == null ? 0 : rounding, "addRectFilled rounding"),
-                    integer(flags, 0)
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "rounding", rounding, 0, 0),
+                    argFlags(fn, flags)
                 );
                 return facade;
             },
 
             addCircle: function (center, radius, color, segments, thickness) {
-                var resolvedCenter = point(center, "addCircle center");
+                var fn = "DrawList.addCircle";
+                var resolvedCenter = point(center, fn, "center");
                 bridge.drawCircle(
                     layer, resolvedCenter[0], resolvedCenter[1],
-                    requiredNumber(radius, "addCircle radius"),
-                    packColor(color, [1, 1, 1, 1], "addCircle color"),
-                    integer(segments, 0),
-                    requiredNumber(thickness == null ? 1 : thickness, "addCircle thickness")
+                    argNumber(fn, "radius", radius, undefined, 0),
+                    packColor(color, WHITE, fn, "color"),
+                    argInt(fn, "segments", segments, 0, 0, DRAW_MAX_SEGMENTS),
+                    argNumber(fn, "thickness", thickness, 1, 0)
                 );
                 return facade;
             },
 
             addCircleFilled: function (center, radius, color, segments) {
-                var resolvedCenter = point(center, "addCircleFilled center");
+                var fn = "DrawList.addCircleFilled";
+                var resolvedCenter = point(center, fn, "center");
                 bridge.drawCircleFilled(
                     layer, resolvedCenter[0], resolvedCenter[1],
-                    requiredNumber(radius, "addCircleFilled radius"),
-                    packColor(color, [1, 1, 1, 1], "addCircleFilled color"),
-                    integer(segments, 0)
+                    argNumber(fn, "radius", radius, undefined, 0),
+                    packColor(color, WHITE, fn, "color"),
+                    argInt(fn, "segments", segments, 0, 0, DRAW_MAX_SEGMENTS)
                 );
                 return facade;
             },
 
             addTriangle: function (first, second, third, color, thickness) {
-                var p1 = point(first, "addTriangle p1");
-                var p2 = point(second, "addTriangle p2");
-                var p3 = point(third, "addTriangle p3");
+                var fn = "DrawList.addTriangle";
+                var p1 = point(first, fn, "first");
+                var p2 = point(second, fn, "second");
+                var p3 = point(third, fn, "third");
                 bridge.drawTriangle(
                     layer, p1[0], p1[1], p2[0], p2[1], p3[0], p3[1],
-                    packColor(color, [1, 1, 1, 1], "addTriangle color"),
-                    requiredNumber(thickness == null ? 1 : thickness, "addTriangle thickness"),
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "thickness", thickness, 1, 0),
                     false
                 );
                 return facade;
             },
 
             addTriangleFilled: function (first, second, third, color) {
-                var p1 = point(first, "addTriangleFilled p1");
-                var p2 = point(second, "addTriangleFilled p2");
-                var p3 = point(third, "addTriangleFilled p3");
+                var fn = "DrawList.addTriangleFilled";
+                var p1 = point(first, fn, "first");
+                var p2 = point(second, fn, "second");
+                var p3 = point(third, fn, "third");
                 bridge.drawTriangle(
                     layer, p1[0], p1[1], p2[0], p2[1], p3[0], p3[1],
-                    packColor(color, [1, 1, 1, 1], "addTriangleFilled color"),
+                    packColor(color, WHITE, fn, "color"),
                     1,
                     true
                 );
@@ -2301,39 +2656,39 @@ module.exports = function (bridge) {
             },
 
             addText: function (position, color, text, options) {
-                var resolvedPosition = point(position, "addText position");
+                var fn = "DrawList.addText";
+                var resolvedPosition = point(position, fn, "position");
                 options = options || {};
                 bridge.drawText(
                     layer, resolvedPosition[0], resolvedPosition[1],
-                    packColor(color, [1, 1, 1, 1], "addText color"),
+                    packColor(color, WHITE, fn, "color"),
                     String(text),
-                    resolveFontIndex(options.font, true),
-                    options.size == null ? 0 : requiredNumber(options.size, "addText font size"),
-                    options.wrapWidth == null
-                        ? 0
-                        : requiredNumber(options.wrapWidth, "addText wrap width")
+                    resolveFontIndex(options.font, true, fn, "options.font"),
+                    argNumber(fn, "options.size", options.size, 0, 0),
+                    argNumber(fn, "options.wrapWidth", options.wrapWidth, 0, 0)
                 );
                 return facade;
             },
 
             addPolyline: function (points, color, thickness, closed) {
+                var fn = "DrawList.addPolyline";
                 var options = {};
                 if (thickness != null && typeof thickness === "object") {
                     options = thickness;
                     thickness = options.thickness;
                     closed = options.closed;
                 }
-                var flags = integer(options.flags, 0);
+                var flags = argInt(fn, "options.flags", options.flags, 0);
                 if (closed === true) {
                     flags |= api.DrawFlags.Closed;
-                } else if (typeof closed === "number") {
-                    flags |= integer(closed, 0);
+                } else if (isNumberLike(closed)) {
+                    flags |= argInt(fn, "closed", closed);
                 }
                 bridge.drawPolyline(
                     layer,
-                    flattenPoints(points, "addPolyline points"),
-                    packColor(color, [1, 1, 1, 1], "addPolyline color"),
-                    requiredNumber(thickness == null ? 1 : thickness, "addPolyline thickness"),
+                    flattenPoints(points, fn, "points"),
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "thickness", thickness, 1, 0),
                     flags
                 );
                 return facade;
@@ -2348,32 +2703,34 @@ module.exports = function (bridge) {
                 thickness,
                 segments
             ) {
-                var p1 = point(first, "addBezierCubic p1");
-                var p2 = point(second, "addBezierCubic p2");
-                var p3 = point(third, "addBezierCubic p3");
-                var p4 = point(fourth, "addBezierCubic p4");
+                var fn = "DrawList.addBezierCubic";
+                var p1 = point(first, fn, "first");
+                var p2 = point(second, fn, "second");
+                var p3 = point(third, fn, "third");
+                var p4 = point(fourth, fn, "fourth");
                 bridge.drawBezierCubic(
                     layer,
                     p1[0], p1[1], p2[0], p2[1], p3[0], p3[1], p4[0], p4[1],
-                    packColor(color, [1, 1, 1, 1], "addBezierCubic color"),
-                    requiredNumber(thickness == null ? 1 : thickness, "addBezierCubic thickness"),
-                    integer(segments, 0)
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "thickness", thickness, 1, 0),
+                    argInt(fn, "segments", segments, 0, 0, DRAW_MAX_SEGMENTS)
                 );
                 return facade;
             },
 
             addImage: function (texture, minimum, maximum, options) {
-                var resolvedTexture = resolveTexture(texture);
-                var pMin = point(minimum, "addImage min");
-                var pMax = point(maximum, "addImage max");
+                var fn = "DrawList.addImage";
+                var resolvedTexture = resolveTexture(fn, texture);
+                var pMin = point(minimum, fn, "minimum");
+                var pMax = point(maximum, fn, "maximum");
                 options = options || {};
-                var uv0 = point(options.uv0 || [0, 0], "addImage uv0");
-                var uv1 = point(options.uv1 || [1, 1], "addImage uv1");
+                var uv0 = point(options.uv0 || [0, 0], fn, "options.uv0");
+                var uv1 = point(options.uv1 || [1, 1], fn, "options.uv1");
                 bridge.drawImage(
                     layer, resolvedTexture._nativeHandle,
                     pMin[0], pMin[1], pMax[0], pMax[1],
                     uv0[0], uv0[1], uv1[0], uv1[1],
-                    packColor(options.tint, [1, 1, 1, 1], "addImage tint")
+                    packColor(options.tint, WHITE, fn, "options.tint")
                 );
                 return facade;
             }
@@ -2400,8 +2757,8 @@ module.exports = function (bridge) {
     api.getBackgroundDrawList = function () { return BACKGROUND_DRAW_LIST; };
 
     api.pushId = function (id) {
-        if (typeof id === "number") {
-            bridge.pushIdInt(integer(id, 0));
+        if (isNumberLike(id)) {
+            bridge.pushIdInt(argInt("pushId", "id", id));
         } else {
             bridge.pushIdString(String(id));
         }
@@ -2409,8 +2766,8 @@ module.exports = function (bridge) {
     api.popId = function () { bridge.popId(); };
     api.beginGroup = function () { bridge.beginGroup(); };
     api.endGroup = function () { bridge.endGroup(); };
-    api.indent = function (width) { bridge.indent(number(width, 0)); };
-    api.unindent = function (width) { bridge.unindent(number(width, 0)); };
+    api.indent = function (width) { bridge.indent(argNumber("indent", "width", width, 0)); };
+    api.unindent = function (width) { bridge.unindent(argNumber("unindent", "width", width, 0)); };
     api.alignTextToFramePadding = function () { bridge.alignTextToFramePadding(); };
     api.beginDisabled = function (disabled) { bridge.beginDisabled(disabled !== false); };
     api.endDisabled = function () { bridge.endDisabled(); };
@@ -2419,10 +2776,14 @@ module.exports = function (bridge) {
     api.getScrollY = function () { return Number(bridge.getScrollY()); };
     api.getScrollMaxX = function () { return Number(bridge.getScrollMaxX()); };
     api.getScrollMaxY = function () { return Number(bridge.getScrollMaxY()); };
-    api.setScrollX = function (value) { bridge.setScrollX(number(value, 0)); };
-    api.setScrollY = function (value) { bridge.setScrollY(number(value, 0)); };
-    api.setScrollHereX = function (centerRatio) { bridge.setScrollHereX(number(centerRatio, 0.5)); };
-    api.setScrollHereY = function (centerRatio) { bridge.setScrollHereY(number(centerRatio, 0.5)); };
+    api.setScrollX = function (value) { bridge.setScrollX(argNumber("setScrollX", "value", value)); };
+    api.setScrollY = function (value) { bridge.setScrollY(argNumber("setScrollY", "value", value)); };
+    api.setScrollHereX = function (centerRatio) {
+        bridge.setScrollHereX(argNumber("setScrollHereX", "centerRatio", centerRatio, 0.5, 0, 1));
+    };
+    api.setScrollHereY = function (centerRatio) {
+        bridge.setScrollHereY(argNumber("setScrollHereY", "centerRatio", centerRatio, 0.5, 0, 1));
+    };
 
     api.isItemActive = function () { return Boolean(bridge.isItemActive()); };
     api.isItemEdited = function () { return Boolean(bridge.isItemEdited()); };
@@ -2434,37 +2795,43 @@ module.exports = function (bridge) {
     api.isItemFocused = function () { return Boolean(bridge.isItemFocused()); };
     api.isItemVisible = function () { return Boolean(bridge.isItemVisible()); };
     api.isWindowHovered = function (flags) {
-        return Boolean(bridge.isWindowHovered(integer(flags, 0)));
+        return Boolean(bridge.isWindowHovered(argFlags("isWindowHovered", flags)));
     };
     api.isWindowFocused = function (flags) {
-        return Boolean(bridge.isWindowFocused(integer(flags, 0)));
+        return Boolean(bridge.isWindowFocused(argFlags("isWindowFocused", flags)));
     };
     api.isWindowCollapsed = function () { return Boolean(bridge.isWindowCollapsed()); };
     api.isWindowAppearing = function () { return Boolean(bridge.isWindowAppearing()); };
     api.getMousePos = function () { return bridge.getMousePos(); };
     api.isMouseDown = function (button) {
-        return Boolean(bridge.isMouseDown(integer(button, 0)));
+        return Boolean(bridge.isMouseDown(mouseButton("isMouseDown", button)));
     };
     api.isMouseClicked = function (button, repeat) {
-        return Boolean(bridge.isMouseClicked(integer(button, 0), Boolean(repeat)));
+        return Boolean(bridge.isMouseClicked(mouseButton("isMouseClicked", button), Boolean(repeat)));
     };
     api.isMouseDoubleClicked = function (button) {
-        return Boolean(bridge.isMouseDoubleClicked(integer(button, 0)));
+        return Boolean(bridge.isMouseDoubleClicked(mouseButton("isMouseDoubleClicked", button)));
     };
     api.isMouseReleased = function (button) {
-        return Boolean(bridge.isMouseReleased(integer(button, 0)));
+        return Boolean(bridge.isMouseReleased(mouseButton("isMouseReleased", button)));
     };
     api.isMouseDragging = function (button, lockThreshold) {
-        return Boolean(bridge.isMouseDragging(integer(button, 0), number(lockThreshold, -1)));
+        return Boolean(bridge.isMouseDragging(
+            mouseButton("isMouseDragging", button),
+            argNumber("isMouseDragging", "lockThreshold", lockThreshold, -1)
+        ));
     };
     api.getMouseDragDelta = function (button, lockThreshold) {
-        return bridge.getMouseDragDelta(integer(button, 0), number(lockThreshold, -1));
+        return bridge.getMouseDragDelta(
+            mouseButton("getMouseDragDelta", button),
+            argNumber("getMouseDragDelta", "lockThreshold", lockThreshold, -1)
+        );
     };
     api.resetMouseDragDelta = function (button) {
-        bridge.resetMouseDragDelta(integer(button, 0));
+        bridge.resetMouseDragDelta(mouseButton("resetMouseDragDelta", button));
     };
     api.calcTextSize = function (text, wrapWidth) {
-        return bridge.calcTextSize(String(text), number(wrapWidth, -1));
+        return bridge.calcTextSize(String(text), argNumber("calcTextSize", "wrapWidth", wrapWidth, -1));
     };
     api.getFrameHeight = function () { return Number(bridge.getFrameHeight()); };
     api.getFrameHeightWithSpacing = function () {
@@ -2477,13 +2844,19 @@ module.exports = function (bridge) {
     api.framerate = function () { return Number(bridge.getFramerate()); };
 
     api.addInputCharacters = function (text) { bridge.addInputCharacters(String(text)); };
-    api.addKeyEvent = function (key, down) { bridge.addKeyEvent(integer(key, 0), Boolean(down)); };
+    api.addKeyEvent = function (key, down) {
+        bridge.addKeyEvent(argInt("addKeyEvent", "key", key, undefined, 0), Boolean(down));
+    };
     api.sendKey = function (key) {
-        bridge.addKeyEvent(integer(key, 0), true);
-        bridge.addKeyEvent(integer(key, 0), false);
+        var resolvedKey = argInt("sendKey", "key", key, undefined, 0);
+        bridge.addKeyEvent(resolvedKey, true);
+        bridge.addKeyEvent(resolvedKey, false);
     };
     api.addMouseWheel = function (wheelX, wheelY) {
-        bridge.addMouseWheelEvent(number(wheelX, 0), number(wheelY, 0));
+        bridge.addMouseWheelEvent(
+            argNumber("addMouseWheel", "wheelX", wheelX, 0),
+            argNumber("addMouseWheel", "wheelY", wheelY, 0)
+        );
     };
     api.wantTextInput = function () { return Boolean(bridge.wantTextInput()); };
 
@@ -2915,14 +3288,16 @@ module.exports = function (bridge) {
         session._highLevel.componentMap = {};
     }
 
-    function componentScale(session, value, fallback) {
-        return number(value, fallback) * clamp(number(session.density, 1), 0.5, 4);
+    // Component sizes and margins are options in dp, converted once to the session's px.
+    function componentScale(session, fn, options, name, fallback) {
+        return argNumber(fn, "options." + name, options[name], fallback, 0) * clamp(session.density, 0.5, 4);
     }
 
+    // Anchors use ImGui coordinates, which are the window's px.
     function setAnchoredWindowPosition(session, position, margin, condition, stackOffset) {
         var resolvedPosition = normalizedKey(position || api.ToastPosition.TopRight);
-        var width = Math.max(1, number(session.width, session.displayWidth));
-        var height = Math.max(1, number(session.height, session.displayHeight));
+        var width = Math.max(1, session.width * session.density);
+        var height = Math.max(1, session.height * session.density);
         var x = width - margin;
         var y = margin + stackOffset;
         var pivotX = 1;
@@ -2992,10 +3367,15 @@ module.exports = function (bridge) {
         if (existing) {
             return existing;
         }
+        var maxEntries = argInt("logWindow", "options.maxEntries", options.maxEntries, 1000, 1);
+        var margin = componentScale(session, "logWindow", options, "margin", 12);
+        var windowWidth = componentScale(session, "logWindow", options, "width", 380);
+        var windowHeight = componentScale(session, "logWindow", options, "height", 260);
+        var windowFlags = argInt("logWindow", "options.flags", options.flags, 0);
         var component = createHighLevelComponent(session, "logWindow", resolvedId, options);
         component.entries = [];
         component.autoScroll = options.autoScroll !== false;
-        component.maxEntries = Math.max(1, integer(options.maxEntries, 1000));
+        component.maxEntries = maxEntries;
         component.open = valueRef(options.open !== false);
         component._scrollPending = false;
 
@@ -3081,19 +3461,15 @@ module.exports = function (bridge) {
                 setAnchoredWindowPosition(
                     session,
                     options.position,
-                    componentScale(session, options.margin, 12),
+                    margin,
                     api.Cond.FirstUseEver,
                     0
                 );
             }
-            api.setNextWindowSize(
-                componentScale(session, options.width, 380),
-                componentScale(session, options.height, 260),
-                api.Cond.FirstUseEver
-            );
+            api.setNextWindowSize(windowWidth, windowHeight, api.Cond.FirstUseEver);
             var title = String(options.title == null ? resolvedId : options.title) +
                 "###imgui-log-window-" + resolvedId;
-            api.withWindow(title, component.open, integer(options.flags, 0), function () {
+            api.withWindow(title, component.open, windowFlags, function () {
                 if (api.smallButton(String(options.clearLabel || "Clear") + "###clear")) {
                     component.clear();
                 }
@@ -3149,11 +3525,24 @@ module.exports = function (bridge) {
             existing.update(text, duration, options);
             return existing;
         }
+        var resolvedDuration = argNumber(
+            "toast", "duration", duration,
+            argNumber("toast", "options.duration", options.duration, 2500, 0),
+            0
+        );
+        var margin = componentScale(session, "toast", options, "margin", 12);
+        var stackStep = componentScale(session, "toast", options, "stackStep", 54);
+        var fadeDuration = argNumber("toast", "options.fadeDuration", options.fadeDuration, 250, 0);
+        var backgroundAlpha = argNumber(
+            "toast", "options.backgroundAlpha", options.backgroundAlpha, 0.92, 0, 1
+        );
+        var extraFlags = argInt("toast", "options.flags", options.flags, 0);
+        var textColor = options.color == null ? null : color4(options.color, null, "toast", "options.color");
         var component = createHighLevelComponent(session, "toast", id, options);
         component.position = options.position || api.ToastPosition.TopRight;
         component.text = String(text == null ? "" : text);
         component.level = normalizeLogLevel(options.level || options.type || api.LogLevel.Info);
-        component.duration = Math.max(0, number(duration, number(options.duration, 2500)));
+        component.duration = resolvedDuration;
         component.createdAt = Date.now();
         component.expiresAt = component.duration > 0
             ? component.createdAt + component.duration
@@ -3161,15 +3550,17 @@ module.exports = function (bridge) {
 
         component.update = function (nextText, nextDuration, nextOptions) {
             nextOptions = nextOptions || {};
+            var nextResolvedDuration = argNumber(
+                "toast", "duration", nextDuration,
+                argNumber("toast", "options.duration", nextOptions.duration, component.duration, 0),
+                0
+            );
             component.text = String(nextText == null ? "" : nextText);
             component.level = normalizeLogLevel(
                 nextOptions.level || nextOptions.type || component.level
             );
             component.position = nextOptions.position || component.position;
-            component.duration = Math.max(
-                0,
-                number(nextDuration, number(nextOptions.duration, component.duration))
-            );
+            component.duration = nextResolvedDuration;
             component.createdAt = Date.now();
             component.expiresAt = component.duration > 0
                 ? component.createdAt + component.duration
@@ -3184,22 +3575,18 @@ module.exports = function (bridge) {
                 component.close("expired");
                 return;
             }
-            var density = clamp(number(session.density, 1), 0.5, 4);
-            var margin = componentScale(session, options.margin, 12);
-            var stackStep = componentScale(session, options.stackStep, 54);
             setAnchoredWindowPosition(
                 session,
                 component.position,
                 margin,
                 api.Cond.Always,
-                Math.max(0, integer(context.stackIndex, 0)) * stackStep
+                Math.max(0, context.stackIndex || 0) * stackStep
             );
             var opacity = 1;
-            var fadeDuration = Math.max(0, number(options.fadeDuration, 250));
             if (component.duration > 0 && fadeDuration > 0) {
                 opacity = clamp((component.expiresAt - now) / fadeDuration, 0, 1);
             }
-            api.setNextWindowBgAlpha(clamp(number(options.backgroundAlpha, 0.92) * opacity, 0, 1));
+            api.setNextWindowBgAlpha(clamp(backgroundAlpha * opacity, 0, 1));
             var flags = api.WindowFlags.NoDecoration |
                 api.WindowFlags.AlwaysAutoResize |
                 api.WindowFlags.NoSavedSettings |
@@ -3210,16 +3597,11 @@ module.exports = function (bridge) {
             if (options.interactive !== true) {
                 flags |= api.WindowFlags.NoInputs;
             }
-            flags |= integer(options.flags, 0);
+            flags |= extraFlags;
             api.withWindow("###imgui-toast-" + id, null, flags, function () {
-                var color = options.color || logLevelColor(component.level);
-                api.pushStyleColor(
-                    api.Col.Text,
-                    number(color[0], 1),
-                    number(color[1], 1),
-                    number(color[2], 1),
-                    number(color.length > 3 ? color[3] : 1, 1) * opacity
-                );
+                var color = (textColor || logLevelColor(component.level)).slice();
+                color[3] *= opacity;
+                api.pushStyleColor(api.Col.Text, color);
                 try {
                     if (options.showLevel === true) {
                         api.textWrapped("[" + component.level.toUpperCase() + "] " + component.text);
@@ -3251,6 +3633,8 @@ module.exports = function (bridge) {
         config = config || {};
         var runtime = session._highLevel;
         var id = String(config.id == null ? runtime.nextId++ : config.id);
+        var dialogWidth = componentScale(session, type, config, "width", 320);
+        var dialogFlags = argInt(type, "options.flags", config.flags, 0);
         var component = createHighLevelComponent(session, "dialog", type + "-" + id, config);
         var resolvePromise;
         var promise = new Promise(function (resolve) {
@@ -3328,17 +3712,13 @@ module.exports = function (bridge) {
                 api.openPopup(popupName);
                 component._opened = true;
             }
-            api.setNextWindowSize(
-                componentScale(session, config.width, 320),
-                0,
-                api.Cond.Appearing
-            );
+            api.setNextWindowSize(dialogWidth, 0, api.Cond.Appearing);
             var visible = api.withPopupModal(
                 popupName,
                 component.open,
                 api.WindowFlags.AlwaysAutoResize |
                     api.WindowFlags.NoSavedSettings |
-                    integer(config.flags, 0),
+                    dialogFlags,
                 function () {
                     component._insideModal = true;
                     try {
@@ -3482,32 +3862,38 @@ module.exports = function (bridge) {
         return config;
     }
 
-    api.singleChoice = function () {
-        var config = parseChoiceDialog("singleChoice", arguments);
-        var component = createDialog(null, "singleChoice", config);
+    function openSingleChoice(session, args) {
+        var config = parseChoiceDialog("singleChoice", args);
+        var selectedIndex = argInt(
+            "singleChoice", "selected", config.selected, -1, -1, config.items.length - 1
+        );
+        var component = createDialog(session, "singleChoice", config);
         component.items = config.items;
-        component.selectedIndex = integer(config.selected, -1);
+        component.selectedIndex = selectedIndex;
         return component.promise;
-    };
+    }
 
-    api.multiChoice = function () {
-        var config = parseChoiceDialog("multiChoice", arguments);
-        var component = createDialog(null, "multiChoice", config);
+    function openMultiChoice(session, args) {
+        var config = parseChoiceDialog("multiChoice", args);
+        var selected = config.selected || [];
+        var booleanSelection = selected.length === config.items.length &&
+            (selected.length === 0 || isBooleanLike(selected[0]));
+        var selectedIndices = {};
+        if (!booleanSelection) {
+            for (var selectedIndex = 0; selectedIndex < selected.length; selectedIndex += 1) {
+                selectedIndices[argInt(
+                    "multiChoice", "selected[" + selectedIndex + "]", selected[selectedIndex],
+                    undefined, 0, config.items.length - 1
+                )] = true;
+            }
+        }
+        var component = createDialog(session, "multiChoice", config);
         component.items = config.items;
         component.choiceRefs = [];
-        var selected = config.selected || [];
-        var booleanSelection = selected.length === component.items.length &&
-            (selected.length === 0 || typeof selected[0] === "boolean");
         for (var itemIndex = 0; itemIndex < component.items.length; itemIndex += 1) {
-            var isSelected = booleanSelection ? Boolean(selected[itemIndex]) : false;
-            if (!booleanSelection) {
-                for (var selectedIndex = 0; selectedIndex < selected.length; selectedIndex += 1) {
-                    if (integer(selected[selectedIndex], -1) === itemIndex) {
-                        isSelected = true;
-                        break;
-                    }
-                }
-            }
+            var isSelected = booleanSelection
+                ? Boolean(selected[itemIndex])
+                : selectedIndices[itemIndex] === true;
             component.choiceRefs.push(valueRef(isSelected));
         }
         component.selectedIndices = function () {
@@ -3520,6 +3906,14 @@ module.exports = function (bridge) {
             return result;
         };
         return component.promise;
+    }
+
+    api.singleChoice = function () {
+        return openSingleChoice(null, arguments);
+    };
+
+    api.multiChoice = function () {
+        return openMultiChoice(null, arguments);
     };
 
     function createStatsOverlay(session, id, options) {
@@ -3530,9 +3924,26 @@ module.exports = function (bridge) {
         if (existing) {
             return existing;
         }
+        var historySize = argInt("statsOverlay", "options.historySize", options.historySize, 120, 10);
+        var margin = componentScale(session, "statsOverlay", options, "margin", 12);
+        var backgroundAlpha = argNumber(
+            "statsOverlay", "options.backgroundAlpha", options.backgroundAlpha, 0.78, 0, 1
+        );
+        var extraFlags = argInt("statsOverlay", "options.flags", options.flags, 0);
+        var warningMs = argNumber("statsOverlay", "options.warningMs", options.warningMs, 16.7, 0);
+        var criticalMs = Math.max(
+            warningMs,
+            argNumber("statsOverlay", "options.criticalMs", options.criticalMs, 33.3, 0)
+        );
+        var scaleMax = Math.max(
+            criticalMs * 1.5,
+            argNumber("statsOverlay", "options.scaleMax", options.scaleMax, criticalMs * 1.5, 0)
+        );
+        var plotWidth = componentScale(session, "statsOverlay", options, "plotWidth", 190);
+        var plotHeight = componentScale(session, "statsOverlay", options, "plotHeight", 48);
         var component = createHighLevelComponent(session, "statsOverlay", resolvedId, options);
         component.frameTimes = [];
-        component.historySize = Math.max(10, integer(options.historySize, 120));
+        component.historySize = historySize;
         component.fps = 0;
         component.frameTime = 0;
         component.snapshot = function () {
@@ -3552,11 +3963,11 @@ module.exports = function (bridge) {
             setAnchoredWindowPosition(
                 session,
                 options.position || api.ToastPosition.TopLeft,
-                componentScale(session, options.margin, 12),
+                margin,
                 api.Cond.Always,
                 0
             );
-            api.setNextWindowBgAlpha(clamp(number(options.backgroundAlpha, 0.78), 0, 1));
+            api.setNextWindowBgAlpha(backgroundAlpha);
             var flags = api.WindowFlags.NoDecoration |
                 api.WindowFlags.AlwaysAutoResize |
                 api.WindowFlags.NoSavedSettings |
@@ -3566,10 +3977,8 @@ module.exports = function (bridge) {
             if (options.interactive !== true) {
                 flags |= api.WindowFlags.NoInputs;
             }
-            flags |= integer(options.flags, 0);
+            flags |= extraFlags;
             api.withWindow("###imgui-stats-overlay-" + resolvedId, null, flags, function () {
-                var warningMs = Math.max(0, number(options.warningMs, 16.7));
-                var criticalMs = Math.max(warningMs, number(options.criticalMs, 33.3));
                 var color = component.frameTime > criticalMs
                     ? [1, 0.28, 0.28, 1]
                     : component.frameTime > warningMs
@@ -3586,12 +3995,9 @@ module.exports = function (bridge) {
                         {
                             overlay: String(options.overlay || "Frame time"),
                             scaleMin: 0,
-                            scaleMax: Math.max(
-                                criticalMs * 1.5,
-                                number(options.scaleMax, criticalMs * 1.5)
-                            ),
-                            width: componentScale(session, options.plotWidth, 190),
-                            height: componentScale(session, options.plotHeight, 48)
+                            scaleMax: scaleMax,
+                            width: plotWidth,
+                            height: plotHeight
                         }
                     );
                 }
@@ -3619,11 +4025,16 @@ module.exports = function (bridge) {
         for (var index = 0; index < source.length; index += 1) {
             var header = source[index];
             if (header != null && typeof header === "object") {
+                var name = "headers[" + index + "]";
                 result.push({
                     key: header.key == null ? index : header.key,
                     label: String(header.label == null ? header.key : header.label),
-                    flags: integer(header.flags, 0),
-                    width: number(header.width, number(header.weight, 0))
+                    flags: argInt("dataTable", name + ".flags", header.flags, 0),
+                    width: argNumber(
+                        "dataTable", name + ".width", header.width,
+                        argNumber("dataTable", name + ".weight", header.weight, 0, 0),
+                        0
+                    )
                 });
             } else {
                 result.push({
@@ -3648,8 +4059,22 @@ module.exports = function (bridge) {
         if (existing) {
             return existing;
         }
+        var normalizedHeaders = normalizeDataTableHeaders(headers);
+        var tableFlags = options.tableFlags == null
+            ? api.TableFlags.Resizable |
+                api.TableFlags.RowBg |
+                api.TableFlags.Borders |
+                api.TableFlags.ScrollY
+            : argInt("dataTable", "options.tableFlags", options.tableFlags);
+        var tableHeight = componentScale(session, "dataTable", options, "tableHeight", 0);
+        var rowHeight = argNumber("dataTable", "options.rowHeight", options.rowHeight, 0, 0);
+        var selectableFlags = argInt("dataTable", "options.selectableFlags", options.selectableFlags, 0);
+        var margin = componentScale(session, "dataTable", options, "margin", 12);
+        var windowWidth = componentScale(session, "dataTable", options, "width", 520);
+        var windowHeight = componentScale(session, "dataTable", options, "height", 340);
+        var windowFlags = argInt("dataTable", "options.flags", options.flags, 0);
         var component = createHighLevelComponent(session, "dataTable", resolvedId, options);
-        component.headers = normalizeDataTableHeaders(headers);
+        component.headers = normalizedHeaders;
         component.rows = [];
         component.open = valueRef(options.open !== false);
         component.multiSelect = options.multiSelect === true;
@@ -3684,11 +4109,10 @@ module.exports = function (bridge) {
         }
 
         function recordIndexFor(target) {
-            if (typeof target === "number") {
-                var numericIndex = integer(target, -1);
-                if (numericIndex >= 0 && numericIndex < component._records.length) {
-                    return numericIndex;
-                }
+            if (isNumberLike(target) && target % 1 === 0 &&
+                target >= 0 && target < component._records.length
+            ) {
+                return Number(target);
             }
             for (var index = 0; index < component._records.length; index += 1) {
                 var row = component._records[index].row;
@@ -3733,9 +4157,10 @@ module.exports = function (bridge) {
         };
 
         component.addRow = function (row, index) {
-            var insertIndex = index == null
-                ? component._records.length
-                : clamp(integer(index, component._records.length), 0, component._records.length);
+            var insertIndex = argInt(
+                "DataTable.addRow", "index", index,
+                component._records.length, 0, component._records.length
+            );
             component._records.splice(insertIndex, 0, createRecord(row));
             refreshRows();
             emitRowsChanged("add", row, insertIndex);
@@ -3936,19 +4361,10 @@ module.exports = function (bridge) {
 
         component.renderTable = function () {
             renderToolbar();
-            var flags = options.tableFlags == null
-                ? api.TableFlags.Resizable |
-                    api.TableFlags.RowBg |
-                    api.TableFlags.Borders |
-                    api.TableFlags.ScrollY
-                : integer(options.tableFlags, 0);
-            var tableHeight = options.tableHeight == null
-                ? 0
-                : componentScale(session, options.tableHeight, 0);
             api.withTable(
                 "##imgui-data-table-" + resolvedId,
                 component.headers.length,
-                flags,
+                tableFlags,
                 0,
                 tableHeight,
                 function () {
@@ -3965,7 +4381,7 @@ module.exports = function (bridge) {
                     for (var rowIndex = 0; rowIndex < component._records.length; rowIndex += 1) {
                         var record = component._records[rowIndex];
                         var row = record.row;
-                        api.tableNextRow(0, number(options.rowHeight, 0));
+                        api.tableNextRow(0, rowHeight);
                         for (var columnIndex = 0; columnIndex < component.headers.length; columnIndex += 1) {
                             api.tableSetColumnIndex(columnIndex);
                             var header = component.headers[columnIndex];
@@ -3974,10 +4390,9 @@ module.exports = function (bridge) {
                                 var clicked = api.selectable(
                                     value + "###row-" + record.uid,
                                     Boolean(component._selected[record.uid]),
-                                    api.SelectableFlags.SpanAllColumns |
-                                        integer(options.selectableFlags, 0),
+                                    api.SelectableFlags.SpanAllColumns | selectableFlags,
                                     0,
-                                    number(options.rowHeight, 0)
+                                    rowHeight
                                 );
                                 if (clicked) {
                                     component.selectRow(rowIndex);
@@ -4022,19 +4437,15 @@ module.exports = function (bridge) {
                 setAnchoredWindowPosition(
                     session,
                     options.position,
-                    componentScale(session, options.margin, 12),
+                    margin,
                     api.Cond.FirstUseEver,
                     0
                 );
             }
-            api.setNextWindowSize(
-                componentScale(session, options.width, 520),
-                componentScale(session, options.height, 340),
-                api.Cond.FirstUseEver
-            );
+            api.setNextWindowSize(windowWidth, windowHeight, api.Cond.FirstUseEver);
             var title = String(options.title == null ? resolvedId : options.title) +
                 "###imgui-data-table-window-" + resolvedId;
-            api.withWindow(title, component.open, integer(options.flags, 0), function () {
+            api.withWindow(title, component.open, windowFlags, function () {
                 component.renderTable();
             });
             if (!component.open.value) {
@@ -4056,14 +4467,14 @@ module.exports = function (bridge) {
 
     api.createWindow = function (renderCallback, options) {
         if (typeof renderCallback !== "function") {
-            throw new TypeError("imgui.createWindow expects a render callback");
+            throw new TypeError(argumentLabel("createWindow", "renderCallback") + " must be a function");
         }
 
         options = options || {};
-        var initialTheme = options.theme == null ? null : resolveThemeName(options.theme);
+        var initialTheme = options.theme == null ? null : resolveThemeName(options.theme, "createWindow", "options.theme");
         var appearanceName = options.appearance == null
             ? null
-            : resolveAppearanceName(options.appearance);
+            : resolveAppearanceName(options.appearance, "createWindow", "options.appearance");
         var initialStyle = {};
         var initialShadow = null;
         if (appearanceName) {
@@ -4071,7 +4482,7 @@ module.exports = function (bridge) {
             initialShadow = APPEARANCE_DEFINITIONS[appearanceName].shadow;
         }
         if (options.rounding != null) {
-            var commonRounding = requiredNumber(options.rounding, "createWindow rounding");
+            var commonRounding = argNumber("createWindow", "options.rounding", options.rounding, undefined, 0);
             initialStyle.windowRounding = commonRounding;
             initialStyle.childRounding = commonRounding;
             initialStyle.popupRounding = commonRounding;
@@ -4082,7 +4493,9 @@ module.exports = function (bridge) {
             initialStyle.menuItemRounding = commonRounding;
         }
         if (options.borderSize != null) {
-            var commonBorderSize = requiredNumber(options.borderSize, "createWindow borderSize");
+            var commonBorderSize = argNumber(
+                "createWindow", "options.borderSize", options.borderSize, undefined, 0
+            );
             initialStyle.windowBorderSize = commonBorderSize;
             initialStyle.childBorderSize = commonBorderSize;
             initialStyle.popupBorderSize = commonBorderSize;
@@ -4100,28 +4513,58 @@ module.exports = function (bridge) {
         copyOwnProperties(initialStyle, options.style);
         copyOwnProperties(initialStyle, options.styleProperties);
         if (options.shadowColor != null) {
-            initialShadow = options.shadowColor;
+            initialShadow = color4(options.shadowColor, null, "createWindow", "options.shadowColor");
         } else if (options.shadow != null) {
             if (options.shadow === false) {
                 initialShadow = [0, 0, 0, 0];
             } else if (options.shadow === true) {
                 initialShadow = [0, 0, 0, 0.30];
-            } else if (typeof options.shadow === "number") {
-                initialShadow = [0, 0, 0, clamp(options.shadow, 0, 1)];
+            } else if (isNumberLike(options.shadow)) {
+                initialShadow = [
+                    0, 0, 0, argNumber("createWindow", "options.shadow", options.shadow, undefined, 0, 1)
+                ];
             } else {
-                initialShadow = options.shadow;
+                initialShadow = color4(options.shadow, null, "createWindow", "options.shadow");
             }
         }
         if (api._activeSession) {
             api._activeSession.close("replaced");
         }
 
+        // Window geometry options are dp, as session fields and events are; the window manager and the
+        // native surface work in px.
+        function windowOption(name, fallback, min, max) {
+            return argNumber("createWindow", "options." + name, options[name], fallback, min, max);
+        }
+
+        function windowPixels(name, fallback, min) {
+            return Math.round(windowOption(name, fallback, min) * density);
+        }
+
+        // Sizes reported by Android (display metrics, views, surfaces) are px.
+        function hostPixels(value, fallback) {
+            var pixels = Math.round(Number(value));
+            return isFinite(pixels) && pixels > 0 ? pixels : fallback;
+        }
+
+        function systemLongPressTimeout() {
+            try {
+                return clamp(Number(android.view.ViewConfiguration.getLongPressTimeout()), 250, 2000);
+            } catch (ignored) {
+                return 500;
+            }
+        }
+
         var metrics = context.getResources().getDisplayMetrics();
-        var density = number(metrics.density, 1);
+        var density = Number(metrics.density);
+        if (!(density > 0) || !isFinite(density)) {
+            density = 1;
+        }
         api._density = clamp(density, 0.5, 4);
-        var displayWidth = metrics.widthPixels;
-        var displayHeight = metrics.heightPixels;
-        var mode = resolveWindowMode(options.mode);
+        api._displayDensity = density;
+        var displayWidth = hostPixels(metrics.widthPixels, 1);
+        var displayHeight = hostPixels(metrics.heightPixels, 1);
+        var mode = resolveWindowMode(options.mode, "createWindow", "options.mode");
         var activityMode = mode === api.WindowMode.Activity;
         var privilegedMode = mode === api.WindowMode.Privileged;
         var activityLikeMode = activityMode || privilegedMode;
@@ -4130,56 +4573,73 @@ module.exports = function (bridge) {
                 ? (options.backend == null ? "auto" : options.backend)
                 : options.privilegedBackend
         );
-        var privilegedTimeout = clamp(integer(options.startupTimeout, 10000), 1, 15000);
-        var privilegedRotation = options.rotation == null ? 0 : integer(options.rotation, 0);
-        if (options.rotation == null) {
+        var privilegedTimeout = argInt(
+            "createWindow", "options.startupTimeout", options.startupTimeout, 10000, 1, 15000
+        );
+        var privilegedRotation = 0;
+        if (options.rotation != null) {
+            privilegedRotation = argInt("createWindow", "options.rotation", options.rotation);
+            if (privilegedRotation !== 0 && privilegedRotation !== 90 &&
+                privilegedRotation !== 180 && privilegedRotation !== 270
+            ) {
+                throw new RangeError(
+                    argumentLabel("createWindow", "options.rotation") +
+                    " must be 0, 90, 180, or 270, got " + options.rotation
+                );
+            }
+        } else {
             try {
                 var displayRotation = context.getSystemService(android.content.Context.WINDOW_SERVICE)
                     .getDefaultDisplay().getRotation();
-                privilegedRotation = [0, 90, 180, 270][integer(displayRotation, 0)] || 0;
+                privilegedRotation = [0, 90, 180, 270][Number(displayRotation)] || 0;
             } catch (ignored) {
                 privilegedRotation = 0;
             }
         }
         var requestedWidth = Math.max(
             1,
-            integer(number(options.width, number(options.w, 360)) * density, 360)
+            options.width != null ? windowPixels("width", undefined, 1) : windowPixels("w", 360, 1)
         );
         var requestedHeight = Math.max(
             1,
-            integer(number(options.height, number(options.h, 420)) * density, 420)
+            options.height != null ? windowPixels("height", undefined, 1) : windowPixels("h", 420, 1)
         );
-        var width = activityLikeMode ? Math.max(1, displayWidth) : Math.min(requestedWidth, displayWidth);
-        var height = activityLikeMode ? Math.max(1, displayHeight) : Math.min(requestedHeight, displayHeight);
-        var margin = integer(12 * density, 12);
-        var x = activityLikeMode
-            ? 0
-            : clamp(
-                integer(options.x, Math.max(0, displayWidth - width - margin)),
+        var width = activityLikeMode ? displayWidth : Math.min(requestedWidth, displayWidth);
+        var height = activityLikeMode ? displayHeight : Math.min(requestedHeight, displayHeight);
+        var margin = Math.round(12 * density);
+        var x = 0;
+        var y = 0;
+        if (!activityLikeMode) {
+            x = clamp(
+                options.x == null ? displayWidth - width - margin : windowPixels("x"),
                 0,
                 Math.max(0, displayWidth - width)
             );
-        var y = activityLikeMode
-            ? 0
-            : clamp(
-                integer(options.y, Math.max(0, displayHeight - height - integer(72 * density, 72))),
+            y = clamp(
+                options.y == null ? displayHeight - height - Math.round(72 * density) : windowPixels("y"),
                 0,
                 Math.max(0, displayHeight - height)
             );
+        }
         var debug = options.debug === true;
-        var fps = clamp(integer(options.fps, 60), 15, 120);
+        var fps = argInt("createWindow", "options.fps", options.fps, 60, 15, 120);
         var frameDelay = Math.max(1, Math.round(1000 / fps));
-        var collapsedFps = clamp(integer(options.collapsedFps, 5), 1, 15);
+        var collapsedFps = argInt("createWindow", "options.collapsedFps", options.collapsedFps, 5, 1, 15);
         var collapsedFrameDelay = Math.max(1, Math.round(1000 / collapsedFps));
         var movable = !activityLikeMode && options.movable !== false;
         var fontPath = options.fontPath == null ? null : String(options.fontPath);
-        var fontSize = number(options.fontSize, 16);
+        var fontSize = windowOption("fontSize", 16, 8, 64);
         var configuredFonts = options.fonts == null ? [] : options.fonts;
-        if (configuredFonts == null || typeof configuredFonts.length !== "number") {
-            throw new TypeError("createWindow fonts expects an array of font definitions");
+        if (isStringLike(configuredFonts) || typeof configuredFonts.length !== "number") {
+            throw new TypeError(
+                argumentLabel("createWindow", "options.fonts") + " must be an array of font definitions"
+            );
         }
         if (configuredFonts.length > 16) {
-            throw new RangeError("createWindow accepts at most 16 additional fonts");
+            throw new RangeError(
+                argumentLabel("createWindow", "options.fonts") + " accepts at most 16 fonts, got " +
+                configuredFonts.length
+            );
         }
         var additionalFontPaths = [];
         var additionalFontSizes = [];
@@ -4197,11 +4657,12 @@ module.exports = function (bridge) {
         };
         for (var fontIndex = 0; fontIndex < configuredFonts.length; fontIndex += 1) {
             var fontDefinition = configuredFonts[fontIndex];
+            var fontName = "options.fonts[" + fontIndex + "]";
             var additionalPath;
             var additionalSize;
             var fontId;
-            if (typeof fontDefinition === "string") {
-                additionalPath = fontDefinition;
+            if (isStringLike(fontDefinition)) {
+                additionalPath = String(fontDefinition);
                 additionalSize = fontSize;
                 fontId = "font" + (fontIndex + 1);
             } else if (fontDefinition != null && typeof fontDefinition === "object") {
@@ -4210,52 +4671,55 @@ module.exports = function (bridge) {
                 } else {
                     additionalPath = fontDefinition.path == null ? "" : String(fontDefinition.path);
                 }
-                additionalSize = fontDefinition.size == null ? fontSize : fontDefinition.size;
+                additionalSize = argNumber(
+                    "createWindow", fontName + ".size", fontDefinition.size, fontSize, 8, 128
+                );
                 fontId = fontDefinition.id == null
                     ? (fontDefinition.name == null ? "font" + (fontIndex + 1) : fontDefinition.name)
                     : fontDefinition.id;
             } else {
-                throw new TypeError("Each createWindow font must be a path or font definition object");
+                throw new TypeError(
+                    argumentLabel("createWindow", fontName) + " must be a path or a font definition object"
+                );
             }
             fontId = String(fontId);
             var fontAlias = normalizedKey(fontId);
             if (!fontAlias) {
-                throw new TypeError("Additional font id must not be empty");
+                throw new TypeError(argumentLabel("createWindow", fontName + ".id") + " must not be empty");
             }
             if (fontAliases.hasOwnProperty(fontAlias)) {
-                throw new RangeError("Duplicate ImGui font id: " + fontId);
+                throw new RangeError(
+                    argumentLabel("createWindow", fontName + ".id") + " repeats the font id '" + fontId + "'"
+                );
             }
             var resolvedFontIndex = api.Fonts.Icons + 1 + fontIndex;
-            additionalFontPaths.push(String(additionalPath));
-            additionalFontSizes.push(clamp(
-                requiredNumber(additionalSize, "Additional font size"),
-                8,
-                128
-            ));
+            additionalFontPaths.push(additionalPath);
+            additionalFontSizes.push(additionalSize);
             fontHandles[fontId] = resolvedFontIndex;
             fontAliases[fontAlias] = resolvedFontIndex;
         }
         fontHandles = freeze(fontHandles);
         api._fontAliases = fontAliases;
-        var dragThreshold = Math.max(4, number(options.dragThreshold, 10) * density);
+        var dragThreshold = Math.max(4, windowOption("dragThreshold", 10, 0) * density);
         var imeEnabled = !privilegedMode && options.ime !== false;
         var flingEnabled = options.fling !== false;
-        var flingFriction = clamp(number(options.flingFriction, 5.5), 0.5, 30);
-        var flingMinVelocity = Math.max(0, number(options.flingMinVelocity, 80) * density);
+        var flingFriction = windowOption("flingFriction", 5.5, 0.5, 30);
+        var flingMinVelocity = windowOption("flingMinVelocity", 80, 0) * density;
         var flingMaxVelocity = Math.max(
-            flingMinVelocity, number(options.flingMaxVelocity, 8000) * density
+            flingMinVelocity, windowOption("flingMaxVelocity", 8000, 0) * density
         );
         var longPressAsRightClick = options.longPressAsRightClick !== false;
-        var longPressDuration = clamp(integer(
-            options.longPressDuration,
-            android.view.ViewConfiguration.getLongPressTimeout()
-        ), 250, 2000);
-        var longPressSlop = Math.max(4, number(options.longPressSlop, 10) * density);
+        var longPressDuration = options.longPressDuration == null
+            ? systemLongPressTimeout()
+            : argInt(
+                "createWindow", "options.longPressDuration", options.longPressDuration, undefined, 250, 2000
+            );
+        var longPressSlop = Math.max(4, windowOption("longPressSlop", 10, 0) * density);
         var moreTouch = options.moreTouch === true;
-        var touchMode = resolveTouchMode(
-            options.touchMode == null ? options.touchable : options.touchMode
-        );
-        var globalAlpha = clamp(number(options.alpha, 1), 0, 1);
+        var touchMode = options.touchMode == null
+            ? resolveTouchMode(options.touchable, "createWindow", "options.touchable")
+            : resolveTouchMode(options.touchMode, "createWindow", "options.touchMode");
+        var globalAlpha = windowOption("alpha", 1, 0, 1);
         var secure = options.secure === true;
         if (privilegedMode && secure) {
             throw new Error("Privileged windows do not yet support secure SurfaceControl layers");
@@ -4266,19 +4730,30 @@ module.exports = function (bridge) {
         var immersive = options.immersive !== false;
         var responsive = options.responsive !== false;
         var contentAutoResize = options.contentAutoResize !== false && options.autoResize !== false;
-        var contentPadding = Math.max(0, number(options.contentPadding, 8) * density);
-        var contentMinWidth = Math.max(1, number(options.contentMinWidth, 48) * density);
-        var contentMinHeight = Math.max(1, number(options.contentMinHeight, 48) * density);
+        var contentPadding = windowOption("contentPadding", 8, 0) * density;
+        var contentMinWidth = windowOption("contentMinWidth", 48, 1) * density;
+        var contentMinHeight = windowOption("contentMinHeight", 48, 1) * density;
         var contentMaxWidth = Math.max(
             contentMinWidth,
-            number(options.contentMaxWidth, displayWidth / density) * density
+            options.contentMaxWidth == null
+                ? displayWidth
+                : windowOption("contentMaxWidth", undefined, 1) * density
         );
         var contentMaxHeight = Math.max(
             contentMinHeight,
-            number(options.contentMaxHeight, displayHeight / density) * density
+            options.contentMaxHeight == null
+                ? displayHeight
+                : windowOption("contentMaxHeight", undefined, 1) * density
         );
         var iniPath = resolveIniPath(options.iniPath);
         var collapseButtonOptions = options.collapseButton;
+        if (collapseButtonOptions != null && !isBooleanLike(collapseButtonOptions) &&
+            typeof collapseButtonOptions !== "object"
+        ) {
+            throw new TypeError(
+                argumentLabel("createWindow", "options.collapseButton") + " must be a boolean or an options object"
+            );
+        }
         var collapseButtonEnabled = !privilegedMode && collapseButtonOptions !== false;
         if (collapseButtonOptions == null || collapseButtonOptions === true) {
             collapseButtonOptions = {};
@@ -4301,8 +4776,8 @@ module.exports = function (bridge) {
             surfaceView = bridge.createActivitySurface(secure, immersive);
             var activitySize = bridge.getViewSize(surfaceView);
             if (activitySize != null && activitySize.length >= 2 && activitySize[0] > 0 && activitySize[1] > 0) {
-                width = integer(activitySize[0], width);
-                height = integer(activitySize[1], height);
+                width = hostPixels(activitySize[0], width);
+                height = hostPixels(activitySize[1], height);
             }
         } else {
             windowObject = floaty.rawWindow(
@@ -4324,14 +4799,48 @@ module.exports = function (bridge) {
         var managedButtons = [];
         var highLevelRuntime = createHighLevelRuntime();
         var eventListeners = {};
-        var session = {
-            window: windowObject,
-            surfaceView: surfaceView,
-            surface: privilegedSurface,
-            imeView: imeView,
-            mode: mode,
-            privilegedBackend: privilegedMode ? privilegedBackend : null,
-            density: density,
+        // Session events and companion button callbacks run on the thread that created the window, the
+        // Looper of the frame callback; one raised on the UI thread (surface, touch) is posted there.
+        var scriptThread = java.lang.Thread.currentThread();
+        var scriptDispatcher = null;
+        try {
+            scriptDispatcher = events.emitter(scriptThread);
+            scriptDispatcher.on("dispatch", function (action) {
+                action();
+            });
+        } catch (ignored) {
+            // Without a thread-bound emitter the callbacks run on the thread that raised them.
+            scriptDispatcher = null;
+        }
+
+        function runOnScriptThread(action) {
+            if (scriptDispatcher == null || java.lang.Thread.currentThread().equals(scriptThread)) {
+                action();
+            } else {
+                scriptDispatcher.emit("dispatch", action);
+            }
+        }
+
+        function toDp(pixels) {
+            return pixels / density;
+        }
+
+        function defineReadOnlyFields(target, getters) {
+            for (var fieldName in getters) {
+                if (getters.hasOwnProperty(fieldName)) {
+                    Object.defineProperty(target, fieldName, {
+                        get: getters[fieldName],
+                        enumerable: true,
+                        configurable: false
+                    });
+                }
+            }
+        }
+
+        // The mutable session state, positions and sizes in px. The session exposes it as read-only fields
+        // with positions and sizes in dp; the setters change it.
+        var state = {
+            imeView: null,
             displayWidth: displayWidth,
             displayHeight: displayHeight,
             width: width,
@@ -4345,22 +4854,14 @@ module.exports = function (bridge) {
             touchable: touchMode !== api.TouchMode.Passthrough,
             interactiveRegionCount: 0,
             collapsed: false,
-            fps: fps,
-            collapsedFps: collapsedFps,
-            frameScheduler: "deadline-timer",
-            iniPath: iniPath,
-            debug: debug,
             ready: false,
             closed: false,
             closeReason: null,
-            theme: initialTheme || api.Themes.Dark,
-            appearance: appearanceName,
-            fonts: fontHandles,
-            textures: managedTextures,
+            theme: initialTheme || api.Themes.Dark
+        };
+        var session = {
             _textures: managedTextures,
-            buttons: managedButtons,
             _buttons: managedButtons,
-            components: highLevelRuntime.components,
             _highLevel: highLevelRuntime,
             _closeRequested: false,
             _inFrame: false,
@@ -4391,15 +4892,13 @@ module.exports = function (bridge) {
 
             getBackendInfo: function () {
                 if (!privilegedMode || privilegedSurface == null) {
-                    return "mode=" + session.mode;
+                    return "mode=" + mode;
                 }
                 return String(bridge.getPrivilegedSurfaceInfo(privilegedSurface));
             },
 
             on: function (eventName, listener) {
-                if (typeof listener !== "function") {
-                    throw new TypeError("Session event listener must be a function");
-                }
+                argFunction("Session.on", "listener", listener);
                 var key = String(eventName);
                 if (!eventListeners[key]) {
                     eventListeners[key] = [];
@@ -4409,9 +4908,7 @@ module.exports = function (bridge) {
             },
 
             once: function (eventName, listener) {
-                if (typeof listener !== "function") {
-                    throw new TypeError("Session event listener must be a function");
-                }
+                argFunction("Session.once", "listener", listener);
                 function onceListener(event) {
                     session.off(eventName, onceListener);
                     listener(event);
@@ -4444,46 +4941,52 @@ module.exports = function (bridge) {
             },
 
             setPosition: function (nextX, nextY) {
-                if (session.closed || activityLikeMode) {
+                var resolvedX = nextX == null ? null : argNumber("Session.setPosition", "x", nextX) * density;
+                var resolvedY = nextY == null ? null : argNumber("Session.setPosition", "y", nextY) * density;
+                if (state.closed || activityLikeMode) {
                     return session;
                 }
-                applySessionPosition(nextX, nextY, "api", true);
+                applySessionPosition(resolvedX, resolvedY, "api", true);
                 return session;
             },
 
             setSize: function (nextWidth, nextHeight) {
-                if (session.closed) {
+                var resolvedWidth = nextWidth == null
+                    ? null
+                    : argNumber("Session.setSize", "width", nextWidth, undefined, 1) * density;
+                var resolvedHeight = nextHeight == null
+                    ? null
+                    : argNumber("Session.setSize", "height", nextHeight, undefined, 1) * density;
+                if (state.closed) {
                     return session;
                 }
                 if (activityMode) {
                     refreshActivitySize("api");
-                } else if (privilegedMode) {
-                    return session;
-                } else {
-                    applySessionSize(nextWidth, nextHeight, "api", true);
+                } else if (!privilegedMode) {
+                    applySessionSize(resolvedWidth, resolvedHeight, "api", true);
                 }
                 return session;
             },
 
             setTouchable: function (nextMode) {
-                if (session.closed) {
+                var resolvedMode = resolveTouchMode(nextMode, "Session.setTouchable", "touchMode");
+                if (state.closed) {
                     return session;
                 }
-                var resolvedMode = resolveTouchMode(nextMode);
-                if (session.touchMode !== resolvedMode) {
-                    session.touchMode = resolvedMode;
+                if (state.touchMode !== resolvedMode) {
+                    state.touchMode = resolvedMode;
                     applyTouchMode(true);
                 }
                 return session;
             },
 
             setMoreTouch: function (enabled) {
-                if (session.closed) {
+                if (state.closed) {
                     return session;
                 }
                 var resolvedMoreTouch = Boolean(enabled);
-                if (session.moreTouch !== resolvedMoreTouch) {
-                    session.moreTouch = resolvedMoreTouch;
+                if (state.moreTouch !== resolvedMoreTouch) {
+                    state.moreTouch = resolvedMoreTouch;
                     applyHostMoreTouch(resolvedMoreTouch);
                     for (var buttonIndex = 0; buttonIndex < session._buttons.length; buttonIndex += 1) {
                         session._buttons[buttonIndex].setMoreTouch(resolvedMoreTouch);
@@ -4494,16 +4997,16 @@ module.exports = function (bridge) {
             },
 
             setAlpha: function (nextAlpha) {
-                if (session.closed) {
+                var resolvedAlpha = argNumber("Session.setAlpha", "alpha", nextAlpha, undefined, 0, 1);
+                if (state.closed) {
                     return session;
                 }
-                var resolvedAlpha = clamp(requiredNumber(nextAlpha, "Window alpha"), 0, 1);
                 if (privilegedMode && resolvedAlpha !== 1) {
                     throw new Error("Privileged windows do not yet support host-layer alpha");
                 }
-                if (session.alpha !== resolvedAlpha) {
-                    session.alpha = resolvedAlpha;
-                    if (!session.collapsed) {
+                if (state.alpha !== resolvedAlpha) {
+                    state.alpha = resolvedAlpha;
+                    if (!state.collapsed) {
                         applyHostAlpha(resolvedAlpha);
                     }
                     emitSessionEvent("alphaChanged", {alpha: resolvedAlpha});
@@ -4512,7 +5015,7 @@ module.exports = function (bridge) {
             },
 
             setSecure: function (nextSecure) {
-                if (session.closed) {
+                if (state.closed) {
                     return session;
                 }
                 var resolvedSecure = Boolean(nextSecure);
@@ -4521,8 +5024,8 @@ module.exports = function (bridge) {
                         "Privileged windows do not yet support secure SurfaceControl layers"
                     );
                 }
-                if (session.secure !== resolvedSecure) {
-                    session.secure = resolvedSecure;
+                if (state.secure !== resolvedSecure) {
+                    state.secure = resolvedSecure;
                     bridge.setWindowSecure(surfaceView, resolvedSecure);
                     session._touchRegionSignature = null;
                     for (var buttonIndex = 0; buttonIndex < session._buttons.length; buttonIndex += 1) {
@@ -4544,7 +5047,7 @@ module.exports = function (bridge) {
             },
 
             toggleCollapsed: function () {
-                return session.collapsed ? session.expand() : session.collapse();
+                return state.collapsed ? session.expand() : session.collapse();
             },
 
             addButtonEx: function (label, callback, buttonOptions) {
@@ -4576,43 +5079,11 @@ module.exports = function (bridge) {
             },
 
             singleChoice: function () {
-                var config = parseChoiceDialog("singleChoice", arguments);
-                var dialog = createDialog(session, "singleChoice", config);
-                dialog.items = config.items;
-                dialog.selectedIndex = integer(config.selected, -1);
-                return dialog.promise;
+                return openSingleChoice(session, arguments);
             },
 
             multiChoice: function () {
-                var config = parseChoiceDialog("multiChoice", arguments);
-                var dialog = createDialog(session, "multiChoice", config);
-                dialog.items = config.items;
-                dialog.choiceRefs = [];
-                var selected = config.selected || [];
-                var booleanSelection = selected.length === dialog.items.length &&
-                    (selected.length === 0 || typeof selected[0] === "boolean");
-                for (var itemIndex = 0; itemIndex < dialog.items.length; itemIndex += 1) {
-                    var isSelected = booleanSelection ? Boolean(selected[itemIndex]) : false;
-                    if (!booleanSelection) {
-                        for (var selectedIndex = 0; selectedIndex < selected.length; selectedIndex += 1) {
-                            if (integer(selected[selectedIndex], -1) === itemIndex) {
-                                isSelected = true;
-                                break;
-                            }
-                        }
-                    }
-                    dialog.choiceRefs.push(valueRef(isSelected));
-                }
-                dialog.selectedIndices = function () {
-                    var result = [];
-                    for (var choiceIndex = 0; choiceIndex < dialog.choiceRefs.length; choiceIndex += 1) {
-                        if (dialog.choiceRefs[choiceIndex].value) {
-                            result.push(choiceIndex);
-                        }
-                    }
-                    return result;
-                };
-                return dialog.promise;
+                return openMultiChoice(session, arguments);
             },
 
             statsOverlay: function (id, componentOptions) {
@@ -4632,16 +5103,56 @@ module.exports = function (bridge) {
             },
 
             close: function (reason) {
-                if (session.closed) {
+                if (state.closed) {
                     return;
                 }
-                session.closeReason = reason || "closed";
+                state.closeReason = reason || "closed";
                 session._closeRequested = true;
                 if (!session._inFrame) {
                     finalizeClose();
                 }
             }
         };
+
+        // Read-only session fields (R1.3): positions and sizes in dp, as the createWindow options are.
+        defineReadOnlyFields(session, {
+            window: function () { return windowObject; },
+            surfaceView: function () { return surfaceView; },
+            surface: function () { return privilegedSurface; },
+            imeView: function () { return state.imeView; },
+            mode: function () { return mode; },
+            privilegedBackend: function () { return privilegedMode ? privilegedBackend : null; },
+            density: function () { return density; },
+            displayWidth: function () { return toDp(state.displayWidth); },
+            displayHeight: function () { return toDp(state.displayHeight); },
+            width: function () { return toDp(state.width); },
+            height: function () { return toDp(state.height); },
+            x: function () { return toDp(state.x); },
+            y: function () { return toDp(state.y); },
+            alpha: function () { return state.alpha; },
+            secure: function () { return state.secure; },
+            moreTouch: function () { return state.moreTouch; },
+            touchMode: function () { return state.touchMode; },
+            touchable: function () { return state.touchable; },
+            interactiveRegionCount: function () { return state.interactiveRegionCount; },
+            collapsed: function () { return state.collapsed; },
+            fps: function () { return fps; },
+            collapsedFps: function () { return collapsedFps; },
+            frameScheduler: function () { return "deadline-timer"; },
+            iniPath: function () { return iniPath; },
+            debug: function () { return debug; },
+            ready: function () { return state.ready; },
+            closed: function () { return state.closed; },
+            closeReason: function () { return state.closeReason; },
+            theme: function () {
+                return api._activeSession === session && api._theme != null ? api._theme : state.theme;
+            },
+            appearance: function () { return appearanceName; },
+            fonts: function () { return fontHandles; },
+            textures: function () { return managedTextures; },
+            buttons: function () { return managedButtons; },
+            components: function () { return highLevelRuntime.components; }
+        });
 
         var eventOptionNames = {
             moved: "onMoved",
@@ -4677,6 +5188,7 @@ module.exports = function (bridge) {
 
         api._activeSession = session;
 
+        // Listeners run on the script thread with the listeners registered when the event was raised.
         function emitSessionEvent(eventName, details) {
             var event = {
                 type: String(eventName),
@@ -4686,23 +5198,24 @@ module.exports = function (bridge) {
             copyOwnProperties(event, details);
             var listeners = eventListeners[eventName];
             if (!listeners || listeners.length === 0) {
-                return event;
+                return;
             }
             listeners = listeners.slice();
-            for (var listenerIndex = 0; listenerIndex < listeners.length; listenerIndex += 1) {
-                try {
-                    listeners[listenerIndex](event, session);
-                } catch (error) {
-                    if (eventName === "error") {
-                        printError("Session 'error' listener", error);
-                    } else {
-                        reportSessionError("event", "Session '" + eventName + "' listener", error, {
-                            event: String(eventName)
-                        });
+            runOnScriptThread(function () {
+                for (var listenerIndex = 0; listenerIndex < listeners.length; listenerIndex += 1) {
+                    try {
+                        listeners[listenerIndex](event, session);
+                    } catch (error) {
+                        if (eventName === "error") {
+                            printError("Session 'error' listener", error);
+                        } else {
+                            reportSessionError("event", "Session '" + eventName + "' listener", error, {
+                                event: String(eventName)
+                            });
+                        }
                     }
                 }
-            }
-            return event;
+            });
         }
 
         var lastReportedError = null;
@@ -4756,7 +5269,7 @@ module.exports = function (bridge) {
                 return;
             }
             try {
-                bridge.setWindowAlpha(surfaceView, clamp(number(alpha, 1), 0, 1));
+                bridge.setWindowAlpha(surfaceView, alpha);
             } catch (error) {
                 console.warn("[imgui] Unable to update host alpha: " + error);
             }
@@ -4804,8 +5317,8 @@ module.exports = function (bridge) {
         }
 
         function applyTouchMode(emitChange) {
-            var previousTouchable = session.touchable;
-            var previousRegionCount = session.interactiveRegionCount;
+            var previousTouchable = state.touchable;
+            var previousRegionCount = state.interactiveRegionCount;
             if (!privilegedMode) {
                 try {
                     bridge.clearWindowTouchableRegion(surfaceView);
@@ -4814,14 +5327,14 @@ module.exports = function (bridge) {
                 }
             }
             session._touchRegionSignature = null;
-            session.interactiveRegionCount = 0;
-            if (session.collapsed || session.touchMode === api.TouchMode.Passthrough) {
-                session.touchable = false;
+            state.interactiveRegionCount = 0;
+            if (state.collapsed || state.touchMode === api.TouchMode.Passthrough) {
+                state.touchable = false;
                 setHostTouchable(false);
             } else {
-                session.touchable = true;
+                state.touchable = true;
                 setHostTouchable(true);
-                if (!privilegedMode && session.touchMode === api.TouchMode.Auto) {
+                if (!privilegedMode && state.touchMode === api.TouchMode.Auto) {
                     try {
                         bridge.setWindowTouchableRegion(surfaceView, floatArray([]));
                         session._touchRegionSignature = "";
@@ -4830,26 +5343,26 @@ module.exports = function (bridge) {
                     }
                 }
             }
-            if (emitChange && (previousTouchable !== session.touchable ||
-                previousRegionCount !== session.interactiveRegionCount
+            if (emitChange && (previousTouchable !== state.touchable ||
+                previousRegionCount !== state.interactiveRegionCount
             )) {
                 emitSessionEvent("touchableChanged", {
-                    mode: session.touchMode,
-                    touchable: session.touchable,
-                    interactiveRegionCount: session.interactiveRegionCount
+                    mode: state.touchMode,
+                    touchable: state.touchable,
+                    interactiveRegionCount: state.interactiveRegionCount
                 });
             } else if (emitChange) {
                 emitSessionEvent("touchableChanged", {
-                    mode: session.touchMode,
-                    touchable: session.touchable,
-                    interactiveRegionCount: session.interactiveRegionCount
+                    mode: state.touchMode,
+                    touchable: state.touchable,
+                    interactiveRegionCount: state.interactiveRegionCount
                 });
             }
         }
 
         function updateTouchableRegion() {
-            if (privilegedMode || session.closed || session.collapsed || !session.ready || pointerDown ||
-                session.touchMode !== api.TouchMode.Auto
+            if (privilegedMode || state.closed || state.collapsed || !state.ready || pointerDown ||
+                state.touchMode !== api.TouchMode.Auto
             ) {
                 return;
             }
@@ -4859,22 +5372,22 @@ module.exports = function (bridge) {
             }
             var signatureParts = [];
             for (var rectangleIndex = 0; rectangleIndex < rectangles.length; rectangleIndex += 1) {
-                signatureParts.push(Math.round(number(rectangles[rectangleIndex], 0) * 2));
+                signatureParts.push(Math.round((Number(rectangles[rectangleIndex]) || 0) * 2));
             }
             var signature = signatureParts.join(",");
             if (session._touchRegionSignature === signature) {
                 return;
             }
-            var previousCount = session.interactiveRegionCount;
+            var previousCount = state.interactiveRegionCount;
             if (bridge.setWindowTouchableRegion(surfaceView, rectangles)) {
                 session._touchRegionSignature = signature;
-                session.interactiveRegionCount = Math.floor(rectangles.length / 4);
-                session.touchable = session.interactiveRegionCount > 0;
-                if (previousCount !== session.interactiveRegionCount) {
+                state.interactiveRegionCount = Math.floor(rectangles.length / 4);
+                state.touchable = state.interactiveRegionCount > 0;
+                if (previousCount !== state.interactiveRegionCount) {
                     emitSessionEvent("touchableChanged", {
-                        mode: session.touchMode,
-                        touchable: session.touchable,
-                        interactiveRegionCount: session.interactiveRegionCount
+                        mode: state.touchMode,
+                        touchable: state.touchable,
+                        interactiveRegionCount: state.interactiveRegionCount
                     });
                 }
             }
@@ -4884,35 +5397,39 @@ module.exports = function (bridge) {
             if (activityLikeMode) {
                 return;
             }
-            var resolvedX = clamp(
-                integer(nextX, session.x),
-                0,
-                Math.max(0, session.displayWidth - session.width)
-            );
-            var resolvedY = clamp(
-                integer(nextY, session.y),
-                0,
-                Math.max(0, session.displayHeight - session.height)
-            );
+            var requestedX = nextX == null ? state.x : Math.round(nextX);
+            var requestedY = nextY == null ? state.y : Math.round(nextY);
+            var resolvedX = clamp(requestedX, 0, Math.max(0, state.displayWidth - state.width));
+            var resolvedY = clamp(requestedY, 0, Math.max(0, state.displayHeight - state.height));
             if (remember) {
-                session._preferredX = integer(nextX, resolvedX);
-                session._preferredY = integer(nextY, resolvedY);
+                session._preferredX = requestedX;
+                session._preferredY = requestedY;
             }
-            if (resolvedX === session.x && resolvedY === session.y) {
+            if (resolvedX === state.x && resolvedY === state.y) {
                 return;
             }
-            var oldX = session.x;
-            var oldY = session.y;
-            session.x = resolvedX;
-            session.y = resolvedY;
+            var oldX = state.x;
+            var oldY = state.y;
+            state.x = resolvedX;
+            state.y = resolvedY;
             session._touchRegionSignature = null;
             windowObject.setPosition(resolvedX, resolvedY);
             emitSessionEvent("moved", {
-                x: resolvedX,
-                y: resolvedY,
-                oldX: oldX,
-                oldY: oldY,
+                x: toDp(resolvedX),
+                y: toDp(resolvedY),
+                oldX: toDp(oldX),
+                oldY: toDp(oldY),
                 source: source || "api"
+            });
+        }
+
+        function emitResized(oldWidth, oldHeight, source) {
+            emitSessionEvent("resized", {
+                width: toDp(state.width),
+                height: toDp(state.height),
+                oldWidth: toDp(oldWidth),
+                oldHeight: toDp(oldHeight),
+                source: source
             });
         }
 
@@ -4920,61 +5437,57 @@ module.exports = function (bridge) {
             if (activityLikeMode) {
                 return;
             }
-            var requestedNextWidth = Math.max(1, integer(nextWidth, session.width));
-            var requestedNextHeight = Math.max(1, integer(nextHeight, session.height));
+            var requestedNextWidth = Math.max(1, nextWidth == null ? state.width : Math.round(nextWidth));
+            var requestedNextHeight = Math.max(1, nextHeight == null ? state.height : Math.round(nextHeight));
             if (remember) {
                 session._preferredWidth = requestedNextWidth;
                 session._preferredHeight = requestedNextHeight;
             }
-            var resolvedWidth = Math.min(requestedNextWidth, Math.max(1, session.displayWidth));
-            var resolvedHeight = Math.min(requestedNextHeight, Math.max(1, session.displayHeight));
-            if (resolvedWidth === session.width && resolvedHeight === session.height) {
+            var resolvedWidth = Math.min(requestedNextWidth, Math.max(1, state.displayWidth));
+            var resolvedHeight = Math.min(requestedNextHeight, Math.max(1, state.displayHeight));
+            if (resolvedWidth === state.width && resolvedHeight === state.height) {
                 return;
             }
-            var oldWidth = session.width;
-            var oldHeight = session.height;
-            session.width = resolvedWidth;
-            session.height = resolvedHeight;
+            var oldWidth = state.width;
+            var oldHeight = state.height;
+            state.width = resolvedWidth;
+            state.height = resolvedHeight;
             session._touchRegionSignature = null;
-            if (!session.collapsed) {
+            if (!state.collapsed) {
                 windowObject.setSize(resolvedWidth, resolvedHeight);
             }
-            applySessionPosition(session.x, session.y, source || "resize", false);
-            emitSessionEvent("resized", {
-                width: resolvedWidth,
-                height: resolvedHeight,
-                oldWidth: oldWidth,
-                oldHeight: oldHeight,
-                source: source || "api"
-            });
+            applySessionPosition(state.x, state.y, source || "resize", false);
+            emitResized(oldWidth, oldHeight, source || "api");
+        }
+
+        // The activity view and the overlay's SurfaceView report their own size.
+        function updateSurfaceSize(nextWidth, nextHeight, source) {
+            nextWidth = hostPixels(nextWidth, state.width);
+            nextHeight = hostPixels(nextHeight, state.height);
+            if (nextWidth === state.width && nextHeight === state.height) {
+                return false;
+            }
+            var oldWidth = state.width;
+            var oldHeight = state.height;
+            state.width = nextWidth;
+            state.height = nextHeight;
+            emitResized(oldWidth, oldHeight, source);
+            return true;
         }
 
         function refreshActivitySize(source) {
-            if (!activityMode || session.closed) {
+            if (!activityMode || state.closed) {
                 return false;
             }
             var size = bridge.getViewSize(surfaceView);
             if (size == null || size.length < 2 || size[0] <= 0 || size[1] <= 0) {
                 return false;
             }
-            var nextWidth = integer(size[0], session.width);
-            var nextHeight = integer(size[1], session.height);
-            if (nextWidth === session.width && nextHeight === session.height) {
+            if (!updateSurfaceSize(size[0], size[1], source || "activity")) {
                 return false;
             }
-            var oldWidth = session.width;
-            var oldHeight = session.height;
-            session.width = nextWidth;
-            session.height = nextHeight;
-            session._preferredWidth = nextWidth;
-            session._preferredHeight = nextHeight;
-            emitSessionEvent("resized", {
-                width: nextWidth,
-                height: nextHeight,
-                oldWidth: oldWidth,
-                oldHeight: oldHeight,
-                source: source || "activity"
-            });
+            session._preferredWidth = state.width;
+            session._preferredHeight = state.height;
             return true;
         }
 
@@ -4985,17 +5498,17 @@ module.exports = function (bridge) {
             }
             session._lastConfigurationCheck = now;
             var currentMetrics = context.getResources().getDisplayMetrics();
-            var nextDisplayWidth = Math.max(1, integer(currentMetrics.widthPixels, session.displayWidth));
-            var nextDisplayHeight = Math.max(1, integer(currentMetrics.heightPixels, session.displayHeight));
-            var changed = nextDisplayWidth !== session.displayWidth ||
-                nextDisplayHeight !== session.displayHeight;
+            var nextDisplayWidth = hostPixels(currentMetrics.widthPixels, state.displayWidth);
+            var nextDisplayHeight = hostPixels(currentMetrics.heightPixels, state.displayHeight);
+            var changed = nextDisplayWidth !== state.displayWidth ||
+                nextDisplayHeight !== state.displayHeight;
             if (!changed && !force) {
                 return;
             }
-            var oldDisplayWidth = session.displayWidth;
-            var oldDisplayHeight = session.displayHeight;
-            session.displayWidth = nextDisplayWidth;
-            session.displayHeight = nextDisplayHeight;
+            var oldDisplayWidth = state.displayWidth;
+            var oldDisplayHeight = state.displayHeight;
+            state.displayWidth = nextDisplayWidth;
+            state.displayHeight = nextDisplayHeight;
             displayWidth = nextDisplayWidth;
             displayHeight = nextDisplayHeight;
             if (options.contentMaxWidth == null) {
@@ -5018,52 +5531,57 @@ module.exports = function (bridge) {
                     false
                 );
                 applySessionPosition(
-                    clamp(session._preferredX, 0, Math.max(0, nextDisplayWidth - session.width)),
-                    clamp(session._preferredY, 0, Math.max(0, nextDisplayHeight - session.height)),
+                    clamp(session._preferredX, 0, Math.max(0, nextDisplayWidth - state.width)),
+                    clamp(session._preferredY, 0, Math.max(0, nextDisplayHeight - state.height)),
                     "configuration",
                     false
                 );
             }
             for (var buttonIndex = 0; buttonIndex < session._buttons.length; buttonIndex += 1) {
-                var button = session._buttons[buttonIndex];
-                button.setPosition(button.x, button.y, "configuration");
+                session._buttons[buttonIndex]._relayout();
             }
             emitSessionEvent("configurationChanged", {
-                width: nextDisplayWidth,
-                height: nextDisplayHeight,
-                oldWidth: oldDisplayWidth,
-                oldHeight: oldDisplayHeight,
+                width: toDp(nextDisplayWidth),
+                height: toDp(nextDisplayHeight),
+                oldWidth: toDp(oldDisplayWidth),
+                oldHeight: toDp(oldDisplayHeight),
                 orientation: nextDisplayWidth >= nextDisplayHeight ? "landscape" : "portrait"
             });
         }
 
         function updateContentAutoSize() {
-            if (activityLikeMode || session.collapsed || !contentAutoResize || !session.ready) {
+            if (activityLikeMode || state.collapsed || !contentAutoResize || !state.ready) {
                 return;
             }
             var bounds = bridge.getAutoResizeBounds();
             if (bounds == null || bounds.length < 4) {
                 return;
             }
+            var contentWidth = Number(bounds[2]);
+            var contentHeight = Number(bounds[3]);
+            if (!isFinite(contentWidth) || !isFinite(contentHeight)) {
+                return;
+            }
             var targetWidth = clamp(
-                Math.ceil(number(bounds[2], session.width) + contentPadding),
+                Math.ceil(contentWidth + contentPadding),
                 contentMinWidth,
-                Math.min(contentMaxWidth, session.displayWidth)
+                Math.min(contentMaxWidth, state.displayWidth)
             );
             var targetHeight = clamp(
-                Math.ceil(number(bounds[3], session.height) + contentPadding),
+                Math.ceil(contentHeight + contentPadding),
                 contentMinHeight,
-                Math.min(contentMaxHeight, session.displayHeight)
+                Math.min(contentMaxHeight, state.displayHeight)
             );
-            if (Math.abs(targetWidth - session.width) >= 2 ||
-                Math.abs(targetHeight - session.height) >= 2
+            if (Math.abs(targetWidth - state.width) >= 2 ||
+                Math.abs(targetHeight - state.height) >= 2
             ) {
                 applySessionSize(targetWidth, targetHeight, "content", true);
             }
         }
 
+        // Companion buttons take dp options and expose read-only dp fields, as the session does.
         function createFloatingButton(label, callback, buttonOptions) {
-            if (session.closed) {
+            if (state.closed) {
                 throw new Error("Cannot add a button to a closed ImGui session");
             }
             if (privilegedMode) {
@@ -5076,182 +5594,188 @@ module.exports = function (bridge) {
                     buttonOptions = callback;
                     callback = null;
                 } else {
-                    throw new TypeError("addButtonEx callback must be a function");
+                    throw new TypeError(argumentLabel("addButtonEx", "callback") + " must be a function");
                 }
             }
             buttonOptions = buttonOptions || {};
-            var buttonWidth = Math.max(
-                1,
-                integer(number(buttonOptions.width, number(buttonOptions.size, 56)) * density, 56)
-            );
-            var buttonHeight = Math.max(
-                1,
-                integer(number(buttonOptions.height, number(buttonOptions.size, 56)) * density, 56)
-            );
+            if (buttonOptions.onMoved != null && typeof buttonOptions.onMoved !== "function") {
+                throw new TypeError(argumentLabel("addButtonEx", "options.onMoved") + " must be a function");
+            }
+
+            function buttonOption(name, fallback, min, max) {
+                return argNumber("addButtonEx", "options." + name, buttonOptions[name], fallback, min, max);
+            }
+
+            var buttonSize = buttonOption("size", 56, 1);
+            var buttonWidth = Math.max(1, Math.round(buttonOption("width", buttonSize, 1) * density));
+            var buttonHeight = Math.max(1, Math.round(buttonOption("height", buttonSize, 1) * density));
             var buttonX = clamp(
-                integer(buttonOptions.x, session.x + Math.max(0, session.width - buttonWidth)),
+                buttonOptions.x == null
+                    ? state.x + Math.max(0, state.width - buttonWidth)
+                    : Math.round(buttonOption("x") * density),
                 0,
-                Math.max(0, session.displayWidth - buttonWidth)
+                Math.max(0, state.displayWidth - buttonWidth)
             );
             var buttonY = clamp(
-                integer(buttonOptions.y, session.y),
+                buttonOptions.y == null ? state.y : Math.round(buttonOption("y") * density),
                 0,
-                Math.max(0, session.displayHeight - buttonHeight)
+                Math.max(0, state.displayHeight - buttonHeight)
             );
-            var buttonAlpha = clamp(number(buttonOptions.alpha, 1), 0, 1);
-            var buttonSecure = buttonOptions.secure == null
-                ? session.secure
-                : Boolean(buttonOptions.secure);
-            var buttonMoreTouch = buttonOptions.moreTouch == null
-                ? session.moreTouch
-                : Boolean(buttonOptions.moreTouch);
-            var buttonTouchable = buttonOptions.touchable !== false;
-            var buttonVisible = buttonOptions.visible !== false && buttonOptions.hidden !== true;
-            var buttonDraggable = buttonOptions.draggable !== false;
-            var buttonWindow = floaty.rawWindow(
-                '<frame bg="#00000000"><text id="imgui_button" w="*" h="*" gravity="center" /></frame>'
-            );
-            var buttonView = buttonWindow.imgui_button;
-            var background = new GradientDrawable();
-            background.setShape(GradientDrawable.RECTANGLE);
-            background.setColor(androidColor(
+            var buttonAlpha = buttonOption("alpha", 1, 0, 1);
+            var backgroundColor = androidColor(
                 buttonOptions.backgroundColor,
                 [0.345, 0.396, 0.949, 0.92],
-                "Button backgroundColor"
-            ));
-            background.setCornerRadius(Math.max(
-                0,
-                number(buttonOptions.rounding, Math.min(buttonWidth, buttonHeight) / density / 2) * density
-            ));
-            var strokeWidth = Math.max(0, integer(number(buttonOptions.borderWidth, 1) * density, 1));
-            if (strokeWidth > 0) {
-                background.setStroke(strokeWidth, androidColor(
-                    buttonOptions.borderColor,
-                    [1, 1, 1, 0.32],
-                    "Button borderColor"
-                ));
-            }
-            buttonView.setBackground(background);
-            buttonView.setText(String(label == null ? "" : label));
-            buttonView.setTextColor(androidColor(
-                buttonOptions.textColor,
-                [1, 1, 1, 1],
-                "Button textColor"
-            ));
-            buttonView.setTextSize(
-                android.util.TypedValue.COMPLEX_UNIT_SP,
-                number(buttonOptions.textSize, 16)
+                "addButtonEx",
+                "options.backgroundColor"
             );
-            buttonView.setGravity(Gravity.CENTER);
-            if (android.os.Build.VERSION.SDK_INT >= 21) {
-                buttonView.setElevation(Math.max(0, number(buttonOptions.elevation, 8) * density));
-            }
-            buttonWindow.setSize(buttonVisible ? buttonWidth : 1, buttonVisible ? buttonHeight : 1);
-            buttonWindow.setPosition(buttonX, buttonY);
-
-            var floatingButton = {
-                window: buttonWindow,
-                view: buttonView,
-                session: session,
+            var borderColor = androidColor(
+                buttonOptions.borderColor,
+                [1, 1, 1, 0.32],
+                "addButtonEx",
+                "options.borderColor"
+            );
+            var textColor = androidColor(buttonOptions.textColor, [1, 1, 1, 1], "addButtonEx", "options.textColor");
+            var cornerRadius = buttonOption("rounding", Math.min(buttonWidth, buttonHeight) / density / 2, 0) * density;
+            var strokeWidth = Math.round(buttonOption("borderWidth", 1, 0) * density);
+            var textSize = buttonOption("textSize", 16, 1);
+            var elevation = buttonOption("elevation", 8, 0) * density;
+            var buttonDraggable = buttonOptions.draggable !== false;
+            // Internal state, positions and sizes in px.
+            var button = {
                 text: String(label == null ? "" : label),
                 x: buttonX,
                 y: buttonY,
                 width: buttonWidth,
                 height: buttonHeight,
                 alpha: buttonAlpha,
-                secure: buttonSecure,
-                moreTouch: buttonMoreTouch,
-                visible: buttonVisible,
-                touchable: buttonTouchable,
-                closed: false,
+                secure: buttonOptions.secure == null ? state.secure : Boolean(buttonOptions.secure),
+                moreTouch: buttonOptions.moreTouch == null ? state.moreTouch : Boolean(buttonOptions.moreTouch),
+                visible: buttonOptions.visible !== false && buttonOptions.hidden !== true,
+                touchable: buttonOptions.touchable !== false,
+                closed: false
+            };
+            var buttonWindow = floaty.rawWindow(
+                '<frame bg="#00000000"><text id="imgui_button" w="*" h="*" gravity="center" /></frame>'
+            );
+            var buttonView = buttonWindow.imgui_button;
+            var background = new GradientDrawable();
+            background.setShape(GradientDrawable.RECTANGLE);
+            background.setColor(backgroundColor);
+            background.setCornerRadius(cornerRadius);
+            if (strokeWidth > 0) {
+                background.setStroke(strokeWidth, borderColor);
+            }
+            buttonView.setBackground(background);
+            buttonView.setText(button.text);
+            buttonView.setTextColor(textColor);
+            buttonView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, textSize);
+            buttonView.setGravity(Gravity.CENTER);
+            if (android.os.Build.VERSION.SDK_INT >= 21) {
+                buttonView.setElevation(elevation);
+            }
+            buttonWindow.setSize(button.visible ? buttonWidth : 1, button.visible ? buttonHeight : 1);
+            buttonWindow.setPosition(buttonX, buttonY);
 
-                setPosition: function (nextX, nextY, source) {
-                    if (floatingButton.closed) {
-                        return floatingButton;
-                    }
-                    var resolvedX = clamp(
-                        integer(nextX, floatingButton.x),
-                        0,
-                        Math.max(0, session.displayWidth - floatingButton.width)
-                    );
-                    var resolvedY = clamp(
-                        integer(nextY, floatingButton.y),
-                        0,
-                        Math.max(0, session.displayHeight - floatingButton.height)
-                    );
-                    if (resolvedX === floatingButton.x && resolvedY === floatingButton.y) {
-                        return floatingButton;
-                    }
-                    floatingButton.x = resolvedX;
-                    floatingButton.y = resolvedY;
-                    buttonWindow.setPosition(resolvedX, resolvedY);
-                    if (typeof buttonOptions.onMoved === "function") {
-                        buttonOptions.onMoved({
-                            button: floatingButton,
-                            session: session,
-                            x: resolvedX,
-                            y: resolvedY,
-                            source: source || "api"
-                        });
-                    }
+            function moveButton(nextX, nextY, source) {
+                if (button.closed) {
+                    return;
+                }
+                var resolvedX = clamp(
+                    nextX == null ? button.x : Math.round(nextX),
+                    0,
+                    Math.max(0, state.displayWidth - button.width)
+                );
+                var resolvedY = clamp(
+                    nextY == null ? button.y : Math.round(nextY),
+                    0,
+                    Math.max(0, state.displayHeight - button.height)
+                );
+                if (resolvedX === button.x && resolvedY === button.y) {
+                    return;
+                }
+                button.x = resolvedX;
+                button.y = resolvedY;
+                buttonWindow.setPosition(resolvedX, resolvedY);
+                if (typeof buttonOptions.onMoved === "function") {
+                    var movedEvent = {
+                        button: floatingButton,
+                        session: session,
+                        x: toDp(resolvedX),
+                        y: toDp(resolvedY),
+                        source: source
+                    };
+                    runOnScriptThread(function () {
+                        try {
+                            buttonOptions.onMoved(movedEvent);
+                        } catch (error) {
+                            reportSessionError("event", "Floating button onMoved", error, {
+                                event: "buttonMoved",
+                                button: floatingButton
+                            });
+                        }
+                    });
+                }
+            }
+
+            var floatingButton = {
+                setPosition: function (nextX, nextY) {
+                    var resolvedX = nextX == null ? null : argNumber("Button.setPosition", "x", nextX) * density;
+                    var resolvedY = nextY == null ? null : argNumber("Button.setPosition", "y", nextY) * density;
+                    moveButton(resolvedX, resolvedY, "api");
                     return floatingButton;
                 },
 
                 setText: function (nextText) {
-                    if (!floatingButton.closed) {
-                        floatingButton.text = String(nextText == null ? "" : nextText);
-                        buttonView.setText(floatingButton.text);
+                    if (!button.closed) {
+                        button.text = String(nextText == null ? "" : nextText);
+                        buttonView.setText(button.text);
                     }
                     return floatingButton;
                 },
 
                 setAlpha: function (nextAlpha) {
-                    if (!floatingButton.closed) {
-                        floatingButton.alpha = clamp(requiredNumber(nextAlpha, "Button alpha"), 0, 1);
-                        bridge.setWindowAlpha(
-                            buttonView,
-                            floatingButton.visible ? floatingButton.alpha : 0
-                        );
+                    var resolvedAlpha = argNumber("Button.setAlpha", "alpha", nextAlpha, undefined, 0, 1);
+                    if (!button.closed) {
+                        button.alpha = resolvedAlpha;
+                        bridge.setWindowAlpha(buttonView, button.visible ? button.alpha : 0);
                     }
                     return floatingButton;
                 },
 
                 setSecure: function (nextSecure) {
-                    if (!floatingButton.closed) {
-                        floatingButton.secure = Boolean(nextSecure);
-                        bridge.setWindowSecure(buttonView, floatingButton.secure);
+                    if (!button.closed) {
+                        button.secure = Boolean(nextSecure);
+                        bridge.setWindowSecure(buttonView, button.secure);
                     }
                     return floatingButton;
                 },
 
                 setMoreTouch: function (enabled) {
-                    if (!floatingButton.closed) {
-                        floatingButton.moreTouch = Boolean(enabled);
-                        bridge.setWindowSplitTouch(buttonView, floatingButton.moreTouch);
+                    if (!button.closed) {
+                        button.moreTouch = Boolean(enabled);
+                        bridge.setWindowSplitTouch(buttonView, button.moreTouch);
                     }
                     return floatingButton;
                 },
 
                 setTouchable: function (nextTouchable) {
-                    if (!floatingButton.closed) {
-                        floatingButton.touchable = Boolean(nextTouchable);
-                        buttonWindow.setTouchable(
-                            floatingButton.visible && floatingButton.touchable
-                        );
+                    if (!button.closed) {
+                        button.touchable = Boolean(nextTouchable);
+                        buttonWindow.setTouchable(button.visible && button.touchable);
                     }
                     return floatingButton;
                 },
 
                 setVisible: function (visible) {
-                    if (floatingButton.closed) {
+                    if (button.closed) {
                         return floatingButton;
                     }
-                    floatingButton.visible = Boolean(visible);
-                    if (floatingButton.visible) {
-                        buttonWindow.setSize(floatingButton.width, floatingButton.height);
-                        buttonWindow.setPosition(floatingButton.x, floatingButton.y);
-                        bridge.setWindowAlpha(buttonView, floatingButton.alpha);
-                        buttonWindow.setTouchable(floatingButton.touchable);
+                    button.visible = Boolean(visible);
+                    if (button.visible) {
+                        buttonWindow.setSize(button.width, button.height);
+                        buttonWindow.setPosition(button.x, button.y);
+                        bridge.setWindowAlpha(buttonView, button.alpha);
+                        buttonWindow.setTouchable(button.touchable);
                     } else {
                         buttonWindow.setTouchable(false);
                         bridge.setWindowAlpha(buttonView, 0);
@@ -5269,10 +5793,10 @@ module.exports = function (bridge) {
                 },
 
                 close: function () {
-                    if (floatingButton.closed) {
+                    if (button.closed) {
                         return;
                     }
-                    floatingButton.closed = true;
+                    button.closed = true;
                     try {
                         buttonWindow.close();
                     } catch (ignored) {
@@ -5285,8 +5809,29 @@ module.exports = function (bridge) {
                     if (session._collapseButton === floatingButton) {
                         session._collapseButton = null;
                     }
+                },
+
+                // Keeps the button on screen after a display change.
+                _relayout: function () {
+                    moveButton(button.x, button.y, "configuration");
                 }
             };
+            defineReadOnlyFields(floatingButton, {
+                window: function () { return buttonWindow; },
+                view: function () { return buttonView; },
+                session: function () { return session; },
+                text: function () { return button.text; },
+                x: function () { return toDp(button.x); },
+                y: function () { return toDp(button.y); },
+                width: function () { return toDp(button.width); },
+                height: function () { return toDp(button.height); },
+                alpha: function () { return button.alpha; },
+                secure: function () { return button.secure; },
+                moreTouch: function () { return button.moreTouch; },
+                visible: function () { return button.visible; },
+                touchable: function () { return button.touchable; },
+                closed: function () { return button.closed; }
+            });
 
             var buttonDownRawX = 0;
             var buttonDownRawY = 0;
@@ -5294,7 +5839,7 @@ module.exports = function (bridge) {
             var buttonOriginY = buttonY;
             var buttonDragging = false;
             buttonView.setOnTouchListener(function (view, event) {
-                if (floatingButton.closed || !floatingButton.visible || !floatingButton.touchable) {
+                if (button.closed || !button.visible || !button.touchable) {
                     return false;
                 }
                 var action = event.getActionMasked();
@@ -5303,8 +5848,8 @@ module.exports = function (bridge) {
                 if (action === MotionEvent.ACTION_DOWN) {
                     buttonDownRawX = rawX;
                     buttonDownRawY = rawY;
-                    buttonOriginX = floatingButton.x;
-                    buttonOriginY = floatingButton.y;
+                    buttonOriginX = button.x;
+                    buttonOriginY = button.y;
                     buttonDragging = false;
                     return true;
                 }
@@ -5315,7 +5860,7 @@ module.exports = function (bridge) {
                         buttonDragging = true;
                     }
                     if (buttonDragging) {
-                        floatingButton.setPosition(
+                        moveButton(
                             buttonOriginX + Math.round(deltaX),
                             buttonOriginY + Math.round(deltaY),
                             "drag"
@@ -5327,14 +5872,16 @@ module.exports = function (bridge) {
                     var clicked = action === MotionEvent.ACTION_UP && !buttonDragging;
                     buttonDragging = false;
                     if (clicked && typeof callback === "function") {
-                        try {
-                            callback(floatingButton, session);
-                        } catch (error) {
-                            reportSessionError("event", "Floating button callback", error, {
-                                event: "buttonClick",
-                                button: floatingButton
-                            });
-                        }
+                        runOnScriptThread(function () {
+                            try {
+                                callback(floatingButton, session);
+                            } catch (error) {
+                                reportSessionError("event", "Floating button callback", error, {
+                                    event: "buttonClick",
+                                    button: floatingButton
+                                });
+                            }
+                        });
                     }
                     return true;
                 }
@@ -5342,10 +5889,10 @@ module.exports = function (bridge) {
             });
 
             session._buttons.push(floatingButton);
-            floatingButton.setSecure(buttonSecure);
-            floatingButton.setMoreTouch(buttonMoreTouch);
-            floatingButton.setAlpha(buttonAlpha);
-            floatingButton.setVisible(buttonVisible);
+            floatingButton.setSecure(button.secure);
+            floatingButton.setMoreTouch(button.moreTouch);
+            floatingButton.setAlpha(button.alpha);
+            floatingButton.setVisible(button.visible);
             return floatingButton;
         }
 
@@ -5357,15 +5904,6 @@ module.exports = function (bridge) {
                 var resolvedOptions = {};
                 copyOwnProperties(resolvedOptions, collapseButtonOptions);
                 resolvedOptions.visible = false;
-                if (resolvedOptions.x == null) {
-                    resolvedOptions.x = session.x + Math.max(
-                        0,
-                        session.width - integer(number(resolvedOptions.size, 56) * density, 56)
-                    );
-                }
-                if (resolvedOptions.y == null) {
-                    resolvedOptions.y = session.y;
-                }
                 session._collapseButton = createFloatingButton(
                     collapseButtonOptions.label == null
                         ? (options.collapseLabel == null ? "IM" : options.collapseLabel)
@@ -5386,18 +5924,18 @@ module.exports = function (bridge) {
         }
 
         function collapseSession() {
-            if (session.closed || session.collapsed) {
+            if (state.closed || state.collapsed) {
                 return;
             }
             if (privilegedMode) {
                 throw new Error("Collapsing a privileged SurfaceControl layer is not supported yet");
             }
-            session.collapsed = true;
+            state.collapsed = true;
             session._expandedBounds = {
-                x: session.x,
-                y: session.y,
-                width: session.width,
-                height: session.height
+                x: state.x,
+                y: state.y,
+                width: state.width,
+                height: state.height
             };
             cancelLongPress();
             cancelPressedButton();
@@ -5408,9 +5946,9 @@ module.exports = function (bridge) {
             } catch (ignored) {
                 // The host region will be discarded during final close if needed.
             }
-            session.interactiveRegionCount = 0;
+            state.interactiveRegionCount = 0;
             session._touchRegionSignature = null;
-            session.touchable = false;
+            state.touchable = false;
             setHostTouchable(false);
             applyHostAlpha(0);
             if (!activityMode) {
@@ -5424,24 +5962,24 @@ module.exports = function (bridge) {
         }
 
         function expandSession() {
-            if (session.closed || !session.collapsed) {
+            if (state.closed || !state.collapsed) {
                 return;
             }
             if (session._collapseButton != null) {
                 session._collapseButton.hide();
             }
             if (!activityMode) {
-                windowObject.setSize(session.width, session.height);
-                windowObject.setPosition(session.x, session.y);
+                windowObject.setSize(state.width, state.height);
+                windowObject.setPosition(state.x, state.y);
             }
-            session.collapsed = false;
-            applyHostAlpha(session.alpha);
+            state.collapsed = false;
+            applyHostAlpha(state.alpha);
             applyTouchMode(false);
             emitSessionEvent("expanded", {
-                x: session.x,
-                y: session.y,
-                width: session.width,
-                height: session.height
+                x: toDp(state.x),
+                y: toDp(state.y),
+                width: toDp(state.width),
+                height: toDp(state.height)
             });
         }
 
@@ -5456,12 +5994,12 @@ module.exports = function (bridge) {
         }
 
         function finalizeClose() {
-            if (session.closed) {
+            if (state.closed) {
                 return;
             }
-            session.closed = true;
-            session.ready = false;
-            disposeHighLevelComponents(session, session.closeReason || "session-closed");
+            state.closed = true;
+            state.ready = false;
+            disposeHighLevelComponents(session, state.closeReason || "session-closed");
             if (session._timer != null) {
                 clearTimeout(session._timer);
                 session._timer = null;
@@ -5513,7 +6051,7 @@ module.exports = function (bridge) {
             } catch (ignored) {
                 // The host may have already disposed the view.
             }
-            emitSessionEvent("closed", {reason: session.closeReason || "closed"});
+            emitSessionEvent("closed", {reason: state.closeReason || "closed"});
             eventListeners = {};
         }
 
@@ -5522,37 +6060,37 @@ module.exports = function (bridge) {
         }
 
         function initializeNativeSurface(nativeSurface, restored) {
-            if (session.closed || api._activeSession !== session || session._surfaceInitializing) {
+            if (state.closed || api._activeSession !== session || session._surfaceInitializing) {
                 return;
             }
             if (session._nativeInitialized && !session._surfaceDetached && bridge.isReady()) {
-                session.ready = true;
+                state.ready = true;
                 return;
             }
             session._surfaceInitializing = true;
             try {
                 if (restored) {
-                    session.ready = Boolean(bridge.attachSurface(nativeSurface));
+                    state.ready = Boolean(bridge.attachSurface(nativeSurface));
                 } else if (session._nativeInitialized && bridge.isReady()) {
-                    session.ready = true;
+                    state.ready = true;
                 } else {
-                    session.ready = Boolean(bridge.init(
+                    state.ready = Boolean(bridge.init(
                         nativeSurface, density, fontPath, fontSize, iniPath,
                         stringArray(additionalFontPaths), floatArray(additionalFontSizes)
                     ));
                 }
-                if (!session.ready) {
+                if (!state.ready) {
                     session.close(restored ? "surface-restoration-failed" : "initialization-failed");
                     return;
                 }
                 session._nativeInitialized = true;
                 session._surfaceDetached = false;
                 if (!restored) {
-                    if (session.debug) {
+                    if (debug) {
                         bridge.setDebugMode(true);
                     }
                     if (initialTheme) {
-                        session.theme = api.setTheme(initialTheme);
+                        state.theme = api.setTheme(initialTheme);
                     } else {
                         api._theme = api.Themes.Dark;
                     }
@@ -5570,17 +6108,17 @@ module.exports = function (bridge) {
                         api.setStyleColor(api.Col.BorderShadow, initialShadow);
                     }
                 }
-                applyHostSecure(session.secure);
-                applyHostMoreTouch(session.moreTouch);
-                applyHostAlpha(session.collapsed ? 0 : session.alpha);
+                applyHostSecure(state.secure);
+                applyHostMoreTouch(state.moreTouch);
+                applyHostAlpha(state.collapsed ? 0 : state.alpha);
                 applyTouchMode(false);
                 updateConfiguration(true);
                 emitSessionEvent(restored ? "surfaceRestored" : "ready", {
                     restored: restored,
-                    mode: session.mode,
+                    mode: mode,
                     backend: privilegedMode ? privilegedBackend : null,
-                    width: session.width,
-                    height: session.height
+                    width: toDp(state.width),
+                    height: toDp(state.height)
                 });
             } catch (error) {
                 console.error("[imgui] Initialization failed: " + error);
@@ -5603,30 +6141,16 @@ module.exports = function (bridge) {
                 surfaceChanged: function (surfaceHolder, format, surfaceWidth, surfaceHeight) {
                     if (activityMode) {
                         refreshActivitySize("surface");
-                    } else if (surfaceWidth > 0 && surfaceHeight > 0 && !session.collapsed) {
-                        var changedWidth = integer(surfaceWidth, session.width);
-                        var changedHeight = integer(surfaceHeight, session.height);
-                        if (changedWidth !== session.width || changedHeight !== session.height) {
-                            var oldWidth = session.width;
-                            var oldHeight = session.height;
-                            session.width = changedWidth;
-                            session.height = changedHeight;
-                            emitSessionEvent("resized", {
-                                width: changedWidth,
-                                height: changedHeight,
-                                oldWidth: oldWidth,
-                                oldHeight: oldHeight,
-                                source: "surface"
-                            });
-                        }
+                    } else if (surfaceWidth > 0 && surfaceHeight > 0 && !state.collapsed) {
+                        updateSurfaceSize(surfaceWidth, surfaceHeight, "surface");
                     }
                     updateConfiguration(true);
                 },
                 surfaceDestroyed: function () {
-                    if (session.closed) {
+                    if (state.closed) {
                         return;
                     }
-                    session.ready = false;
+                    state.ready = false;
                     setImeTargetVisible(false);
                     if (api._activeSession === session && session._nativeInitialized && bridge.isOwner()) {
                         try {
@@ -5644,7 +6168,7 @@ module.exports = function (bridge) {
             try {
                 surfaceView.post(new Runnable({
                     run: function () {
-                        if (session.closed || session._nativeInitialized) {
+                        if (state.closed || session._nativeInitialized) {
                             return;
                         }
                         try {
@@ -5663,9 +6187,9 @@ module.exports = function (bridge) {
 
         // Keep every main-thread host mutation after callback registration. A main-thread hop can
         // create the Surface immediately; registering later would miss the first surfaceCreated.
-        applyHostSecure(session.secure);
-        applyHostMoreTouch(session.moreTouch);
-        applyHostAlpha(session.alpha);
+        applyHostSecure(state.secure);
+        applyHostMoreTouch(state.moreTouch);
+        applyHostAlpha(state.alpha);
         applyTouchMode(false);
 
         // Register the holder callback before hopping to the main thread to add the IME proxy.
@@ -5674,7 +6198,7 @@ module.exports = function (bridge) {
         if (imeEnabled) {
             try {
                 imeView = bridge.createImeView(surfaceView);
-                session.imeView = imeView;
+                state.imeView = imeView;
             } catch (error) {
                 console.warn("[imgui] IME proxy creation failed; text input will remain programmatic: " + error);
             }
@@ -5713,7 +6237,7 @@ module.exports = function (bridge) {
             }
             session._imeTargetVisible = visible;
             postToUi(function () {
-                if (session.closed || session._imeTargetVisible !== visible) {
+                if (state.closed || session._imeTargetVisible !== visible) {
                     return;
                 }
                 try {
@@ -5765,7 +6289,7 @@ module.exports = function (bridge) {
                 var movedX = lastRawX - downRawX;
                 var movedY = lastRawY - downRawY;
                 if (!pointerDown || dragging || wheeling || pressedMouseButton !== api.MouseButton.Left ||
-                    session.closed || session._closeRequested || api._activeSession !== session ||
+                    state.closed || session._closeRequested || api._activeSession !== session ||
                     Math.sqrt(movedX * movedX + movedY * movedY) > longPressSlop
                 ) {
                     return;
@@ -5815,7 +6339,7 @@ module.exports = function (bridge) {
         }
 
         surfaceView.setOnTouchListener(function (view, event) {
-            if (!session.ready || session.closed || api._activeSession !== session) {
+            if (!state.ready || state.closed || api._activeSession !== session) {
                 return false;
             }
 
@@ -5833,8 +6357,8 @@ module.exports = function (bridge) {
                 pointerDown = true;
                 downRawX = lastRawX;
                 downRawY = lastRawY;
-                originX = session.x;
-                originY = session.y;
+                originX = state.x;
+                originY = state.y;
                 downFrameSerial = session._frameSerial;
                 dragging = false;
                 wheeling = false;
@@ -5899,9 +6423,11 @@ module.exports = function (bridge) {
                     }
                 }
                 if (dragging) {
-                    session.setPosition(
-                        clamp(originX + Math.round(movedX), 0, Math.max(0, displayWidth - session.width)),
-                        clamp(originY + Math.round(movedY), 0, Math.max(0, displayHeight - session.height))
+                    applySessionPosition(
+                        clamp(originX + Math.round(movedX), 0, Math.max(0, state.displayWidth - state.width)),
+                        clamp(originY + Math.round(movedY), 0, Math.max(0, state.displayHeight - state.height)),
+                        "drag",
+                        true
                     );
                 } else {
                     bridge.touchEvent(2, eventX, eventY, Math.max(0, pressedMouseButton));
@@ -5937,9 +6463,9 @@ module.exports = function (bridge) {
         });
 
         function scheduleNextFrame() {
-            if (!session.closed && !session._closeRequested) {
+            if (!state.closed && !session._closeRequested) {
                 var now = Date.now();
-                var nextDelay = session.collapsed ? collapsedFrameDelay : frameDelay;
+                var nextDelay = state.collapsed ? collapsedFrameDelay : frameDelay;
                 if (session._scheduledFrameDelay !== nextDelay ||
                     session._nextFrameAt <= 0 || session._nextFrameAt < now - nextDelay
                 ) {
@@ -5958,19 +6484,19 @@ module.exports = function (bridge) {
         function renderFrame() {
             session._timer = null;
             if (session._closeRequested || api._activeSession !== session) {
-                session.close(session.closeReason || "replaced");
+                session.close(state.closeReason || "replaced");
                 return;
             }
             updateConfiguration(false);
-            if (session.ready && !bridge.isOwner()) {
+            if (state.ready && !bridge.isOwner()) {
                 session.close("native-context-replaced");
                 return;
             }
-            if (session.collapsed) {
+            if (state.collapsed) {
                 scheduleNextFrame();
                 return;
             }
-            if (!session.ready || !bridge.isReady()) {
+            if (!state.ready || !bridge.isReady()) {
                 scheduleNextFrame();
                 return;
             }
@@ -5999,20 +6525,20 @@ module.exports = function (bridge) {
                 }
                 // With an "error" listener the rest of the frame is skipped and the session goes on (D4).
                 if (!reportSessionError("render", "Render callback", error, null)) {
-                    session.closeReason = "render-error";
+                    state.closeReason = "render-error";
                     session._closeRequested = true;
                 }
             } finally {
                 if (frameStarted) {
                     try {
-                        if (session.debug) {
+                        if (debug) {
                             bridge.showDebugWindows();
                         }
                         frameRendered = Boolean(bridge.render());
                         if (frameRendered) {
                             session._frameSerial += 1;
                         }
-                        if (session.debug) {
+                        if (debug) {
                             printDebugMessages();
                         }
                     } catch (error) {
@@ -6026,7 +6552,7 @@ module.exports = function (bridge) {
             }
 
             if (!frameRendered && frameStarted) {
-                session.closeReason = "presentation-failed";
+                state.closeReason = "presentation-failed";
                 session._closeRequested = true;
             }
             if (frameRendered) {
@@ -6053,6 +6579,31 @@ module.exports = function (bridge) {
         }
         scheduleNextFrame();
         return session;
+    };
+
+    // ui.dp() and ui.px() convert between dp (createWindow options, session and button geometry) and the
+    // px of ImGui coordinates inside a frame, with the active session's density or the display's.
+    function currentDensity() {
+        if (api._activeSession != null) {
+            return api._activeSession.density;
+        }
+        if (api._displayDensity == null) {
+            var displayDensity = Number(context.getResources().getDisplayMetrics().density);
+            api._displayDensity = displayDensity > 0 && isFinite(displayDensity) ? displayDensity : 1;
+        }
+        return api._displayDensity;
+    }
+
+    Object.defineProperty(api, "density", {
+        get: currentDensity,
+        enumerable: true,
+        configurable: false
+    });
+    api.dp = function (value) {
+        return argNumber("dp", "value", value) * currentDensity();
+    };
+    api.px = function (value) {
+        return argNumber("px", "value", value) / currentDensity();
     };
 
     api.closeWindow = function () {
@@ -6130,6 +6681,8 @@ module.exports = function (bridge) {
         SetSecure: "setSecure",
         CollapseWindow: "collapseWindow",
         ExpandWindow: "expandWindow",
+        Dp: "dp",
+        Px: "px",
         SetNextWindowPos: "setNextWindowPos",
         SetNextWindowSize: "setNextWindowSize",
         SetNextWindowSizeConstraints: "setNextWindowSizeConstraints",

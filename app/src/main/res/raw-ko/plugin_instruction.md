@@ -8,7 +8,7 @@ var level = imgui.float(0.5);
 
 var overlay = imgui.createWindow(function (ui, window) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(window.width, window.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(window.width), ui.dp(window.height), ui.Cond.Always);
     ui.withWindow(
         "ImGui 컨트롤",
         null,
@@ -32,7 +32,7 @@ var overlay = imgui.createWindow(function (ui, window) {
 });
 ```
 
-`width`, `height`, `fontSize`는 화면 밀도와 무관한 단위를 사용합니다. `inputText`에 포커스하면 조합 입력을 지원하는 시스템 IME가 자동으로 열립니다. 빈 영역 드래그로 창을 이동하고 두 손가락 세로 스와이프로 관성 스크롤하며 한 손가락 길게 누르기로 오른쪽 클릭합니다. `movable: false`를 전달하면 드래그를 비활성화합니다. 시스템 글꼴에 필요한 문자가 없으면 `fontPath`로 TTF 또는 OTF 파일을 불러옵니다.
+창 크기와 위치 (`width`, `height`, `x`, `y`, 세션 필드와 이벤트) 및 `fontSize`는 dp 단위입니다. 프레임 안의 좌표는 px이므로 `ui.dp()` / `ui.px()`로 변환합니다. 이벤트와 버튼 콜백은 스크립트 스레드에서 실행됩니다. `inputText`에 포커스하면 조합 입력을 지원하는 시스템 IME가 자동으로 열립니다. 빈 영역 드래그로 창을 이동하고 두 손가락 세로 스와이프로 관성 스크롤하며 한 손가락 길게 누르기로 오른쪽 클릭합니다. `movable: false`를 전달하면 드래그를 비활성화합니다. 시스템 글꼴에 필요한 문자가 없으면 `fontPath`로 TTF 또는 OTF 파일을 불러옵니다.
 
 `Themes` / `setTheme`, `setStyleProperties`, `Appearance`로 외형을 설정할 수 있습니다. `createWindow.fonts`는 assets 또는 파일 글꼴을 `pushFont` / `withFont`용으로 로드하며 CJK 대체 글꼴과 Material 아이콘이 자동 병합되어 `Icons` / `icon(name)`으로 제공됩니다.
 
@@ -46,6 +46,6 @@ var overlay = imgui.createWindow(function (ui, window) {
 
 상태형 컨트롤은 `imgui.ref(value)`로 만든 가벼운 참조나 일반 `{ value: ... }` 객체도 허용하며, 기존 `bool`, `float`, `int`, `string`, 색상 배열 헬퍼와도 호환됩니다. 세션 관리형 `logWindow`, `toast`, Promise 대화상자, `statsOverlay`, `dataTable` 컴포넌트는 사용자 콜백 뒤에 렌더링되고 세션과 함께 자동으로 닫힙니다.
 
-내장 예제 5개는 `imgui.runExample("widget-overview")`, `"parameter-panel"`, `"log-hud"`, `"data-table-demo"`, `"theme-gallery"`로 실행하고, `listExamples`에서 목록을 확인하며 `getExampleSource`로 소스를 볼 수 있습니다. AutoJs6 6.8 플러그인 센터는 아직 일반적인 원클릭 예제 실행 동작을 제공하지 않습니다.
+내장 예제 7개는 `imgui.runExample("widget-overview")`, `"parameter-panel"`, `"log-hud"`, `"data-table-demo"`, `"theme-gallery"`, `"error-handling"`, `"background-task"`로 실행하고, `listExamples`에서 목록을 확인하며 `getExampleSource`로 소스를 볼 수 있습니다. AutoJs6 6.8 플러그인 센터는 아직 일반적인 원클릭 예제 실행 동작을 제공하지 않습니다.
 
 v1.7은 완전한 편집기 선언을 `types/imgui.d.ts`에 제공합니다. 런타임 한도는 `imgui.Limits`(텍스트 64 KiB, 선택 항목 512개, 입력 이벤트 2,048개)로 확인하며, 초과 입력은 조용히 잘리지 않고 거부됩니다.

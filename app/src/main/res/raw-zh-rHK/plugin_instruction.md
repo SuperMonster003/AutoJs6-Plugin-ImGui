@@ -8,7 +8,7 @@ var level = imgui.float(0.5);
 
 var overlay = imgui.createWindow(function (ui, window) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(window.width, window.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(window.width), ui.dp(window.height), ui.Cond.Always);
     ui.withWindow(
         "ImGui 控制面板",
         null,
@@ -32,7 +32,7 @@ var overlay = imgui.createWindow(function (ui, window) {
 });
 ```
 
-`width`, `height` 和 `fontSize` 使用與螢幕密度無關的單位. 聚焦 `inputText` 會自動顯示支援組合文字的系統輸入法. 拖動空白區域可以移動浮動視窗; 雙指縱向滑動帶慣性捲動, 單指長按模擬右鍵. 傳入 `movable: false` 可停用拖動. 如果系統字型無法顯示所需字元, 可透過 `fontPath` 載入 TTF 或 OTF 字型檔案.
+視窗尺寸與位置 (`width`, `height`, `x`, `y`, 會話欄位與事件) 以及 `fontSize` 使用 dp; 幀內座標是 px, 用 `ui.dp()` / `ui.px()` 換算. 事件與按鈕回調在腳本線程執行. 聚焦 `inputText` 會自動顯示支援組合文字的系統輸入法. 拖動空白區域可以移動浮動視窗; 雙指縱向滑動帶慣性捲動, 單指長按模擬右鍵. 傳入 `movable: false` 可停用拖動. 如果系統字型無法顯示所需字元, 可透過 `fontPath` 載入 TTF 或 OTF 字型檔案.
 
 可用 `Themes` / `setTheme`、`setStyleProperties` 與 `Appearance` 快速設定視覺效果. `createWindow.fonts` 可預載 assets 或檔案字型供 `pushFont` / `withFont` 切換; 內置 CJK 後備和 Material 圖示子集會自動合併, 圖示可由 `Icons` / `icon(name)` 取得.
 
@@ -46,6 +46,6 @@ var overlay = imgui.createWindow(function (ui, window) {
 
 有狀態控制項亦支援 `imgui.ref(value)` 輕量引用或普通 `{ value: ... }` 物件; 原有 `bool`、`float`、`int`、`string` 與顏色陣列輔助方法保持相容. 會話託管的 `logWindow`、`toast`、Promise 對話框、`statsOverlay` 和 `dataTable` 會在用戶回調之後渲染, 並隨會話自動關閉.
 
-可用 `imgui.runExample("widget-overview")`、`"parameter-panel"`、`"log-hud"`、`"data-table-demo"` 或 `"theme-gallery"` 運行五個內置範例, 透過 `listExamples` 探索範例, 透過 `getExampleSource` 查看原始碼. AutoJs6 6.8 插件中心目前尚未提供通用的一鍵運行範例操作.
+可用 `imgui.runExample("widget-overview")`, `"parameter-panel"`, `"log-hud"`, `"data-table-demo"`, `"theme-gallery"`, `"error-handling"` 或 `"background-task"` 運行七個內置範例, 透過 `listExamples` 探索範例, 透過 `getExampleSource` 查看原始碼. AutoJs6 6.8 插件中心目前尚未提供通用的一鍵運行範例操作.
 
 v1.7 亦在 `types/imgui.d.ts` 發佈完整編輯器聲明. 執行期安全上限可透過 `imgui.Limits` 查詢 (文字輸入 64 KiB、選擇項 512 個、輸入事件隊列 2,048 條); API 會明確拒絕超限輸入, 不再靜默截斷.

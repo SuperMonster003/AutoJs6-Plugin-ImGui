@@ -58,8 +58,8 @@
             sequence += 1;
         }
 
-        ui.setNextWindowPos(16 * window.density, 16 * window.density, ui.Cond.FirstUseEver);
-        ui.setNextWindowSize(390 * window.density, 230 * window.density, ui.Cond.FirstUseEver);
+        ui.setNextWindowPos(ui.dp(16), ui.dp(16), ui.Cond.FirstUseEver);
+        ui.setNextWindowSize(ui.dp(390), ui.dp(230), ui.Cond.FirstUseEver);
         ui.withWindow("Log HUD Controls", controllerOpen, 0, function () {
             ui.checkbox("Auto feed", autoFeed);
             ui.combo("Manual severity", severity, ["Debug", "Info", "Warning", "Error"]);
@@ -93,8 +93,8 @@
     }, {
         width: numberOption(options.width, 960),
         height: numberOption(options.height, 620),
-        x: numberOption(options.x, 12),
-        y: numberOption(options.y, 50),
+        x: numberOption(options.x, 4),
+        y: numberOption(options.y, 24),
         fps: numberOption(options.fps, 30),
         theme: options.theme || imgui.Themes.ModernDark,
         touchMode: imgui.TouchMode.Auto,

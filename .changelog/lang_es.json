@@ -5,6 +5,31 @@
   "changelog_label_improvement": "Mejora",
   "changelog_label_dependency": "Dependencia",
   "$data": {
+    "v1.12.0": {
+      "released_date": "2026/10/29",
+      "hint": [
+        "Cambio incompatible: las posiciones y tamaños de la ventana están ahora en dp en todas partes. Antes estaban en px los x / y de createWindow, los x / y / width / height / displayWidth / displayHeight de Session, setPosition / setSize, los datos de los eventos y los x / y de los botones flotantes; las coordenadas dentro de un fotograma siguen en px. Cómo actualizar los scripts se explica en docs/MIGRATION-1.12.md",
+        "Cambio incompatible: un argumento incorrecto (tipo erróneo, NaN, número como cadena o valor fuera de rango) ahora lanza TypeError o RangeError con el nombre del método y del argumento, por ejemplo `imgui.sliderFloat: argument \"max\" must be a finite number`, en lugar de convertirse o limitarse en silencio; las opciones de ventana como fps, alpha y fontSize se comprueban igual",
+        "Cambio incompatible: los campos de Session y de los botones flotantes son de solo lectura (asignar uno lanza una excepción en modo estricto); use los métodos set. FloatingButton.setPosition ya no acepta el argumento source, y un número como color de un botón flotante se interpreta como cualquier otro color de imgui (0xAABBGGRR, como devuelve colorU32) y no como un color ARGB de Android",
+        "Cambio incompatible: los eventos de sesión, las devoluciones de llamada de los botones flotantes y los resultados de los diálogos se ejecutan en el hilo del script, donde se ejecuta la función de renderizado, y no en el hilo de interfaz de Android; consulte docs/THREADING.md"
+      ],
+      "feature": [
+        "imgui.dp() / imgui.px() (alias Dp / Px) convierten entre dp y px, e imgui.density da el número de px por dp",
+        "Los colores aceptan en todas partes un número empaquetado, [r, g, b, a], {r, g, b, a} o \"#rrggbbaa\", incluidos textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; los argumentos r, g, b, a por separado siguen funcionando",
+        "Ejemplo background-task: un hilo de trabajo realiza una tarea lenta mientras la ventana sigue dibujándose, con progreso y cancelación",
+        "docs/THREADING.md explica en qué hilo se ejecuta cada devolución de llamada y cómo hacer trabajo lento en segundo plano, y docs/MIGRATION-1.12.md enumera los cambios en los scripts necesarios para esta versión"
+      ],
+      "fix": [
+        "Las devoluciones de llamada de eventos y de botones flotantes podían ejecutarse a la vez que la función de renderizado, y llamar a sleep en ellas producía un error",
+        "Session.theme no cambiaba después de imgui.setTheme",
+        "Al arrastrar la ventana, el evento moved informaba la fuente api en lugar de drag"
+      ],
+      "improvement": [
+        "Los ejemplos usan ui.dp() en lugar de multiplicar por window.density",
+        "Las declaraciones TypeScript indican la unidad y el rango permitido de cada tamaño, posición y opción, y marcan como readonly los campos de Session y de los botones flotantes",
+        "Cada versión de GitHub incluye un archivo SHA256SUMS para comprobar los APK descargados"
+      ]
+    },
     "v1.11.0": {
       "released_date": "2026/10/29",
       "hint": [

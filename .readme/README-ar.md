@@ -64,7 +64,7 @@
 - تعمل مراجع `imgui.ref(value)` / `{value: x}` الخفيفة مع كل عناصر التحكم ذات الحالة، مع بقاء مساعدات مراجع مصفوفات Java القديمة متوافقة بالكامل.
 - توفر مكونات الجلسة `logWindow` و`toast` المكدسة وحوارات Promise و`statsOverlay` الملوّن حسب العتبات و`dataTable` القابل للتحديد وCRUD واجهة تصحيح جاهزة.
 - تتوفر أسماء PascalCase بديلة للواجهات البرمجية الشائعة وتعدادات الثوابت (مثلًا `ui.Button`) وهي تحافظ على أسلوب وسائط الإضافة; قائمة الأسماء البديلة والفروق عن توقيعات C++ الأصلية في [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
-- يشمل الدعم الهندسي تصريحات TypeScript كاملة وستة أمثلة قابلة للتشغيل واختبارات رسم Android وطابور إدخال غير حاجب وأدوات تحديث upstream قابلة للتحقق وأتمتة إصدارات CI.
+- يشمل الدعم الهندسي تصريحات TypeScript كاملة وسبعة أمثلة قابلة للتشغيل واختبارات رسم Android وطابور إدخال غير حاجب وأدوات تحديث upstream قابلة للتحقق وأتمتة إصدارات CI.
 - توطين معلومات الإضافة وتعليمات الاستخدام و README و CHANGELOG بعشر لغات.
 
 ******
@@ -95,7 +95,7 @@ var themeColor = imgui.ref([0.25, 0.55, 0.90]);
 
 imgui.createWindow(function (ui, overlay) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(overlay.width, overlay.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(overlay.width), ui.dp(overlay.height), ui.Cond.Always);
     ui.withWindow(
         "ImGui Panel",
         null,
@@ -120,7 +120,7 @@ imgui.createWindow(function (ui, overlay) {
 });
 ```
 
-تقبل عناصر التحكم القابلة للتغيير المراجع الخفيفة المنشأة عبر `imgui.ref(value)` أو كائنات `{ value: ... }` العادية؛ وتظل مساعدات `imgui.bool` و`imgui.int` و`imgui.float` و`imgui.string` و`imgui.floats` القديمة متوافقة. يؤدي تركيز `inputText` إلى فتح IME النظام تلقائيًا مع دعم التركيب؛ مرر `ime: false` لتعطيله. تستخدم `width` و `height` و `fontSize` وحدات مستقلة عن الكثافة. اسحب مساحة فارغة لتحريك النافذة (`movable: false` يثبتها)؛ للتمرير العمودي بإصبعين قصور ذاتي قابل للضبط (`fling` و `flingFriction` و `flingMinVelocity` و `flingMaxVelocity`)، ويصدر الضغط المطول بإصبع واحد نقرة يمنى (`longPressAsRightClick` و `longPressDuration` و `longPressSlop`). عندما لا يغطي خط النظام المحارف المطلوبة وجّه `fontPath` إلى ملف TTF أو OTF.
+تقبل عناصر التحكم القابلة للتغيير المراجع الخفيفة المنشأة عبر `imgui.ref(value)` أو كائنات `{ value: ... }` العادية; وتظل مساعدات `imgui.bool` و`imgui.int` و`imgui.float` و`imgui.string` و`imgui.floats` القديمة متوافقة. يؤدي تركيز `inputText` إلى فتح IME النظام تلقائيًا مع دعم التركيب; مرر `ime: false` لتعطيله. أحجام النافذة ومواضعها بوحدة dp: الخيارات `width` و `height` و `x` و `y` وحقول الجلسة وبيانات الأحداث, و `fontSize` بوحدة dp أيضًا. أما الإحداثيات داخل الإطار فبوحدة px, فحوّل بينهما باستخدام `ui.dp()` / `ui.px()`. تعمل دوال الأحداث والأزرار على خيط السكربت (راجع [THREADING.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/THREADING.md)), ويسرد [MIGRATION-1.12.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/MIGRATION-1.12.md) التغييرات مقارنة بالإصدارات السابقة. اسحب مساحة فارغة لتحريك النافذة (`movable: false` يثبتها); للتمرير العمودي بإصبعين قصور ذاتي قابل للضبط (`fling` و `flingFriction` و `flingMinVelocity` و `flingMaxVelocity`), ويصدر الضغط المطول بإصبع واحد نقرة يمنى (`longPressAsRightClick` و `longPressDuration` و `longPressSlop`). عندما لا يغطي خط النظام المحارف المطلوبة وجّه `fontPath` إلى ملف TTF أو OTF.
 
 السمات والخطوط: يقبل `setTheme` قيم `Themes` الإحدى عشرة ويحدّث `setStyleProperties` عدة قيم `StyleVar` دفعة واحدة؛ كما يقبل `createWindow` الخيارات `theme` و`appearance` و`style` و`shadow`. تحمّل مصفوفة `fonts` خطوط assets (`asset://...`) أو الملفات لاستخدامها مع `pushFont` / `withFont`. يدمج احتياط CJK والأيقونات تلقائياً؛ استخدم `Icons` / `icon(name)` للحصول على رسوم الأيقونات.
 
@@ -128,7 +128,7 @@ imgui.createWindow(function (ui, overlay) {
 
 جلسات النوافذ: يستخدم التراكب `TouchMode.Auto` افتراضياً، فتظل نوافذ ImGui الجذرية تفاعلية بينما تنتقل لمسات مناطق Surface الفارغة إلى التطبيق أسفلها؛ اختر `Touchable` أو `Passthrough` لسياسة ثابتة. تستطيع الجلسة تغيير الشفافية/الأمان/وضع اللمس، والانطواء إلى فقاعة منخفضة الإطارات، وإنشاء `addButtonEx` مستقلة، واتباع محتوى `AlwaysAutoResize`، وحفظ التخطيط عبر `iniPath`، ونشر الأحداث عبر `on` / `once` / `off` أو callbacks الخيارات. ينشئ `imgui.launch(...)` سطحاً بملء الشاشة في Activity ‏AutoJs6 الحالية بحالة resumed، بينما يختار `launchFloaty(...)` التراكب صراحةً. لكل محرك نصوص جلسة عرض أصلية واحدة، لكن يمكن لـ callback الخاص بها إنشاء أي عدد من جذور ImGui عبر `begin` / `withWindow`؛ وتغلق الجلسة الجديدة السابقة. عندما يرمي callback الرسم أو callback حدث استثناءً, يطبع `console.error` الخطأ مع مكدس الاستدعاء (مرة واحدة لسلسلة الخطأ نفسه) ويُطلق الحدث `error` (`error` / `phase` / `frame`); من دون مستمع `error` يغلق خطأ الرسم الجلسة (`closeReason` هو `render-error`), ومع وجود مستمع يُتخطى باقي الإطار ويستمر الرسم. يبلّغ الخيار `debug: true` عبر `console.warn` وlogcat عن أخطاء الاستخدام مثل `begin` دون `end`, ويعرض نافذتي Metrics وDebug Log. تعمل الأساليب العامة مثل `setTouchable` / `setGlobalAlpha` / `getComponent` على الجلسة الحالية وترمي `imgui.<name>: no active session` عند عدم وجود جلسة نشطة.
 
-ترتبط المكونات عالية المستوى بالجلسة النشطة وتُرسم بعد callback المستخدم: يوفر `logWindow` مستويات ملوّنة ومسحاً وتصديراً وتمريراً تلقائياً؛ ويعرض `toast` إشعارات مؤقتة ذات موضع؛ وتُرجع `alert` / `confirm` / `singleChoice` / `multiChoice` كائنات Promise؛ ويرسم `statsOverlay` زمن الإطار؛ ويوفر `dataTable` التحديد وCRUD. يمكن اكتشاف الأمثلة الستة (`widget-overview` و`parameter-panel` و`log-hud` و`data-table-demo` و`theme-gallery` و`error-handling`) عبر `listExamples` / `getExampleSource` وتشغيلها بـ `runExample`. لا يستهلك مركز إضافات AutoJs6 6.8 بيانات الأمثلة العامة بعد، لذا شغّل الاستدعاء أدناه مباشرة حتى يضيف المضيف الدعم:
+ترتبط المكونات عالية المستوى بالجلسة النشطة وتُرسم بعد callback المستخدم: يوفر `logWindow` مستويات ملوّنة ومسحاً وتصديراً وتمريراً تلقائياً; ويعرض `toast` إشعارات مؤقتة ذات موضع; وتُرجع `alert` / `confirm` / `singleChoice` / `multiChoice` كائنات Promise; ويرسم `statsOverlay` زمن الإطار; ويوفر `dataTable` التحديد وCRUD. يمكن اكتشاف الأمثلة السبعة (`widget-overview` و`parameter-panel` و`log-hud` و`data-table-demo` و`theme-gallery` و`error-handling` و`background-task`) عبر `listExamples` / `getExampleSource` وتشغيلها بـ `runExample`. لا يستهلك مركز إضافات AutoJs6 6.8 بيانات الأمثلة العامة بعد, لذا شغّل الاستدعاء أدناه مباشرة حتى يضيف المضيف الدعم:
 
 ```js
 imgui.runExample("widget-overview");
@@ -142,7 +142,7 @@ imgui.runExample("widget-overview");
 
 تتوفر للواجهات الشائعة أسماء PascalCase بديلة (مثلًا `ui.Button` يكافئ `ui.button`). تحافظ الأسماء البديلة على أسلوب وسائط الإضافة (القيم القابلة للتغيير عبر `imgui.ref` مثلًا) ولا تطابق توقيعات C++ الأصلية واحدًا لواحد; القائمة والفروق في [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). تعكس أساليب lower camel case عمليات Dear ImGui التي تحمل الاسم نفسه, وهي مقسمة إلى المجموعات التالية:
 
-- وقت تشغيل الجلسة: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode` و`setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure` و`collapseWindow` / `expandWindow` و`addButtonEx` و`on` / `once` / `off` مع صيغها الخاصة بالجلسة, والحدث `error` للجلسة الذي يبلّغ عن أخطاء الدوال, والخيار `debug` الذي يفعّل وضع التصحيح.
+- وقت تشغيل الجلسة: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode` و`setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure` و`collapseWindow` / `expandWindow` و`addButtonEx` وتحويل الوحدات `density` / `dp` / `px` و`on` / `once` / `off` مع صيغها الخاصة بالجلسة, والحدث `error` للجلسة الذي يبلّغ عن أخطاء الدوال, والخيار `debug` الذي يفعّل وضع التصحيح.
 - اكتشاف الواجهة الخلفية: تعرض `getBackendCapabilities` / `BackendStatus` مدى التوفر والجاهزية للإنتاج للنوافذ واللمس المقسم والعملية ذات الامتيازات والإدخال المباشر وDocking وMulti-Viewport, من دون رفع الامتيازات.
 - الجلسة والنوافذ: `createWindow` و `closeWindow` و `withWindow` و `withChild` و `setNextWindowPos` و `setNextWindowSize` و `setNextWindowBgAlpha` إضافة إلى استعلامات حالة النافذة مثل `isWindowHovered`.
 - النص وعناصر التحكم: `text` و `textColored` و `textWrapped` و `separatorText` و `bulletText` و `labelText` و `button` و `arrowButton` و `invisibleButton` و `checkbox` و `toggle` و `radioButton` و `sliderFloat` و `sliderInt` و `vSliderFloat` و `dragFloat` و `dragInt` و `inputText` و `inputInt` و `inputFloat` و `inputTextMultiline` و `colorEdit3` و `colorEdit4` و `colorPicker4` و `colorButton` و `progressBar` و `plotLines` و `plotHistogram` وغيرها.
@@ -171,6 +171,25 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.12.0
+
+###### 2026/10/29
+
+* `تلميح` تغيير غير متوافق: أصبحت مواضع النافذة وأحجامها بوحدة dp في كل مكان. كانت x / y في createWindow و x / y / width / height / displayWidth / displayHeight في Session و setPosition / setSize وبيانات الأحداث و x / y للأزرار العائمة بوحدة px; وتبقى الإحداثيات داخل الإطار بوحدة px. راجع docs/MIGRATION-1.12.md لمعرفة طريقة تحديث السكربتات
+* `تلميح` تغيير غير متوافق: الوسيط الخاطئ (نوع خاطئ أو NaN أو رقم في سلسلة نصية أو قيمة خارج النطاق) يرمي الآن TypeError أو RangeError يذكر اسم الأسلوب واسم الوسيط, مثل `imgui.sliderFloat: argument "max" must be a finite number`, بدلًا من تحويله أو قصّه بصمت; وتُفحص خيارات النافذة مثل fps و alpha و fontSize بالطريقة نفسها
+* `تلميح` تغيير غير متوافق: أصبحت حقول Session والأزرار العائمة للقراءة فقط (يرمي الإسناد استثناءً في الوضع الصارم); استخدم أساليب set بدلًا منها. لم يعد FloatingButton.setPosition يقبل الوسيط source, والرقم الممرر لونًا لزر عائم يُقرأ مثل أي لون آخر في imgui (0xAABBGGRR كما يعيده colorU32) وليس لون Android بصيغة ARGB
+* `تلميح` تغيير غير متوافق: تعمل أحداث الجلسة ودوال الأزرار العائمة ونتائج الحوارات على خيط السكربت, وهو خيط دالة الرسم, بدلًا من خيط واجهة Android; راجع docs/THREADING.md
+* `ميزة` تحوّل imgui.dp() / imgui.px() (الاسمان البديلان Dp / Px) بين dp و px, ويعطي imgui.density عدد px في كل dp
+* `ميزة` تقبل الألوان في كل مكان رقمًا مضغوطًا أو [r, g, b, a] أو {r, g, b, a} أو "#rrggbbaa", بما في ذلك textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; وما زال تمرير r, g, b, a وسائط منفصلة يعمل
+* `ميزة` المثال background-task: خيط عامل ينفذ مهمة بطيئة بينما تواصل النافذة الرسم, مع عرض التقدم والإلغاء
+* `ميزة` يشرح docs/THREADING.md الخيط الذي تعمل عليه كل دالة وكيفية تنفيذ العمل البطيء في الخلفية, ويسرد docs/MIGRATION-1.12.md تعديلات السكربتات اللازمة لهذا الإصدار
+* `إصلاح` قد تعمل دوال الأحداث والأزرار العائمة في الوقت نفسه مع دالة الرسم, وكان استدعاء sleep فيها يسبب خطأ
+* `إصلاح` لم يتغير Session.theme بعد imgui.setTheme
+* `إصلاح` كان سحب النافذة يبلّغ عن الحدث moved بالمصدر api بدلًا من drag
+* `تحسين` تستخدم الأمثلة ui.dp() بدلًا من الضرب في window.density
+* `تحسين` تذكر تصريحات TypeScript وحدة كل حجم وموضع وخيار ونطاقه المسموح, وتعلّم حقول Session والأزرار العائمة بأنها readonly
+* `تحسين` يتضمن كل إصدار على GitHub ملف SHA256SUMS للتحقق من ملفات APK المنزّلة
+
 #### v1.11.0
 
 ###### 2026/10/29
@@ -193,13 +212,6 @@ imgui.runExample("widget-overview");
 * `إصلاح` كانت معاملات دالة الرسم (render callback) في createWindow / launchFloaty / launch / launchPrivileged مصرحة في تصريحات TypeScript بالشكل (session); وأصبحت الآن مطابقة للاستدعاء الفعلي (ui, session) مع إضافة النوع RenderCallback
 * `تحسين` بعد تفعيل الإضافة تُستخدم مباشرة بوصفها الكائن العام imgui الذي يسجله AutoJs6 ويحمّل الإضافة عند أول استدعاء لأحد أعضائه, فلم تعد هناك حاجة إلى plugins.load; وتعيد الصيغة السابقة plugins.load("io.github.supermonster003.autojs6.plugin.imgui") الكائن نفسه
 * `تحسين` تحديث أمثلة السكربتات وتعليمات الاستخدام و README وتصريحات TypeScript وفق استخدام الكائن العام, ولم يعد ملف التصريحات يضيف تحميلات زائدة (overloads) إلى plugins.load
-
-#### v1.9.4
-
-###### 2026/10/05
-
-* `تحسين` تستخدم أيقونات مركز الملحقات الأحجام والمواضع والصور الفاتحة والداكنة والخلفيات الدائرية المعدلة في Icon Studio مع الاحتفاظ بالمصادر والمعلمات لإعادة إنتاجها
-* `تحسين` تستخدم أيقونات معلومات التطبيق في Android صور Icon Studio وخلفياته الفاتحة والداكنة مع الحفاظ على الصور الشفافة في مركز الملحقات وخيارات المشغل الحالية
 
 ##### لمزيد من سجل الإصدارات
 

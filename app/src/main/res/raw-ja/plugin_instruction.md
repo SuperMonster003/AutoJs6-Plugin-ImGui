@@ -8,7 +8,7 @@ var level = imgui.float(0.5);
 
 var overlay = imgui.createWindow(function (ui, window) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(window.width, window.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(window.width), ui.dp(window.height), ui.Cond.Always);
     ui.withWindow(
         "ImGui コントロール",
         null,
@@ -32,7 +32,7 @@ var overlay = imgui.createWindow(function (ui, window) {
 });
 ```
 
-`width`, `height`, `fontSize` は画面密度に依存しない単位です. `inputText` にフォーカスすると変換中テキスト対応のシステム IME が自動表示されます. 空白領域のドラッグで移動でき, 二本指の縦スワイプは慣性スクロール, 一本指の長押しは右クリックになります. `movable: false` で移動を無効にできます. システムフォントに必要な文字がない場合は `fontPath` で TTF または OTF ファイルを読み込みます.
+ウィンドウのサイズと位置 (`width`, `height`, `x`, `y`, セッションのフィールドとイベント) と `fontSize` は dp です. フレーム内の座標は px なので `ui.dp()` / `ui.px()` で換算します. イベントとボタンのコールバックはスクリプトスレッドで実行されます. `inputText` にフォーカスすると変換中テキスト対応のシステム IME が自動表示されます. 空白領域のドラッグで移動でき, 二本指の縦スワイプは慣性スクロール, 一本指の長押しは右クリックになります. `movable: false` で移動を無効にできます. システムフォントに必要な文字がない場合は `fontPath` で TTF または OTF ファイルを読み込みます.
 
 `Themes` / `setTheme`、`setStyleProperties`、`Appearance` で外観を設定できます. `createWindow.fonts` は assets またはファイルフォントを `pushFont` / `withFont` 用に読み込み、CJK フォールバックと Material アイコンは自動マージされて `Icons` / `icon(name)` から利用できます.
 
@@ -46,6 +46,6 @@ var overlay = imgui.createWindow(function (ui, window) {
 
 ステートフルコントロールは `imgui.ref(value)` で作る軽量参照や通常の `{ value: ... }` オブジェクトも受け付け、従来の `bool`、`float`、`int`、`string`、カラー配列ヘルパーとの互換性も維持します。セッション管理の `logWindow`、`toast`、Promise ダイアログ、`statsOverlay`、`dataTable` はユーザーコールバックの後に描画され、セッションとともに自動終了します。
 
-5 つの同梱サンプルは `imgui.runExample("widget-overview")`、`"parameter-panel"`、`"log-hud"`、`"data-table-demo"`、`"theme-gallery"` で実行でき、`listExamples` で一覧、`getExampleSource` でソースを確認できます。AutoJs6 6.8 のプラグインセンターには、汎用的なワンクリック実行操作はまだありません。
+7 つの同梱サンプルは `imgui.runExample("widget-overview")`, `"parameter-panel"`, `"log-hud"`, `"data-table-demo"`, `"theme-gallery"`, `"error-handling"`, `"background-task"` で実行でき, `listExamples` で一覧, `getExampleSource` でソースを確認できます. AutoJs6 6.8 のプラグインセンターには, 汎用的なワンクリック実行操作はまだありません.
 
 v1.7 は完全なエディター宣言を `types/imgui.d.ts` に公開します。実行時上限は `imgui.Limits`（テキスト 64 KiB、選択項目 512 件、入力イベント 2,048 件）で確認でき、超過入力は暗黙に切り詰めず拒否されます。

@@ -8,7 +8,7 @@ var level = imgui.float(0.5);
 
 var overlay = imgui.createWindow(function (ui, window) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(window.width, window.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(window.width), ui.dp(window.height), ui.Cond.Always);
     ui.withWindow(
         "عناصر تحكم ImGui",
         null,
@@ -32,7 +32,7 @@ var overlay = imgui.createWindow(function (ui, window) {
 });
 ```
 
-تستخدم `width` و `height` و `fontSize` وحدات مستقلة عن كثافة الشاشة. يؤدي تركيز `inputText` إلى فتح IME النظام تلقائيًا مع دعم التركيب. اسحب مساحة فارغة لتحريك النافذة؛ يمرر السحب العمودي بإصبعين بالقصور الذاتي ويصدر الضغط المطول بإصبع واحد نقرة يمنى. مرر `movable: false` لتعطيل السحب. استخدم `fontPath` لتحميل ملف TTF أو OTF مقروء عندما لا يحتوي خط النظام على المحارف المطلوبة.
+أحجام النافذة ومواضعها (`width` و `height` و `x` و `y` وحقول الجلسة وأحداثها) و `fontSize` بوحدة dp; أما الإحداثيات داخل الإطار فبوحدة px, فحوّل بينهما باستخدام `ui.dp()` / `ui.px()`. تعمل دوال الأحداث والأزرار على خيط السكربت. يؤدي تركيز `inputText` إلى فتح IME النظام تلقائيًا مع دعم التركيب. اسحب مساحة فارغة لتحريك النافذة; يمرر السحب العمودي بإصبعين بالقصور الذاتي ويصدر الضغط المطول بإصبع واحد نقرة يمنى. مرر `movable: false` لتعطيل السحب. استخدم `fontPath` لتحميل ملف TTF أو OTF مقروء عندما لا يحتوي خط النظام على المحارف المطلوبة.
 
 استخدم `Themes` / `setTheme` و`setStyleProperties` و`Appearance` للمظاهر الجاهزة. يحمّل `createWindow.fonts` خطوط assets أو الملفات لاستخدامها مع `pushFont` / `withFont`؛ ويُدمج احتياط CJK وأيقونات Material تلقائياً وتتاح عبر `Icons` / `icon(name)`.
 
@@ -46,6 +46,6 @@ var overlay = imgui.createWindow(function (ui, window) {
 
 تقبل عناصر التحكم ذات الحالة أيضاً مراجع خفيفة من `imgui.ref(value)` أو كائنات `{ value: ... }` العادية؛ وتظل مساعدات `bool` و`float` و`int` و`string` ومصفوفات الألوان القديمة متوافقة. تُعرض مكونات `logWindow` و`toast` وحوارات Promise و`statsOverlay` و`dataTable` المدارة بواسطة الجلسة بعد رد نداء المستخدم وتُغلق تلقائياً مع جلستها.
 
-شغّل أيًا من الأمثلة الخمسة باستخدام `imgui.runExample("widget-overview")` أو `"parameter-panel"` أو `"log-hud"` أو `"data-table-demo"` أو `"theme-gallery"`، واستكشفها عبر `listExamples` ومصدرها عبر `getExampleSource`. لا يعرض مركز إضافات AutoJs6 6.8 حتى الآن إجراء عاماً لتشغيل المثال بنقرة واحدة.
+شغّل أيًا من الأمثلة السبعة باستخدام `imgui.runExample("widget-overview")` أو `"parameter-panel"` أو `"log-hud"` أو `"data-table-demo"` أو `"theme-gallery"` أو `"error-handling"` أو `"background-task"`, واستكشفها عبر `listExamples` ومصدرها عبر `getExampleSource`. لا يعرض مركز إضافات AutoJs6 6.8 حتى الآن إجراء عاماً لتشغيل المثال بنقرة واحدة.
 
 ينشر الإصدار 1.7 أيضًا تصريحات المحرر الكاملة في `types/imgui.d.ts`. تتوفر الحدود عبر `imgui.Limits` (نص 64 KiB و512 عنصر اختيار و2,048 حدث إدخال)؛ ويُرفض الإدخال المتجاوز بدل اقتطاعه بصمت.

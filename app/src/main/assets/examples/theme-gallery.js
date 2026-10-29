@@ -31,15 +31,15 @@
 
     var launch = options.activity === true ? imgui.launch : imgui.launchFloaty;
     var session = launch(function (ui, window) {
-        ui.setNextWindowPos(14 * window.density, 14 * window.density, ui.Cond.FirstUseEver);
-        ui.setNextWindowSize(680 * window.density, 590 * window.density, ui.Cond.FirstUseEver);
+        ui.setNextWindowPos(ui.dp(14), ui.dp(14), ui.Cond.FirstUseEver);
+        ui.setNextWindowSize(ui.dp(680), ui.dp(590), ui.Cond.FirstUseEver);
         ui.withWindow("ImGui Theme Gallery", open, 0, function () {
             ui.text("Current theme: " + currentTheme);
             ui.textDisabled("Select a preset; the controls below update immediately.");
             ui.separatorText("Presets");
 
             for (var index = 0; index < themes.length; index += 1) {
-                if (ui.button(themes[index][0] + "##theme-" + index, 150 * window.density, 0)) {
+                if (ui.button(themes[index][0] + "##theme-" + index, ui.dp(150), 0)) {
                     currentTheme = ui.setTheme(themes[index][1]);
                     window.theme = currentTheme;
                     window.toast(themes[index][0] + " applied", 1200, {
@@ -72,7 +72,7 @@
                 ui.colorButton(
                     "##swatch-" + swatchIndex,
                     color[0], color[1], color[2], color[3],
-                    0, 34 * window.density, 24 * window.density
+                    0, ui.dp(34), ui.dp(24)
                 );
                 ui.sameLine();
                 ui.text(swatches[swatchIndex][0]);
@@ -103,8 +103,8 @@
     }, {
         width: numberOption(options.width, 720),
         height: numberOption(options.height, 630),
-        x: numberOption(options.x, 18),
-        y: numberOption(options.y, 56),
+        x: numberOption(options.x, 6),
+        y: numberOption(options.y, 24),
         fps: numberOption(options.fps, 45),
         theme: currentTheme,
         touchMode: imgui.TouchMode.Auto,

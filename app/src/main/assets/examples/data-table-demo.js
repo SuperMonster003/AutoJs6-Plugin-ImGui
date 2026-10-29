@@ -59,8 +59,8 @@
             );
         }
 
-        ui.setNextWindowPos(14 * window.density, 14 * window.density, ui.Cond.FirstUseEver);
-        ui.setNextWindowSize(430 * window.density, 275 * window.density, ui.Cond.FirstUseEver);
+        ui.setNextWindowPos(ui.dp(14), ui.dp(14), ui.Cond.FirstUseEver);
+        ui.setNextWindowSize(ui.dp(430), ui.dp(275), ui.Cond.FirstUseEver);
         ui.withWindow("Table Demo Controls", controlsOpen, 0, function () {
             ui.text("Rows: " + table.rows.length + ", selected: " + table.selectedRows().length);
 
@@ -106,8 +106,8 @@
     }, {
         width: numberOption(options.width, 1120),
         height: numberOption(options.height, 650),
-        x: numberOption(options.x, 10),
-        y: numberOption(options.y, 46),
+        x: numberOption(options.x, 4),
+        y: numberOption(options.y, 24),
         fps: numberOption(options.fps, 45),
         theme: options.theme || imgui.Themes.Dark,
         touchMode: imgui.TouchMode.Auto,

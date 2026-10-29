@@ -4,6 +4,25 @@
 
 ******
 
+# v1.12.0
+
+###### 2026/10/29
+
+* `Note` Changement incompatible: les positions et tailles de la fenêtre sont désormais partout en dp. Les x / y de createWindow, les x / y / width / height / displayWidth / displayHeight de Session, setPosition / setSize, les données des événements et les x / y des boutons flottants étaient en px; les coordonnées dans une frame restent en px. La mise à jour des scripts est décrite dans docs/MIGRATION-1.12.md
+* `Note` Changement incompatible: un argument incorrect (mauvais type, NaN, nombre sous forme de chaîne ou valeur hors limites) lève désormais une TypeError ou une RangeError qui nomme la méthode et l'argument, par exemple `imgui.sliderFloat: argument "max" must be a finite number`, au lieu d'être converti ou borné en silence; les options de fenêtre comme fps, alpha et fontSize sont vérifiées de la même façon
+* `Note` Changement incompatible: les champs de Session et des boutons flottants sont en lecture seule (une affectation lève une exception en mode strict); utilisez les méthodes set. FloatingButton.setPosition ne prend plus d'argument source, et un nombre donné comme couleur de bouton flottant est lu comme toute autre couleur imgui (0xAABBGGRR, comme renvoyé par colorU32) et non plus comme une couleur Android ARGB
+* `Note` Changement incompatible: les événements de session, les rappels des boutons flottants et les résultats des dialogues s'exécutent sur le thread du script, celui de la fonction de rendu, et non plus sur le thread UI d'Android; voir docs/THREADING.md
+* `Fonctionnalité` imgui.dp() / imgui.px() (alias Dp / Px) convertissent entre dp et px, et imgui.density donne le nombre de px par dp
+* `Fonctionnalité` Les couleurs acceptent partout un nombre compacté, [r, g, b, a], {r, g, b, a} ou "#rrggbbaa", y compris dans textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; les arguments séparés r, g, b, a fonctionnent toujours
+* `Fonctionnalité` Exemple background-task: un thread de travail effectue une tâche longue pendant que la fenêtre continue de s'afficher, avec progression et annulation
+* `Fonctionnalité` docs/THREADING.md explique sur quel thread s'exécute chaque rappel et comment effectuer un travail long en arrière-plan, et docs/MIGRATION-1.12.md liste les modifications de scripts nécessaires pour cette version
+* `Correctif` Les rappels d'événements et des boutons flottants pouvaient s'exécuter en même temps que la fonction de rendu, et un appel à sleep dans ces rappels provoquait une erreur
+* `Correctif` Session.theme ne changeait pas après imgui.setTheme
+* `Correctif` Le déplacement de la fenêtre signalait l'événement moved avec la source api au lieu de drag
+* `Amélioration` Les exemples utilisent ui.dp() au lieu de multiplier par window.density
+* `Amélioration` Les déclarations TypeScript indiquent l'unité et la plage autorisée de chaque taille, position et option, et marquent les champs de Session et des boutons flottants comme readonly
+* `Amélioration` Chaque version GitHub inclut un fichier SHA256SUMS pour vérifier les APK téléchargés
+
 # v1.11.0
 
 ###### 2026/10/29

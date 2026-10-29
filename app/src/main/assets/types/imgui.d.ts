@@ -17,8 +17,20 @@
 declare namespace ImGui {
     type MutableValue<T> = ValueRef<T> | IndexedRef<T>;
     type Point = readonly [number, number] | { x: number; y: number };
+    /**
+     * A color in one of four forms:
+     * - a packed 32-bit integer in Dear ImGui order 0xAABBGGRR, as returned by imgui.colorU32;
+     * - an array [r, g, b] or [r, g, b, a];
+     * - an object {r, g, b, a?};
+     * - a string "#rgb", "#rgba", "#rrggbb" or "#rrggbbaa".
+     *
+     * Array and object components are 0..1; a component above 1 is read as 0..255. Alpha defaults to 1. Functions that
+     * take a color also accept the components positionally (r, g, b, a). An invalid color throws TypeError or
+     * RangeError naming the function and the argument.
+     */
     type Color =
         | number
+        | string
         | readonly [number, number, number]
         | readonly [number, number, number, number]
         | { r: number; g: number; b: number; a?: number };
@@ -266,19 +278,32 @@ declare namespace ImGui {
         size?: number;
     }
 
+    /**
+     * Options of a floating Android button. Sizes and positions are dp; values out of range throw RangeError.
+     */
     interface FloatingButtonOptions {
+        /** Width and height in dp when width or height is omitted, default 56. */
         size?: number;
+        /** Width in dp. */
         width?: number;
+        /** Height in dp. */
         height?: number;
+        /** Left edge in dp, clamped to the display. */
         x?: number;
+        /** Top edge in dp, clamped to the display. */
         y?: number;
+        /** Opacity 0..1. */
         alpha?: number;
-        backgroundColor?: Color | string;
-        borderColor?: Color | string;
+        backgroundColor?: Color;
+        borderColor?: Color;
+        /** Border width in dp. */
         borderWidth?: number;
+        /** Corner radius in dp, half the smaller side by default. */
         rounding?: number;
-        textColor?: Color | string;
+        textColor?: Color;
+        /** Label size in sp, default 16. */
         textSize?: number;
+        /** Shadow elevation in dp, default 8. */
         elevation?: number;
         draggable?: boolean;
         touchable?: boolean;
@@ -286,33 +311,45 @@ declare namespace ImGui {
         visible?: boolean;
         hidden?: boolean;
         secure?: boolean;
+        /** Runs on the script thread. */
         onClick?: (button: FloatingButton) => void;
+        /** Runs on the script thread after the button moved. */
         onMoved?: (event: {
             readonly button: FloatingButton;
             readonly session: Session;
+            /** New left edge in dp. */
             readonly x: number;
+            /** New top edge in dp. */
             readonly y: number;
+            /** "drag" when the user dragged the button, "api" for setPosition, "configuration" after a display change. */
             readonly source: string;
         }) => void;
     }
 
+    /** A floating Android button. Fields are read-only; change them with the setters. */
     interface FloatingButton {
         readonly window: unknown;
         readonly view: unknown;
         readonly session: Session;
-        text: string;
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-        alpha: number;
-        secure: boolean;
-        moreTouch: boolean;
-        visible: boolean;
-        touchable: boolean;
-        closed: boolean;
+        readonly text: string;
+        /** Left edge in dp. */
+        readonly x: number;
+        /** Top edge in dp. */
+        readonly y: number;
+        /** Width in dp. */
+        readonly width: number;
+        /** Height in dp. */
+        readonly height: number;
+        readonly alpha: number;
+        readonly secure: boolean;
+        readonly moreTouch: boolean;
+        readonly visible: boolean;
+        readonly touchable: boolean;
+        readonly closed: boolean;
         setText(text: unknown): FloatingButton;
-        setPosition(x: number, y: number, source?: string): FloatingButton;
+        /** Moves the button to (x, y) in dp, clamped to the display; null keeps that coordinate. */
+        setPosition(x: number | null, y: number | null): FloatingButton;
+        /** Opacity 0..1. */
         setAlpha(alpha: number): FloatingButton;
         setSecure(secure: boolean): FloatingButton;
         setMoreTouch(enabled: boolean): FloatingButton;
@@ -323,55 +360,84 @@ declare namespace ImGui {
         close(): void;
     }
 
+    /**
+     * Options of imgui.createWindow. Sizes and positions of the Android window are dp (1 dp = imgui.density px);
+     * coordinates inside a frame (setNextWindowPos, drawing, ...) stay px. A value of the wrong type, NaN or out of
+     * range throws TypeError or RangeError naming the option.
+     */
     interface WindowOptions {
         mode?: WindowMode;
         /** Privileged launcher selection. Auto prefers an operational host Shizuku service. */
         backend?: PrivilegedBackend;
         /** Alias of backend, used only when mode is privileged. */
         privilegedBackend?: PrivilegedBackend;
-        /** Privileged child startup deadline, clamped to 1..15000 milliseconds. */
+        /** Privileged child startup deadline in milliseconds, 1..15000, default 10000. */
         startupTimeout?: number;
         /** Touch-coordinate rotation in degrees; inferred from the display when omitted. */
         rotation?: 0 | 90 | 180 | 270;
+        /** Overlay width in dp, at least 1, default 360; limited to the display. */
         width?: number;
+        /** Alias of width. */
         w?: number;
+        /** Overlay height in dp, at least 1, default 420; limited to the display. */
         height?: number;
+        /** Alias of height. */
         h?: number;
+        /** Left edge in dp, clamped to the display; 12 dp from the right edge by default. */
         x?: number;
+        /** Top edge in dp, clamped to the display; 72 dp above the bottom edge by default. */
         y?: number;
+        /** Frame rate while expanded, 15..120, default 60. */
         fps?: number;
+        /** Frame rate while collapsed, 1..15, default 5. */
         collapsedFps?: number;
         movable?: boolean;
         fontPath?: string;
+        /** Default font size in dp, 8..64, default 16. */
         fontSize?: number;
+        /** Additional fonts, at most 16; FontDefinition.size is dp, 8..128. */
         fonts?: readonly (string | FontDefinition)[];
         iniPath?: string | false | null;
         ime?: boolean;
         fling?: boolean;
+        /** Fling deceleration, 0.5..30, default 5.5. */
         flingFriction?: number;
+        /** Slowest fling in dp per second, default 80. */
         flingMinVelocity?: number;
+        /** Fastest fling in dp per second, default 8000. */
         flingMaxVelocity?: number;
+        /** Distance in dp a touch must move before it drags, default 10. */
         dragThreshold?: number;
         longPressAsRightClick?: boolean;
+        /** Long-press delay in milliseconds, 250..2000; the system long-press timeout by default. */
         longPressDuration?: number;
+        /** Distance in dp a long press may move, default 10. */
         longPressSlop?: number;
         moreTouch?: boolean;
         touchMode?: TouchMode | boolean;
         touchable?: TouchMode | boolean;
+        /** Window opacity 0..1, default 1. */
         alpha?: number;
         secure?: boolean;
         immersive?: boolean;
         responsive?: boolean;
         contentAutoResize?: boolean;
         autoResize?: boolean;
+        /** Padding in dp added around the content when contentAutoResize is on, default 8. */
         contentPadding?: number;
+        /** Smallest auto-resized width in dp, default 48. */
         contentMinWidth?: number;
+        /** Smallest auto-resized height in dp, default 48. */
         contentMinHeight?: number;
+        /** Largest auto-resized width in dp; the display width by default. */
         contentMaxWidth?: number;
+        /** Largest auto-resized height in dp; the display height by default. */
         contentMaxHeight?: number;
         theme?: ThemeName;
         appearance?: AppearanceName;
+        /** Rounding of windows, frames, popups, ... in dp. */
         rounding?: number;
+        /** Border size of windows, frames and popups in dp. */
         borderSize?: number;
         style?: StyleProperties;
         styleProperties?: StyleProperties;
@@ -385,6 +451,7 @@ declare namespace ImGui {
          * large enough for them.
          */
         debug?: boolean;
+        /** Session event listeners; like Session.on, they run on the script thread. */
         events?: Partial<Record<SessionEventName, SessionEventListener>>;
         /** Listener of the "error" event, see {@link SessionErrorEvent}. */
         onError?: (event: SessionErrorEvent) => void;
@@ -422,6 +489,18 @@ declare namespace ImGui {
         | "secureChanged"
         | "error";
 
+    /**
+     * A session event. Listeners run on the script thread, the thread of the render callback, one after another, so
+     * they may change the render state without locks; do not block in them (see docs/THREADING.md). Positions and
+     * sizes in the payload are dp:
+     * - moved: x, y, oldX, oldY, source ("drag", "api", "configuration", ...);
+     * - resized: width, height, oldWidth, oldHeight, source;
+     * - ready / surfaceRestored: restored, mode, backend, width, height;
+     * - configurationChanged: width, height, oldWidth, oldHeight (the display), orientation;
+     * - collapsed: button, fps; expanded: x, y, width, height;
+     * - closed: reason; touchableChanged: mode, touchable, interactiveRegionCount;
+     * - moreTouchChanged: enabled; alphaChanged: alpha; secureChanged: secure.
+     */
     interface SessionEvent {
         readonly type: string;
         readonly session: Session;
@@ -595,37 +674,54 @@ declare namespace ImGui {
         renderTable(): this;
     }
 
+    /**
+     * A running ImGui window. Fields are read-only (writing one throws TypeError in strict mode); change them with the
+     * setters. Positions and sizes are dp; multiply by density for px.
+     */
     interface Session {
         readonly mode: WindowMode;
         /** Root/Shizuku backend selected for a privileged session, otherwise null. */
         readonly privilegedBackend: ActivePrivilegedBackend | null;
         /** Binder-transferred Android Surface for privileged mode, otherwise null. */
         readonly surface: object | null;
+        /** The floaty or Activity window that holds the surface. */
+        readonly window: unknown;
+        readonly surfaceView: unknown;
+        /** The hidden text field that receives IME input, or null when ime is false. */
+        readonly imeView: unknown;
+        /** Display density, px per dp. */
         readonly density: number;
-        displayWidth: number;
-        displayHeight: number;
-        width: number;
-        height: number;
-        x: number;
-        y: number;
-        alpha: number;
-        secure: boolean;
-        moreTouch: boolean;
-        touchMode: TouchMode;
-        touchable: boolean;
-        interactiveRegionCount: number;
-        collapsed: boolean;
+        /** Display width in dp. */
+        readonly displayWidth: number;
+        /** Display height in dp. */
+        readonly displayHeight: number;
+        /** Window width in dp. */
+        readonly width: number;
+        /** Window height in dp. */
+        readonly height: number;
+        /** Left edge of the window in dp. */
+        readonly x: number;
+        /** Top edge of the window in dp. */
+        readonly y: number;
+        readonly alpha: number;
+        readonly secure: boolean;
+        readonly moreTouch: boolean;
+        readonly touchMode: TouchMode;
+        readonly touchable: boolean;
+        readonly interactiveRegionCount: number;
+        readonly collapsed: boolean;
         readonly fps: number;
         readonly collapsedFps: number;
         readonly frameScheduler: "deadline-timer";
         readonly iniPath: string | null;
         /** Whether the session runs in debug mode (WindowOptions.debug). */
         readonly debug: boolean;
-        ready: boolean;
-        closed: boolean;
-        closeReason: string | null;
-        theme: ThemeName;
-        appearance: AppearanceName | null;
+        readonly ready: boolean;
+        readonly closed: boolean;
+        readonly closeReason: string | null;
+        /** Current theme, including a change made with imgui.setTheme. */
+        readonly theme: ThemeName;
+        readonly appearance: AppearanceName | null;
         readonly fonts: Readonly<Record<string, number>>;
         readonly textures: Texture[];
         readonly buttons: FloatingButton[];
@@ -634,15 +730,19 @@ declare namespace ImGui {
         destroyTexture(texture: Texture): boolean;
         /** Live backend/UID/PID/Surface/direct-input diagnostics. */
         getBackendInfo(): string;
+        /** Adds a listener; it runs on the script thread. */
         on(eventName: "error", listener: (event: SessionErrorEvent) => void): this;
         on(eventName: SessionEventName | string, listener: SessionEventListener): this;
         once(eventName: "error", listener: (event: SessionErrorEvent) => void): this;
         once(eventName: SessionEventName | string, listener: SessionEventListener): this;
         off(eventName: SessionEventName | string, listener?: SessionEventListener | null): this;
-        setPosition(x: number, y: number): this;
-        setSize(width: number, height: number): this;
+        /** Moves the window to (x, y) in dp, clamped to the display; null keeps that coordinate. */
+        setPosition(x: number | null, y: number | null): this;
+        /** Resizes the window to width x height in dp, limited to the display; null keeps that side. */
+        setSize(width: number | null, height: number | null): this;
         setTouchable(mode: TouchMode | boolean): this;
         setMoreTouch(enabled: boolean): this;
+        /** Window opacity 0..1. */
         setAlpha(alpha: number): this;
         setSecure(secure: boolean): this;
         collapse(): this;
@@ -678,6 +778,24 @@ declare namespace ImGui {
         bytes(values?: readonly number[]): NativeArray<number>;
         strings(values?: readonly unknown[]): NativeArray<string>;
         version(): string;
+
+        /**
+         * Display density, px per dp: the active session's density, otherwise the display's. Window options, Session
+         * geometry and event payloads are dp; coordinates inside a frame are px.
+         */
+        readonly density: number;
+        /**
+         * Converts dp to px, for example ui.setNextWindowSize(ui.dp(320), ui.dp(240)).
+         * @param value length in dp
+         * @returns length in px
+         */
+        dp(value: number): number;
+        /**
+         * Converts px to dp.
+         * @param value length in px
+         * @returns length in dp
+         */
+        px(value: number): number;
 
         readonly Limits: Readonly<{
             InputTextMaxBytes: 65536;
@@ -748,6 +866,7 @@ declare namespace ImGui {
         setCursorPos(x: number, y: number): void;
         text(value: unknown): void;
         textWrapped(value: unknown): void;
+        textColored(color: Color, value: unknown): void;
         textColored(red: number, green: number, blue: number, alpha: number, value: unknown): void;
         button(label: string, width?: number, height?: number): boolean;
         smallButton(label: string): boolean;
@@ -802,6 +921,8 @@ declare namespace ImGui {
         listBox(label: string, currentItem: MutableValue<number>, items: readonly unknown[], heightInItems?: number): boolean;
         colorPicker3(label: string, value: MutableValue<readonly number[]> | NativeArray<number>, flags?: number): boolean;
         colorPicker4(label: string, value: MutableValue<readonly number[]> | NativeArray<number>, flags?: number): boolean;
+        colorButton(id: string, color: Color, flags?: number, width?: number, height?: number): boolean;
+        colorButton(id: string, color: Color, options: { flags?: number; width?: number; height?: number }): boolean;
         colorButton(id: string, red: number, green: number, blue: number, alpha?: number, flags?: number, width?: number, height?: number): boolean;
         plotLines(label: string, values: readonly number[] | NativeArray<number>, options?: PlotOptions): void;
         plotHistogram(label: string, values: readonly number[] | NativeArray<number>, options?: PlotOptions): void;
@@ -838,10 +959,15 @@ declare namespace ImGui {
         tableSetupColumn(label: string, flags?: number, initWidthOrWeight?: number): void;
         tableSetupScrollFreeze(columns: number, rows: number): void;
         tableHeadersRow(): void;
+        tableSetBgColor(target: number, color: Color, columnIndex?: number): void;
         tableSetBgColor(target: number, red: number, green: number, blue: number, alpha?: number, columnIndex?: number): void;
-        pushStyleColor(index: number, red: number, green: number, blue: number, alpha?: number): void;
+        /** index is an imgui.Col value or name. */
+        pushStyleColor(index: number | string, color: Color): void;
+        pushStyleColor(index: number | string, red: number, green: number, blue: number, alpha?: number): void;
         popStyleColor(count?: number): void;
-        setStyleColor(index: number, red: number, green: number, blue: number, alpha?: number): void;
+        /** index is an imgui.Col value or name. */
+        setStyleColor(index: number | string, color: Color): Api;
+        setStyleColor(index: number | string, red: number, green: number, blue: number, alpha?: number): Api;
         setStyleProperties(properties: StyleProperties): void;
         setTheme(name: ThemeName | string): ThemeName;
         pushStyleVar(index: number, x: number | Point, y?: number): void;
@@ -962,6 +1088,8 @@ declare namespace ImGui {
 
     interface ApiAliases {
         readonly Ref: ApiCore["ref"];
+        readonly Dp: ApiCore["dp"];
+        readonly Px: ApiCore["px"];
         readonly GetBackendCapabilities: ApiCore["getBackendCapabilities"];
         readonly ListExamples: ApiCore["listExamples"];
         readonly GetExampleSource: ApiCore["getExampleSource"];

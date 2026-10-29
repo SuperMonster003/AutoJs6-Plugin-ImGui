@@ -33,8 +33,8 @@
             throw new Error("Thrown on purpose by the render callback");
         }
 
-        ui.setNextWindowPos(16 * window.density, 16 * window.density, ui.Cond.FirstUseEver);
-        ui.setNextWindowSize(420 * window.density, 300 * window.density, ui.Cond.FirstUseEver);
+        ui.setNextWindowPos(ui.dp(16), ui.dp(16), ui.Cond.FirstUseEver);
+        ui.setNextWindowSize(ui.dp(420), ui.dp(300), ui.Cond.FirstUseEver);
         ui.withWindow("Error Handling", controllerOpen, 0, function () {
             ui.text("Debug mode: " + (window.debug ? "on" : "off"));
             ui.text("Errors received: " + errorCount);
@@ -74,8 +74,8 @@
     }, {
         width: numberOption(options.width, 960),
         height: numberOption(options.height, 720),
-        x: numberOption(options.x, 12),
-        y: numberOption(options.y, 50),
+        x: numberOption(options.x, 4),
+        y: numberOption(options.y, 24),
         fps: numberOption(options.fps, 30),
         theme: options.theme || imgui.Themes.ModernDark,
         debug: options.debug !== false,

@@ -5,6 +5,31 @@
   "changelog_label_improvement": "优化",
   "changelog_label_dependency": "依赖",
   "$data": {
+    "v1.12.0": {
+      "released_date": "2026/10/29",
+      "hint": [
+        "不兼容变更: 窗口的位置与尺寸统一改用 dp. createWindow 的 x / y, Session 的 x / y / width / height / displayWidth / displayHeight, setPosition / setSize, 事件数据以及悬浮按钮的 x / y 以前是 px; 帧内坐标仍是 px. 脚本的改法见 docs/MIGRATION-1.12.md",
+        "不兼容变更: 参数有误 (类型不对, NaN, 数字字符串或超出范围) 时改为抛出 TypeError 或 RangeError, 消息写明方法名与参数名, 例如 `imgui.sliderFloat: argument \"max\" must be a finite number`, 不再静默转换或截断; fps, alpha, fontSize 等窗口选项同样检查",
+        "不兼容变更: Session 与悬浮按钮的字段改为只读 (严格模式下赋值会抛错), 请改用对应的 set 方法. FloatingButton.setPosition 不再接受 source 参数; 悬浮按钮颜色传数字时与其他 imgui 颜色一样按 0xAABBGGRR (即 colorU32 的返回值) 解释, 不再按 Android ARGB 解释",
+        "不兼容变更: 会话事件, 悬浮按钮回调与对话框结果改在脚本线程 (渲染回调所在的线程) 执行, 不再在 Android UI 线程执行, 详见 docs/THREADING.md"
+      ],
+      "feature": [
+        "imgui.dp() / imgui.px() (别名 Dp / Px) 在 dp 与 px 之间换算, imgui.density 给出每 dp 对应的 px 数",
+        "所有颜色参数都接受打包整数, [r, g, b, a], {r, g, b, a} 或 \"#rrggbbaa\", 包括 textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; 分别传入 r, g, b, a 的写法仍然可用",
+        "示例 background-task: 工作线程执行耗时任务, 窗口照常绘制, 带进度显示与取消",
+        "文档 docs/THREADING.md 说明各回调在哪个线程执行以及如何在后台执行耗时任务, docs/MIGRATION-1.12.md 列出升级到本版本时脚本需要的改动"
+      ],
+      "fix": [
+        "事件回调与悬浮按钮回调可能与渲染回调同时执行, 且在其中调用 sleep 会报错的问题",
+        "调用 imgui.setTheme 后 Session.theme 不变的问题",
+        "拖动窗口时 moved 事件的 source 为 api 而不是 drag 的问题"
+      ],
+      "improvement": [
+        "示例改用 ui.dp(), 不再手动乘以 window.density",
+        "TypeScript 声明写明每个尺寸, 位置与选项的单位和取值范围, 并把 Session 与悬浮按钮的字段标为只读",
+        "每个 GitHub Release 附带 SHA256SUMS 文件, 便于校验下载的 APK"
+      ]
+    },
     "v1.11.0": {
       "released_date": "2026/10/29",
       "hint": [

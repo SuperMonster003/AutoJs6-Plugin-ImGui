@@ -39,8 +39,8 @@
             window.setAlpha(lastAlpha);
         }
 
-        ui.setNextWindowPos(14 * window.density, 14 * window.density, ui.Cond.FirstUseEver);
-        ui.setNextWindowSize(560 * window.density, 510 * window.density, ui.Cond.FirstUseEver);
+        ui.setNextWindowPos(ui.dp(14), ui.dp(14), ui.Cond.FirstUseEver);
+        ui.setNextWindowSize(ui.dp(560), ui.dp(510), ui.Cond.FirstUseEver);
         ui.withWindow("ImGui Parameter Panel", open, 0, function () {
             ui.separatorText("Live parameters");
             ui.checkbox("Animate preview", animated);
@@ -55,37 +55,37 @@
             ui.separatorText("Preview");
             var origin = ui.getCursorPos();
             var available = ui.getContentRegionAvail();
-            var previewHeight = 150 * window.density;
+            var previewHeight = ui.dp(150);
             ui.invisibleButton("parameter-preview", available[0], previewHeight);
             var windowPosition = ui.getWindowPos();
             var center = [
                 windowPosition[0] + origin[0] + available[0] * 0.5,
                 windowPosition[1] + origin[1] + previewHeight * 0.5
             ];
-            var orbit = sample * window.density;
+            var orbit = ui.dp(sample);
             var color = ui.colorU32(accent.value);
             var draw = ui.getWindowDrawList();
             draw.addRectFilled(
                 [windowPosition[0] + origin[0], windowPosition[1] + origin[1]],
                 [windowPosition[0] + origin[0] + available[0], windowPosition[1] + origin[1] + previewHeight],
                 [0.05, 0.07, 0.10, 0.75],
-                10 * window.density
+                ui.dp(10)
             );
             draw.addLine(
-                [center[0] - amplitude.value * window.density, center[1]],
-                [center[0] + amplitude.value * window.density, center[1]],
+                [center[0] - ui.dp(amplitude.value), center[1]],
+                [center[0] + ui.dp(amplitude.value), center[1]],
                 [0.35, 0.38, 0.44, 1],
                 1
             );
             draw.addCircleFilled(
                 [center[0] + orbit, center[1]],
-                radius.value * window.density,
+                ui.dp(radius.value),
                 color,
                 segments.value
             );
             draw.addCircle(
                 center,
-                (radius.value + 12) * window.density,
+                ui.dp(radius.value + 12),
                 [accent.value[0], accent.value[1], accent.value[2], 0.35],
                 segments.value,
                 thickness.value
@@ -95,7 +95,7 @@
                 scaleMin: -90,
                 scaleMax: 90,
                 width: -1,
-                height: 72 * window.density,
+                height: ui.dp(72),
                 overlay: sample.toFixed(1) + " px"
             });
 
@@ -121,8 +121,8 @@
     }, {
         width: numberOption(options.width, 590),
         height: numberOption(options.height, 550),
-        x: numberOption(options.x, 24),
-        y: numberOption(options.y, 72),
+        x: numberOption(options.x, 8),
+        y: numberOption(options.y, 28),
         fps: numberOption(options.fps, 60),
         theme: options.theme || imgui.Themes.CyanDusk,
         touchMode: imgui.TouchMode.Auto,

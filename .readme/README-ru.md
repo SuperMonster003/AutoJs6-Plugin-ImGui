@@ -64,7 +64,7 @@
 - Лёгкие ссылки `imgui.ref(value)` / `{value: x}` работают со всеми элементами с состоянием, а прежние помощники ссылок на Java-массивы остаются полностью совместимыми.
 - Управляемые сессией `logWindow`, стековые `toast`, диалоги Promise, цветной по порогам `statsOverlay` и выбираемая CRUD-таблица `dataTable` дают готовый интерфейс отладки.
 - Для часто используемых API и перечислений констант есть псевдонимы PascalCase (например, `ui.Button`), сохраняющие стиль аргументов плагина; список псевдонимов и отличия от исходных сигнатур C++ приведены в [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
-- Инженерная поддержка включает полные декларации TypeScript, шесть запускаемых примеров, Android-тесты рендеринга, неблокирующую входную очередь, проверяемое обновление upstream и автоматизацию CI-релизов.
+- Инженерная поддержка включает полные декларации TypeScript, семь запускаемых примеров, Android-тесты рендеринга, неблокирующую входную очередь, проверяемое обновление upstream и автоматизацию CI-релизов.
 - Локализация сведений о плагине, инструкций, README и CHANGELOG на десять языков.
 
 ******
@@ -95,7 +95,7 @@ var themeColor = imgui.ref([0.25, 0.55, 0.90]);
 
 imgui.createWindow(function (ui, overlay) {
     ui.setNextWindowPos(0, 0, ui.Cond.Always);
-    ui.setNextWindowSize(overlay.width, overlay.height, ui.Cond.Always);
+    ui.setNextWindowSize(ui.dp(overlay.width), ui.dp(overlay.height), ui.Cond.Always);
     ui.withWindow(
         "ImGui Panel",
         null,
@@ -120,7 +120,7 @@ imgui.createWindow(function (ui, overlay) {
 });
 ```
 
-Изменяемые элементы принимают лёгкие ссылки из `imgui.ref(value)` и обычные объекты `{ value: ... }`; прежние помощники `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` остаются совместимыми. Фокус на `inputText` автоматически открывает системный IME с поддержкой составления; `ime: false` отключает автоматику. `width`, `height` и `fontSize` используют единицы без привязки к плотности. Перетаскивайте пустую область (`movable: false` закрепляет окно); вертикальный жест двумя пальцами имеет настраиваемую инерцию (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`), а долгое нажатие одним пальцем создаёт правый клик (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). Если системный шрифт не покрывает нужные символы, укажите в `fontPath` файл TTF или OTF.
+Изменяемые элементы принимают лёгкие ссылки из `imgui.ref(value)` и обычные объекты `{ value: ... }`; прежние помощники `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` остаются совместимыми. Фокус на `inputText` автоматически открывает системный IME с поддержкой составления; `ime: false` отключает автоматику. Размеры и положение окна задаются в dp: параметры `width`, `height`, `x` и `y`, поля сессии и данные событий; `fontSize` тоже в dp. Координаты внутри кадра задаются в px, переводите их через `ui.dp()` / `ui.px()`. Обработчики событий и кнопок выполняются в потоке скрипта (см. [THREADING.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/THREADING.md)), а отличия от прежних версий перечислены в [MIGRATION-1.12.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/MIGRATION-1.12.md). Перетаскивайте пустую область (`movable: false` закрепляет окно); вертикальный жест двумя пальцами имеет настраиваемую инерцию (`fling`, `flingFriction`, `flingMinVelocity`, `flingMaxVelocity`), а долгое нажатие одним пальцем создаёт правый клик (`longPressAsRightClick`, `longPressDuration`, `longPressSlop`). Если системный шрифт не покрывает нужные символы, укажите в `fontPath` файл TTF или OTF.
 
 Темы и шрифты: `setTheme` принимает все 11 значений `Themes`, а `setStyleProperties` пакетно обновляет `StyleVar`; `createWindow` также принимает `theme`, `appearance`, `style` и `shadow`. Массив `fonts` загружает шрифты из assets (`asset://...`) или файлов для `pushFont` / `withFont`. CJK-резерв и иконки объединяются автоматически; `Icons` / `icon(name)` возвращает глифы иконок.
 
@@ -128,7 +128,7 @@ imgui.createWindow(function (ui, overlay) {
 
 Оконные сессии: оверлей по умолчанию использует `TouchMode.Auto`, оставляя корневые окна ImGui интерактивными и передавая касания пустых областей Surface приложению под ним; для фиксированной политики выберите `Touchable` или `Passthrough`. Сессия позволяет менять прозрачность/защиту/режим касаний, сворачиваться в мини-пузырь с низким FPS, создавать отдельные `addButtonEx`, следовать содержимому `AlwaysAutoResize`, сохранять расположение через `iniPath` и публиковать события через `on` / `once` / `off` или callbacks параметров. `imgui.launch(...)` создаёт полноэкранный Surface в текущей resumed Activity AutoJs6, а `launchFloaty(...)` явно выбирает оверлей. На движок сценариев приходится одна нативная сессия рендеринга, но её callback может создать любое число корней ImGui через `begin` / `withWindow`; новая сессия закрывает предыдущую. Исключение в колбэке рендеринга или в колбэке события выводится со стеком через `console.error` (серия одинаковых ошибок выводится один раз) и порождает событие `error` (`error` / `phase` / `frame`); без слушателя `error` ошибка рендеринга закрывает сессию (`closeReason` равен `render-error`), а при наличии слушателя остаток кадра пропускается и рендеринг продолжается. Опция `debug: true` сообщает через `console.warn` и logcat об ошибках использования, например `begin` без `end`, и показывает окна Metrics и Debug Log. Глобальные методы `setTouchable` / `setGlobalAlpha` / `getComponent` и подобные действуют на текущую сессию и без активной сессии выбрасывают `imgui.<name>: no active session`.
 
-Компоненты высокого уровня подключаются к активной сессии и рисуются после пользовательского callback: `logWindow` предоставляет уровни с цветами, очистку, экспорт и автопрокрутку; `toast` — позиционированные временные уведомления; `alert` / `confirm` / `singleChoice` / `multiChoice` возвращают Promise; `statsOverlay` строит график времени кадра; `dataTable` предоставляет выбор и CRUD. Шесть встроенных примеров (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling`) доступны через `listExamples` / `getExampleSource` и запускаются `runExample`. Центр плагинов AutoJs6 6.8 пока не использует общие метаданные примеров, поэтому до поддержки хостом запускайте приведённый ниже вызов напрямую:
+Компоненты высокого уровня подключаются к активной сессии и рисуются после пользовательского callback: `logWindow` предоставляет уровни с цветами, очистку, экспорт и автопрокрутку; `toast` - позиционированные временные уведомления; `alert` / `confirm` / `singleChoice` / `multiChoice` возвращают Promise; `statsOverlay` строит график времени кадра; `dataTable` предоставляет выбор и CRUD. Семь встроенных примеров (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling`, `background-task`) доступны через `listExamples` / `getExampleSource` и запускаются `runExample`. Центр плагинов AutoJs6 6.8 пока не использует общие метаданные примеров, поэтому до поддержки хостом запускайте приведённый ниже вызов напрямую:
 
 ```js
 imgui.runExample("widget-overview");
@@ -142,7 +142,7 @@ imgui.runExample("widget-overview");
 
 Для часто используемых API есть и псевдонимы PascalCase (например, `ui.Button` эквивалентен `ui.button`). Псевдонимы сохраняют стиль аргументов плагина (изменяемые значения через `imgui.ref` и т. п.) и не соответствуют исходным сигнатурам C++ один к одному; список и отличия приведены в [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). Методы lower camel case повторяют одноименные операции Dear ImGui и делятся на следующие группы:
 
-- Среда сессии: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, а также `on` / `once` / `off` и их формы для сессии, событие сессии `error`, сообщающее об ошибках колбэков, и опция `debug`, включающая режим отладки.
+- Среда сессии: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, перевод единиц `density` / `dp` / `px`, а также `on` / `once` / `off` и их формы для сессии, событие сессии `error`, сообщающее об ошибках колбэков, и опция `debug`, включающая режим отладки.
 - Обнаружение бэкенда: `getBackendCapabilities` / `BackendStatus` сообщает о доступности и готовности к эксплуатации окон, разделенной обработки касаний, привилегированного процесса, прямого ввода, Docking и Multi-Viewport, не повышая привилегии.
 - Сессия и окна: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, а также запросы состояния окна, такие как `isWindowHovered`.
 - Текст и элементы управления: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` и другие.
@@ -171,6 +171,25 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.12.0
+
+###### 2026/10/29
+
+* `Подсказка` Несовместимое изменение: положение и размеры окна теперь везде задаются в dp. Раньше в px были x / y в createWindow, x / y / width / height / displayWidth / displayHeight в Session, setPosition / setSize, данные событий и x / y плавающих кнопок; координаты внутри кадра по-прежнему в px. Как обновить скрипты, описано в docs/MIGRATION-1.12.md
+* `Подсказка` Несовместимое изменение: неверный аргумент (неверный тип, NaN, число в строке или значение вне диапазона) теперь вызывает TypeError или RangeError с именем метода и аргумента, например `imgui.sliderFloat: argument "max" must be a finite number`, вместо тихого преобразования или ограничения; параметры окна, такие как fps, alpha и fontSize, проверяются так же
+* `Подсказка` Несовместимое изменение: поля Session и плавающих кнопок доступны только для чтения (присваивание в строгом режиме вызывает исключение); используйте методы set. FloatingButton.setPosition больше не принимает аргумент source, а число в качестве цвета плавающей кнопки читается как любой другой цвет imgui (0xAABBGGRR, как возвращает colorU32), а не как цвет Android ARGB
+* `Подсказка` Несовместимое изменение: события сессии, обработчики плавающих кнопок и результаты диалогов выполняются в потоке скрипта, где работает функция отрисовки, а не в потоке интерфейса Android; см. docs/THREADING.md
+* `Функция` imgui.dp() / imgui.px() (псевдонимы Dp / Px) переводят dp в px и обратно, а imgui.density возвращает число px в одном dp
+* `Функция` Цвет везде можно задать упакованным числом, [r, g, b, a], {r, g, b, a} или "#rrggbbaa", в том числе в textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; отдельные аргументы r, g, b, a по-прежнему работают
+* `Функция` Пример background-task: рабочий поток выполняет долгую задачу, а окно продолжает отрисовку, с индикатором хода и отменой
+* `Функция` docs/THREADING.md объясняет, в каком потоке выполняется каждый обработчик и как выполнять долгую работу в фоне, а docs/MIGRATION-1.12.md перечисляет изменения в скриптах, нужные для этой версии
+* `Исправление` Обработчики событий и плавающих кнопок могли выполняться одновременно с функцией отрисовки, а вызов sleep в них приводил к ошибке
+* `Исправление` Session.theme не менялся после imgui.setTheme
+* `Исправление` При перетаскивании окна событие moved сообщало source api вместо drag
+* `Улучшение` Примеры используют ui.dp() вместо умножения на window.density
+* `Улучшение` Декларации TypeScript указывают единицы и допустимый диапазон каждого размера, положения и параметра и помечают поля Session и плавающих кнопок как readonly
+* `Улучшение` К каждому релизу на GitHub прилагается файл SHA256SUMS для проверки скачанных APK
+
 #### v1.11.0
 
 ###### 2026/10/29
@@ -193,13 +212,6 @@ imgui.runExample("widget-overview");
 * `Исправление` Параметры колбэка отрисовки createWindow / launchFloaty / launch / launchPrivileged были объявлены в декларациях TypeScript как (session); теперь они соответствуют фактическому вызову (ui, session), добавлен тип RenderCallback
 * `Улучшение` После включения плагин используется напрямую как глобальный объект imgui: его регистрирует AutoJs6, а плагин загружается при первом обращении к члену, поэтому plugins.load больше не нужен; прежний вызов plugins.load("io.github.supermonster003.autojs6.plugin.imgui") возвращает тот же объект
 * `Улучшение` Примеры скриптов, инструкция по использованию, README и декларации TypeScript обновлены под использование глобального объекта; файл деклараций больше не расширяет plugins.load перегрузками
-
-#### v1.9.4
-
-###### 2026/10/05
-
-* `Улучшение` Значки центра плагинов используют размеры, положение, светлые и тёмные изображения и круглые фоны, настроенные в Icon Studio, сохраняя исходники и параметры для воспроизведения
-* `Улучшение` Значки в сведениях о приложении Android используют изображения и светлый и тёмный фон Icon Studio, сохраняя прозрачные изображения центра плагинов и существующие варианты значков лаунчера
 
 ##### Дополнительная история выпусков
 

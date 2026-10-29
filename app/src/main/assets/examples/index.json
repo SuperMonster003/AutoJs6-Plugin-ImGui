@@ -37,6 +37,12 @@
       "title": "Error Handling",
       "asset": "examples/error-handling.js",
       "runner": "imgui.runExample"
+    },
+    {
+      "id": "background-task",
+      "title": "Background Task",
+      "asset": "examples/background-task.js",
+      "runner": "imgui.runExample"
     }
   ]
 }

@@ -60,6 +60,7 @@ public class ImGuiPluginContractTest {
                 "data-table-demo",
                 "theme-gallery",
                 "error-handling",
+                "background-task",
             },
             ImGuiPluginContract.exampleNames()
         );

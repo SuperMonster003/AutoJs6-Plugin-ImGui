@@ -5,6 +5,31 @@
   "changelog_label_improvement": "개선",
   "changelog_label_dependency": "의존성",
   "$data": {
+    "v1.12.0": {
+      "released_date": "2026/10/29",
+      "hint": [
+        "호환되지 않는 변경: 창의 위치와 크기는 모두 dp로 바뀌었습니다. createWindow의 x / y, Session의 x / y / width / height / displayWidth / displayHeight, setPosition / setSize, 이벤트 데이터, 플로팅 버튼의 x / y는 이전에 px였습니다. 프레임 안의 좌표는 계속 px입니다. 스크립트 수정 방법은 docs/MIGRATION-1.12.md를 참고하세요",
+        "호환되지 않는 변경: 인자가 잘못되면(잘못된 타입, NaN, 숫자 문자열, 범위를 벗어난 값) 조용히 변환하거나 잘라 내지 않고 메서드 이름과 인자 이름을 담은 TypeError 또는 RangeError를 던집니다. 예: `imgui.sliderFloat: argument \"max\" must be a finite number`. fps, alpha, fontSize 같은 창 옵션도 같은 방식으로 검사합니다",
+        "호환되지 않는 변경: Session과 플로팅 버튼의 필드는 읽기 전용이 되었습니다(strict 모드에서 대입하면 예외 발생). 대신 set 메서드를 사용하세요. FloatingButton.setPosition은 더 이상 source 인자를 받지 않으며, 플로팅 버튼 색상에 숫자를 넘기면 Android ARGB가 아니라 다른 imgui 색상과 같은 0xAABBGGRR(colorU32의 반환값)로 해석합니다",
+        "호환되지 않는 변경: 세션 이벤트, 플로팅 버튼 콜백, 대화상자 결과는 Android UI 스레드가 아니라 렌더 콜백과 같은 스크립트 스레드에서 실행됩니다. 자세한 내용은 docs/THREADING.md를 참고하세요"
+      ],
+      "feature": [
+        "imgui.dp() / imgui.px()(별칭 Dp / Px)로 dp와 px를 변환하고, imgui.density로 1 dp당 px 수를 얻을 수 있습니다",
+        "색상은 모든 API에서 압축된 정수, [r, g, b, a], {r, g, b, a}, \"#rrggbbaa\" 중 하나로 지정할 수 있습니다(textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor 포함). r, g, b, a를 따로 넘기는 방식도 계속 쓸 수 있습니다",
+        "예제 background-task: 작업 스레드가 오래 걸리는 일을 하는 동안에도 창은 계속 그려지며, 진행률 표시와 취소를 제공합니다",
+        "docs/THREADING.md는 각 콜백이 실행되는 스레드와 오래 걸리는 작업을 백그라운드에서 하는 방법을, docs/MIGRATION-1.12.md는 이 버전에 맞춰 스크립트에서 바꿔야 할 점을 설명합니다"
+      ],
+      "fix": [
+        "이벤트 콜백과 플로팅 버튼 콜백이 렌더 콜백과 동시에 실행될 수 있고, 그 안에서 sleep을 호출하면 오류가 나던 문제",
+        "imgui.setTheme을 호출해도 Session.theme이 바뀌지 않던 문제",
+        "창을 드래그할 때 moved 이벤트의 source가 drag가 아니라 api로 보고되던 문제"
+      ],
+      "improvement": [
+        "예제가 window.density를 곱하는 대신 ui.dp()를 사용합니다",
+        "TypeScript 선언에 모든 크기, 위치, 옵션의 단위와 허용 범위를 적고 Session과 플로팅 버튼의 필드를 readonly로 표시했습니다",
+        "각 GitHub 릴리스에 내려받은 APK를 검증할 수 있는 SHA256SUMS 파일을 첨부합니다"
+      ]
+    },
     "v1.11.0": {
       "released_date": "2026/10/29",
       "hint": [
