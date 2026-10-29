@@ -2063,9 +2063,10 @@ module.exports = function (bridge) {
         return FLOAT_ARRAY_CLASS.isInstance(values) ? values : floatArray(numberList(fn, "values", values));
     }
 
-    function plot(fn, label, values, options) {
+    // The bridge calls stay literal so that verifyImGuiSource sees every wrapped connection method.
+    function plotArguments(fn, label, values, options) {
         options = options || {};
-        bridge[fn](
+        return [
             String(label),
             plotValues(fn, values),
             plotValuesOffset(fn, options),
@@ -2075,14 +2076,16 @@ module.exports = function (bridge) {
             argNumber(fn, "options.scaleMax", options.scaleMax, NaN),
             argNumber(fn, "options.width", options.width, 0),
             argNumber(fn, "options.height", options.height, 0)
-        );
+        ];
     }
 
     api.plotLines = function (label, values, options) {
-        plot("plotLines", label, values, options);
+        var a = plotArguments("plotLines", label, values, options);
+        bridge.plotLines(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
     };
     api.plotHistogram = function (label, values, options) {
-        plot("plotHistogram", label, values, options);
+        var a = plotArguments("plotHistogram", label, values, options);
+        bridge.plotHistogram(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
     };
     api.treeNodeEx = function (label, flags) {
         return Boolean(bridge.treeNodeEx(String(label), argFlags("treeNodeEx", flags)));
