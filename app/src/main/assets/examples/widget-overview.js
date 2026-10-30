@@ -16,6 +16,20 @@
     var accent = imgui.ref([0.20, 0.62, 0.96, 1.0]);
     var choice = imgui.ref(0);
     var mainOpen = imgui.ref(true);
+    var position = imgui.ref([0.5, -1.25, 2.0]);
+    var margins = imgui.ref([8, 8, 16, 16]);
+    var levels = imgui.ref([20, 80]);
+    var spanMin = imgui.ref(0.25);
+    var spanMax = imgui.ref(0.75);
+    var angle = imgui.ref(Math.PI / 4);
+    var debugWindows = [
+        {label: "Metrics/Debugger", show: imgui.showMetricsWindow, open: imgui.ref(false)},
+        {label: "Debug Log", show: imgui.showDebugLogWindow, open: imgui.ref(false)},
+        {label: "ID Stack Tool", show: imgui.showIdStackToolWindow, open: imgui.ref(false)},
+        {label: "Style Editor", show: imgui.showStyleEditor, open: imgui.ref(false)},
+        {label: "About Dear ImGui", show: imgui.showAboutWindow, open: imgui.ref(false)},
+        {label: "User Guide", show: imgui.showUserGuide, open: imgui.ref(false)}
+    ];
     var initialized = false;
     var logWindow;
     var dataTable;
@@ -89,7 +103,15 @@
 
         ui.setNextWindowPos(ui.dp(14), ui.dp(14), ui.Cond.FirstUseEver);
         ui.setNextWindowSize(ui.dp(520), ui.dp(520), ui.Cond.FirstUseEver);
-        ui.withWindow("ImGui P4 Widget Overview", mainOpen, 0, function () {
+        ui.withWindow("ImGui P4 Widget Overview", mainOpen, ui.WindowFlags.MenuBar, function () {
+            ui.withMenuBar(function () {
+                ui.withMenu("Debug", true, function () {
+                    debugWindows.forEach(function (entry) {
+                        ui.menuItem(entry.label, null, entry.open);
+                    });
+                });
+            });
+
             ui.separatorText("Lightweight references");
             ui.checkbox("Enabled", enabled);
             ui.sliderFloat("Gain", gain, 0, 1, "%.2f");
@@ -102,6 +124,17 @@
                 ", gain=" + gain.value.toFixed(2) +
                 ", count=" + count.value +
                 ", name=" + name.value
+            );
+
+            ui.separatorText("Multi-component widgets");
+            ui.dragFloat3("Position", position, 0.01, -10, 10, "%.2f");
+            ui.dragInt4("Margins", margins, 1, 0, 64);
+            ui.sliderInt2("Levels", levels, 0, 100);
+            ui.dragFloatRange2("Span", spanMin, spanMax, 0.01, 0, 1, "Min %.2f", "Max %.2f");
+            ui.sliderAngle("Angle", angle);
+            ui.textDisabled(
+                "Position=" + position.value.map(function (v) { return v.toFixed(2); }).join(", ") +
+                ", angle=" + angle.value.toFixed(3) + " rad"
             );
 
             ui.separatorText("Toast and log");
@@ -174,6 +207,12 @@
             ui.separatorText("Session");
             if (ui.button("Close overview")) {
                 window.close("example-closed");
+            }
+        });
+
+        debugWindows.forEach(function (entry) {
+            if (entry.open.value) {
+                entry.show(entry.open);
             }
         });
 

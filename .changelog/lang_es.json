@@ -5,6 +5,20 @@
   "changelog_label_improvement": "Mejora",
   "changelog_label_dependency": "Dependencia",
   "$data": {
+    "v1.14.0": {
+      "released_date": "2026/10/30",
+      "hint": [
+        "Cambio de comportamiento: en una ventana a pantalla completa abierta con imgui.launch, la tecla Atrás ahora cierra la ventana (session.closeReason es \"back\"). Para mantenerla abierta, llame a e.preventDefault() en session.on(\"back\", e). Las ventanas flotantes (launchFloaty) no cambian"
+      ],
+      "feature": [
+        "Ventanas de herramientas de depuración: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (alias ShowMetricsWindow, etc.) muestran las herramientas integradas de Dear ImGui; con imgui.bool(true), el botón de cierre las oculta. El ejemplo widget-overview tiene un nuevo menú Debug que las abre",
+        "Ordenación de tablas: en una tabla con la marca Sortable, tocar el encabezado de una columna cambia el orden; tableGetSortSpecs() devuelve las columnas y direcciones de orden (imgui.SortDirection), y specsDirty es true solo en el fotograma en que cambian. El cuarto argumento de tableSetupColumn es el id de usuario de la columna. dataTable ordena sus filas con sortable: true, y la función compare de una columna define un orden propio; vea el ejemplo data-table-demo",
+        "Controles de 2 a 4 valores: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, además de dragFloatRange2 / dragIntRange2 para un rango mínimo-máximo y sliderAngle para un ángulo (guardado en radianes, mostrado en grados). Los valores se pasan como {value: [x, y, z]}, imgui.floats(...) o el nuevo imgui.ints(...); vea la nueva sección del ejemplo widget-overview"
+      ],
+      "improvement": [
+        "Con createWindow({debug: true}), una devolución de llamada de dibujo que tarda más de 250 ms muestra un console.warn con el tiempo y sugiere pasar el trabajo lento (sleep, red, archivos) a threads.start, como mucho una vez cada 10 segundos; docs/THREADING.md explica cómo"
+      ]
+    },
     "v1.13.0": {
       "released_date": "2026/10/30",
       "hint": [

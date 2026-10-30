@@ -12,6 +12,7 @@
     var controlsOpen = imgui.ref(true);
     var nextId = 7;
     var table;
+    var stateOrder = ["New", "Pending", "Active", "Done"];
     var rows = [
         {id: 1, task: "Initialize EGL", owner: "Renderer", state: "Done", cost: 4.2},
         {id: 2, task: "Build font atlas", owner: "Fonts", state: "Done", cost: 7.8},
@@ -27,10 +28,17 @@
             table = window.dataTable(
                 "frame-pipeline",
                 [
-                    {key: "id", label: "#", width: 38},
+                    {key: "id", label: "#", width: 38, flags: ui.TableColumnFlags.DefaultSort},
                     {key: "task", label: "Task", width: 180},
                     {key: "owner", label: "Owner", width: 90},
-                    {key: "state", label: "State", width: 82},
+                    {
+                        key: "state",
+                        label: "State",
+                        width: 82,
+                        compare: function (a, b) {
+                            return stateOrder.indexOf(a) - stateOrder.indexOf(b);
+                        }
+                    },
                     {
                         key: "cost",
                         label: "Cost (ms)",
@@ -48,6 +56,7 @@
                     height: 430,
                     rowKey: "id",
                     multiSelect: true,
+                    sortable: true,
                     emptyText: "No pipeline stages",
                     onRowClick: function (row) {
                         window.toast("Selected: " + row.task, 1400, {
@@ -95,6 +104,7 @@
             }
 
             ui.textDisabled("Click rows in the table; Ctrl-style multi-select is managed by the wrapper.");
+            ui.textDisabled("Click a column header to sort; click it again to reverse the order.");
             if (ui.button("Close example")) {
                 window.close("example-closed");
             }

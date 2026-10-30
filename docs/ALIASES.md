@@ -13,7 +13,10 @@ Constants need no alias: `ui.WindowFlags.NoTitleBar` stands for `ImGuiWindowFlag
 
 | Area | C++ (Dear ImGui 1.92) | Plugin | Aliases concerned |
 | --- | --- | --- | --- |
-| Mutable values | `bool*`, `int*`, `float*`, `char*` buffers, `float col[3]` | A mutable value: `imgui.ref(x)`, a plain `{value: x}` object, or a Java array from `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats`. Colors are a reference to a number array. | `Begin`, `BeginTabItem`, `BeginPopupModal`, `Checkbox`, `RadioButton`, `SliderFloat`, `SliderInt`, `VSliderFloat`, `VSliderInt`, `DragFloat`, `DragInt`, `InputText`, `InputTextMultiline`, `InputInt`, `InputFloat`, `Combo`, `ListBox`, `ColorEdit3`, `ColorEdit4`, `ColorPicker3`, `ColorPicker4`, `MenuItem`, `Toggle` |
+| Mutable values | `bool*`, `int*`, `float*`, `char*` buffers, `float col[3]` | A mutable value: `imgui.ref(x)`, a plain `{value: x}` object, or a Java array from `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.ints`. Colors and multi-component widgets take a reference to a number array (`{value: [...]}`) or a Java array from `imgui.floats` / `imgui.ints`. | `Begin`, `BeginTabItem`, `BeginPopupModal`, `Checkbox`, `RadioButton`, `SliderFloat`, `SliderInt`, `VSliderFloat`, `VSliderInt`, `DragFloat`, `DragInt`, `InputText`, `InputTextMultiline`, `InputInt`, `InputFloat`, `Combo`, `ListBox`, `ColorEdit3`, `ColorEdit4`, `ColorPicker3`, `ColorPicker4`, `MenuItem`, `Toggle`, `DragFloat2` to `DragFloat4`, `DragInt2` to `DragInt4`, `SliderFloat2` to `SliderFloat4`, `SliderInt2` to `SliderInt4`, `InputFloat2` to `InputFloat4`, `InputInt2` to `InputInt4`, `DragFloatRange2`, `DragIntRange2`, `SliderAngle`, `ShowMetricsWindow`, `ShowDebugLogWindow`, `ShowIDStackToolWindow`, `ShowStyleEditor`, `ShowAboutWindow`, `ShowUserGuide` |
+| Debug and tool windows | `ShowStyleEditor(ImGuiStyle* ref)` and `ShowUserGuide()` draw inside the current window; the others take `bool* p_open` | Each takes an optional mutable boolean (the window's close button sets it to false). `ShowStyleEditor` (no reference style) and `ShowUserGuide` open their own windows, "Dear ImGui Style Editor" and "Dear ImGui User Guide". | `ShowStyleEditor`, `ShowUserGuide` |
+| Multi-component widgets | `float v[2]` .. `float v[4]`, `int v[2]` .. `int v[4]`; `InputFloat2` .. `InputInt4` without steps | A mutable number array with at least as many numbers as components; the other arguments as in the one-component form | `DragFloat2` to `DragFloat4`, `DragInt2` to `DragInt4`, `SliderFloat2` to `SliderFloat4`, `SliderInt2` to `SliderInt4`, `InputFloat2` to `InputFloat4`, `InputInt2` to `InputInt4` |
+| Table sorting | `ImGuiTableSortSpecs*` pointing into the table, `SpecsDirty` cleared by the caller | `{specsDirty, specs: [{columnIndex, columnUserId, sortDirection, sortOrder}]}` copied for the frame, or `null`; reading it clears `SpecsDirty`, so `specsDirty` is true only in the frame the specs change. `TableSetupColumn` takes the user id as its fourth argument. | `TableGetSortSpecs`, `TableSetupColumn` |
 | `ImVec2` arguments | One `ImVec2` (`size`, `pos`, `pivot`) | Two numbers (`width, height`, `x, y`, `pivotX, pivotY`) | `Button`, `InvisibleButton`, `Dummy`, `BeginChild`, `BeginListBox`, `Selectable`, `ProgressBar`, `ColorButton`, `VSliderFloat`, `VSliderInt`, `InputTextMultiline`, `SetNextWindowPos`, `SetNextWindowSize`, `SetNextWindowSizeConstraints`, `SetCursorPos`, `BeginTable` (outer size; there is no `inner_width`) |
 | `ImVec2` results | `ImVec2` | `Vec2`: a two-element array, `[x, y]` | `GetWindowPos`, `GetWindowSize`, `GetContentRegionAvail`, `GetCursorPos`, `GetMousePos`, `GetMouseDragDelta`, `CalcTextSize` |
 | Colors | `ImVec4` or `ImU32` | Four numbers from 0 to 1 (`red, green, blue, alpha`); alpha defaults to 1 | `TextColored`, `PushStyleColor`, `ColorButton`, `TableSetBgColor` |
@@ -30,13 +33,10 @@ Constants need no alias: `ui.WindowFlags.NoTitleBar` stands for `ImGuiWindowFlag
 
 These Dear ImGui functions have no plugin method, so they have no alias either:
 
-- Multi-component and range widgets: `SliderFloat2` to `SliderFloat4`, `DragFloat2` to `DragFloat4`, `InputFloat2`
-  to `InputFloat4` and the `Int` forms, `DragFloatRange2`, `SliderAngle`, `InputDouble`, the `*Scalar*` functions,
-  `CheckboxFlags`.
+- `InputDouble`, the `*Scalar*` functions, `CheckboxFlags`.
 - Keyboard queries: `IsKeyDown`, `IsKeyPressed`, `IsKeyReleased`, `Shortcut`, `GetKeyName`. The `Key` constants
   are for injecting input with `addKeyEvent` / `sendKey`.
-- Clipboard (`GetClipboardText`, `SetClipboardText`), drag and drop, `ImGuiListClipper`, `TableGetSortSpecs`,
-  multi-select, the draw list `Path*` functions and `PushClipRect`, docking and multiple viewports.
+- Clipboard (`GetClipboardText`, `SetClipboardText`), drag and drop, multi-select, the draw list `Path*` functions and `PushClipRect`, docking and multiple viewports.
 
 ## Alias list
 
@@ -44,7 +44,7 @@ The section below is generated by `python tools/generate_aliases_doc.py`; `--che
 
 <!-- aliases:begin (generated by tools/generate_aliases_doc.py) -->
 
-197 aliases, in the order of the facade's alias table. "Upstream" is the `ImGui::` function of the
+225 aliases, in the order of the facade's alias table. "Upstream" is the `ImGui::` function of the
 same name in the vendored `imgui.h`, marked "obsolete" when the header lists it only as an obsolete function.
 The 40 aliases marked "-" name plugin features or differ from the upstream name (see "Names" above).
 
@@ -129,6 +129,12 @@ The 40 aliases marked "-" name plugin features or differ from the upstream name 
 | `IsAnyItemHovered` | `isAnyItemHovered` | `ImGui::IsAnyItemHovered` |
 | `IsAnyItemActive` | `isAnyItemActive` | `ImGui::IsAnyItemActive` |
 | `ShowDemoWindow` | `showDemoWindow` | `ImGui::ShowDemoWindow` |
+| `ShowMetricsWindow` | `showMetricsWindow` | `ImGui::ShowMetricsWindow` |
+| `ShowDebugLogWindow` | `showDebugLogWindow` | `ImGui::ShowDebugLogWindow` |
+| `ShowIDStackToolWindow` | `showIdStackToolWindow` | `ImGui::ShowIDStackToolWindow` |
+| `ShowStyleEditor` | `showStyleEditor` | `ImGui::ShowStyleEditor` |
+| `ShowAboutWindow` | `showAboutWindow` | `ImGui::ShowAboutWindow` |
+| `ShowUserGuide` | `showUserGuide` | `ImGui::ShowUserGuide` |
 | `StyleColorsDark` | `styleColorsDark` | `ImGui::StyleColorsDark` |
 | `StyleColorsLight` | `styleColorsLight` | `ImGui::StyleColorsLight` |
 | `StyleColorsClassic` | `styleColorsClassic` | `ImGui::StyleColorsClassic` |
@@ -154,6 +160,27 @@ The 40 aliases marked "-" name plugin features or differ from the upstream name 
 | `TreeNodeEx` | `treeNodeEx` | `ImGui::TreeNodeEx` |
 | `VSliderFloat` | `vSliderFloat` | `ImGui::VSliderFloat` |
 | `VSliderInt` | `vSliderInt` | `ImGui::VSliderInt` |
+| `DragFloat2` | `dragFloat2` | `ImGui::DragFloat2` |
+| `DragFloat3` | `dragFloat3` | `ImGui::DragFloat3` |
+| `DragFloat4` | `dragFloat4` | `ImGui::DragFloat4` |
+| `DragInt2` | `dragInt2` | `ImGui::DragInt2` |
+| `DragInt3` | `dragInt3` | `ImGui::DragInt3` |
+| `DragInt4` | `dragInt4` | `ImGui::DragInt4` |
+| `SliderFloat2` | `sliderFloat2` | `ImGui::SliderFloat2` |
+| `SliderFloat3` | `sliderFloat3` | `ImGui::SliderFloat3` |
+| `SliderFloat4` | `sliderFloat4` | `ImGui::SliderFloat4` |
+| `SliderInt2` | `sliderInt2` | `ImGui::SliderInt2` |
+| `SliderInt3` | `sliderInt3` | `ImGui::SliderInt3` |
+| `SliderInt4` | `sliderInt4` | `ImGui::SliderInt4` |
+| `InputFloat2` | `inputFloat2` | `ImGui::InputFloat2` |
+| `InputFloat3` | `inputFloat3` | `ImGui::InputFloat3` |
+| `InputFloat4` | `inputFloat4` | `ImGui::InputFloat4` |
+| `InputInt2` | `inputInt2` | `ImGui::InputInt2` |
+| `InputInt3` | `inputInt3` | `ImGui::InputInt3` |
+| `InputInt4` | `inputInt4` | `ImGui::InputInt4` |
+| `DragFloatRange2` | `dragFloatRange2` | `ImGui::DragFloatRange2` |
+| `DragIntRange2` | `dragIntRange2` | `ImGui::DragIntRange2` |
+| `SliderAngle` | `sliderAngle` | `ImGui::SliderAngle` |
 | `Toggle` | `toggle` | - |
 | `ToggleSwitch` | `toggle` | - |
 | `BeginCombo` | `beginCombo` | `ImGui::BeginCombo` |
@@ -183,6 +210,7 @@ The 40 aliases marked "-" name plugin features or differ from the upstream name 
 | `TableNextColumn` | `tableNextColumn` | `ImGui::TableNextColumn` |
 | `TableSetColumnIndex` | `tableSetColumnIndex` | `ImGui::TableSetColumnIndex` |
 | `TableSetupColumn` | `tableSetupColumn` | `ImGui::TableSetupColumn` |
+| `TableGetSortSpecs` | `tableGetSortSpecs` | `ImGui::TableGetSortSpecs` |
 | `TableSetupScrollFreeze` | `tableSetupScrollFreeze` | `ImGui::TableSetupScrollFreeze` |
 | `TableHeadersRow` | `tableHeadersRow` | `ImGui::TableHeadersRow` |
 | `TableSetBgColor` | `tableSetBgColor` | `ImGui::TableSetBgColor` |

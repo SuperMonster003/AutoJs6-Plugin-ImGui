@@ -126,7 +126,7 @@ imgui.createWindow(function (ui, overlay) {
 
 紋理與自繪: 請在視窗工作階段就緒後呼叫 `createTexture` (通常於渲染回呼首次執行時建立). 傳回物件包含 `width` / `height`, `update(source)` (取代像素並保持控制代碼不變, 尺寸變更時 `width` / `height` 隨之更新) 與冪等的 `dispose()` / `close()`; 工作階段關閉時會自動釋放其餘紋理. `image` / `imageButton` 用於顯示紋理, `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` 提供常用繪圖原語. DrawList 座標採用 Surface 像素座標. 可直接傳入 AutoJs6 `images.read(...)` 與螢幕擷取所得的 `Image`, 也可傳入裝有 PNG 或 JPEG 資料的 `ArrayBuffer` 或型別陣列.
 
-視窗工作階段: 懸浮窗預設採用 `TouchMode.Auto`, ImGui 根視窗保持可互動, Surface 空白區域則直接觸達下層應用程式; 也可用 `Touchable` 或 `Passthrough` 固定策略. 工作階段支援動態透明度/防擷取/觸控模式、收合為低幀率迷你懸浮球、建立獨立可拖曳 `addButtonEx`、跟隨 `AlwaysAutoResize` 內容、透過 `iniPath` 持久化版面配置, 並以 `on` / `once` / `off` 或 options 回呼訂閱事件. `imgui.launch(...)` 會在目前前景 AutoJs6 Activity 中建立全螢幕 Surface, `launchFloaty(...)` 則明確選擇懸浮窗. 每個指令碼引擎只擁有一個原生渲染工作階段, 但可在同一渲染回呼中用 `begin` / `withWindow` 建立任意多個 ImGui 根視窗; 新建工作階段會關閉舊工作階段. 渲染回呼或事件回呼擲出錯誤時以 `console.error` 輸出錯誤與呼叫堆疊 (同一錯誤連續出現只輸出一次) 並觸發 `error` 事件 (含 `error` / `phase` / `frame`); 沒有 `error` 監聽器時渲染錯誤會關閉工作階段 (`closeReason` 為 `render-error`), 有監聽器時略過本幀剩餘部分並繼續渲染. 選項 `debug: true` 以 `console.warn` 與 logcat 回報 `begin` 未配對 `end` 等用法錯誤, 並顯示 Metrics 與 Debug Log 視窗. `setTouchable` / `setGlobalAlpha` / `getComponent` 等全域方法作用於目前工作階段, 沒有作用中的工作階段時擲出 `imgui.<name>: no active session`.
+視窗工作階段: 懸浮窗預設採用 `TouchMode.Auto`, ImGui 根視窗保持可互動, Surface 空白區域則直接觸達下層應用程式; 也可用 `Touchable` 或 `Passthrough` 固定策略. 工作階段支援動態透明度/防擷取/觸控模式、收合為低幀率迷你懸浮球、建立獨立可拖曳 `addButtonEx`、跟隨 `AlwaysAutoResize` 內容、透過 `iniPath` 持久化版面配置, 並以 `on` / `once` / `off` 或 options 回呼訂閱事件. `imgui.launch(...)` 會在目前前景 AutoJs6 Activity 中建立全螢幕 Surface, `launchFloaty(...)` 則明確選擇懸浮窗. 每個指令碼引擎只擁有一個原生渲染工作階段, 但可在同一渲染回呼中用 `begin` / `withWindow` 建立任意多個 ImGui 根視窗; 新建工作階段會關閉舊工作階段. 渲染回呼或事件回呼擲出錯誤時以 `console.error` 輸出錯誤與呼叫堆疊 (同一錯誤連續出現只輸出一次) 並觸發 `error` 事件 (含 `error` / `phase` / `frame`); 沒有 `error` 監聽器時渲染錯誤會關閉工作階段 (`closeReason` 為 `render-error`), 有監聽器時略過本幀剩餘部分並繼續渲染. 選項 `debug: true` 以 `console.warn` 與 logcat 回報 `begin` 未配對 `end` 等用法錯誤, 並顯示 Metrics 與 Debug Log 視窗. `setTouchable` / `setGlobalAlpha` / `getComponent` 等全域方法作用於目前工作階段, 沒有作用中的工作階段時擲出 `imgui.<name>: no active session`. `imgui.launch` 工作階段中按返回鍵會關閉工作階段 (`closeReason` 為 `back`), 除非 `back` 監聽器呼叫 `event.preventDefault()`; 螢幕鍵盤顯示時返回鍵會先收起鍵盤. 懸浮視窗只在文字輸入取得焦點時收到返回鍵, 此時只收起鍵盤. `debug: true` 時, 渲染回呼耗時超過 250 ms 也會以 `console.warn` 提示改用 `threads.start` (每 10 秒最多一次).
 
 高階元件會掛接到目前工作階段並在使用者渲染回呼後繪製: `logWindow` 提供等級著色, 清除, 匯出回呼與自動捲底; `toast` 提供定時定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 回傳 Promise; `statsOverlay` 繪製幀耗時並顯示每個影格的工作耗時; `dataTable` 提供資料列選取與 CRUD. 九個內建範例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling` / `background-task` / `large-list` / `texture-refresh`) 可透過 `listExamples` / `getExampleSource` 發現並用 `runExample` 啟動. AutoJs6 6.8 外掛中心尚未使用通用範例中繼資料, 在宿主支援前可直接執行下方呼叫:
 
@@ -145,15 +145,16 @@ imgui.runExample("widget-overview");
 - 工作階段執行階段: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, `density` / `dp` / `px` 單位換算, 以及工作階段級 `on` / `once` / `off` 與對應執行個體方法; 工作階段 `error` 事件回報回呼錯誤, `debug` 選項開啟偵錯模式; 省電相關的 `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` 與 `idle` / `active` 事件.
 - 後端探測: `getBackendCapabilities` / `BackendStatus` 回報視窗, split-touch, 特權處理程序, direct input, Docking 與 Multi-Viewport 的可用性與正式環境就緒狀態, 不執行權限提升操作.
 - 會話與視窗: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` 以及 `isWindowHovered` 等視窗狀態查詢.
-- 文字與控制項: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等.
-- 容器與導覽: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / `withTable` 表格族 / `withListBox` / `withCombo` / `selectable`, 以及用於長清單的 `listClipper`.
+- 文字與控制項: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等. 多值控制項: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
+- 容器與導覽: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / `withTable` 表格族 / `withListBox` / `withCombo` / `selectable`, 以及用於長清單的 `listClipper`. 表格排序: `tableGetSortSpecs` / `SortDirection`, 以及 `dataTable` 的 `sortable: true`.
 - 彈窗與選單: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
 - 樣式與版面配置: `styleColorsDark` / `styleColorsLight` / `styleColorsClassic` / `pushStyleColor` / `pushStyleVar` / `setWindowFontScale` / `withGroup` / `withDisabled` / `withId` / `indent` / `sameLine` / `separator` / `spacing` / 游標與捲動控制族.
 - 紋理與自繪: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, 以及具備線段/矩形/圓形/三角形/文字/折線/貝茲曲線/影像原語的 `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`.
 - 查詢與輸入: `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate` 等狀態查詢, `setKeyboardFocusHere` 主動聚焦, 以及 `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput` 輸入原語. `InputTextFlags` 目前公開的所有旗標都會傳遞至 Dear ImGui; 依賴回呼的旗標未公開, `WordWrap` 僅用於多行輸入.
+- 偵錯工具: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide` 顯示 Dear ImGui 內建的工具視窗; 每個都可傳入一個可變布林參考, 按下關閉按鈕時它會變為 false.
 - 高階元件與範例: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, 以及 `listExamples` / `getExampleSource` / `runExample`; 每個工作階段也提供同名工廠.
-- 可變參照: 輕量 `imgui.ref` (或普通 `{value: x}` 物件), 以及相容的 Java 陣列輔助方法 `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.strings`.
-- 常數: `BackendStatus` / `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, 取值與 Dear ImGui 同名列舉或外掛常數表一一對應.
+- 可變參照: 輕量 `imgui.ref` (或普通 `{value: x}` 物件), 以及相容的 Java 陣列輔助方法 `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.ints` / `imgui.strings`.
+- 常數: `BackendStatus` / `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `SortDirection` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, 取值與 Dear ImGui 同名列舉或外掛常數表一一對應.
 
 ******
 
@@ -170,6 +171,16 @@ imgui.runExample("widget-overview");
 ### 發行歷史
 
 ******
+
+#### v1.14.0
+
+###### 2026/10/30
+
+* `提示` 行為變更: 以 imgui.launch 開啟的全螢幕視窗現在按返回鍵會關閉視窗 (session.closeReason 為 "back"). 若要保留視窗, 請在 session.on("back", e) 中呼叫 e.preventDefault(). 懸浮視窗 (launchFloaty) 不變
+* `新增` 偵錯工具視窗: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (別名 ShowMetricsWindow 等) 顯示 Dear ImGui 內建的偵錯工具; 傳入 imgui.bool(true) 後可用關閉按鈕隱藏. 範例 widget-overview 新增 Debug 選單, 可開啟這些視窗
+* `新增` 表格排序: 表格帶有 Sortable 旗標時輕觸欄標題即可切換排序; tableGetSortSpecs() 傳回排序欄與方向 (imgui.SortDirection), specsDirty 只在排序變化的那一幀為 true. tableSetupColumn 的第四個參數是欄的使用者 id. dataTable 設定 sortable: true 即可依欄排序, 欄的 compare 函式可自訂順序; 請參閱範例 data-table-demo
+* `新增` 多值控制項: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 以及編輯最小值與最大值的 dragFloatRange2 / dragIntRange2 和編輯角度的 sliderAngle (以弧度儲存, 以度顯示). 數值以 {value: [x, y, z]}, imgui.floats(...) 或新增的 imgui.ints(...) 傳入; 請參閱範例 widget-overview 的新區段
+* `優化` createWindow({debug: true}) 時, 渲染回呼耗時超過 250 毫秒會以 console.warn 提示耗時, 並建議把 sleep, 網路, 檔案等慢速操作移到 threads.start, 每 10 秒最多提示一次; docs/THREADING.md 說明做法
 
 #### v1.13.0
 
@@ -201,20 +212,6 @@ imgui.runExample("widget-overview");
 * `優化` 範例改用 ui.dp(), 不再手動乘以 window.density
 * `優化` TypeScript 宣告寫明每個尺寸, 位置與選項的單位和取值範圍, 並把 Session 與懸浮按鈕的欄位標為唯讀
 * `優化` 每個 GitHub Release 附帶 SHA256SUMS 檔案, 方便驗證下載的 APK
-
-#### v1.11.0
-
-###### 2026/10/29
-
-* `提示` 依賴使用中視窗工作階段的全域方法 (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) 在沒有使用中工作階段時改為擲出 `imgui.<方法名稱>: no active session` 錯誤, 其中 getComponent 以前回傳 null
-* `提示` 繪圖選項 offset 已棄用, 請改用 valuesOffset (舊寫法仍然有效)
-* `新增` 視窗工作階段的 error 事件: 繪製回呼或事件回呼擲出錯誤時觸發, 事件含 error, phase (render 或 event) 與 frame; 有 error 監聽器時工作階段繼續繪製, 可在處理器中自行關閉工作階段, 沒有監聽器時與以前一樣以 render-error 關閉
-* `新增` 視窗選項 debug: 開啟 Dear ImGui 的錯誤復原與偵錯記錄, Begin / End 不成對等用法錯誤經 console.warn 提示, 並顯示 Metrics 與 Debug Log 視窗
-* `新增` 範例 error-handling, 示範 error 事件, debug 模式與常見錯誤的排查
-* `新增` 別名文件 docs/ALIASES.md, 列出全部 PascalCase 別名及其與 Dear ImGui C++ 簽章的差異
-* `修復` plotLines / plotHistogram 的 valuesOffset 與 stride 選項無效的問題
-* `優化` 繪製回呼或事件回呼出錯時主控台輸出含呼叫堆疊的錯誤訊息, 同一錯誤連續出現時只輸出一次
-* `優化` README 的別名說明改為 "常用 API 別名", 補充單一工作階段模型 (建立新工作階段會關閉上一個) 與新增成員的使用說明, 目標 SDK 更正為 37
 
 ##### 更多發行歷史可參閱
 

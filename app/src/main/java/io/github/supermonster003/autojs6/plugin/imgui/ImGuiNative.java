@@ -344,6 +344,85 @@ final class ImGuiNative {
 
     static native void nativeListClipperBegin(int itemsCount, float itemsHeight, int[] includeItems);
 
+    static native boolean nativeDragFloatN(
+        String label,
+        float[] value,
+        int components,
+        float speed,
+        float min,
+        float max,
+        String format,
+        int flags
+    );
+
+    static native boolean nativeDragIntN(
+        String label,
+        int[] value,
+        int components,
+        float speed,
+        int min,
+        int max,
+        String format,
+        int flags
+    );
+
+    static native boolean nativeSliderFloatN(
+        String label,
+        float[] value,
+        int components,
+        float min,
+        float max,
+        String format,
+        int flags
+    );
+
+    static native boolean nativeSliderIntN(
+        String label,
+        int[] value,
+        int components,
+        int min,
+        int max,
+        String format,
+        int flags
+    );
+
+    static native boolean nativeInputFloatN(String label, float[] value, int components, String format, int flags);
+
+    static native boolean nativeInputIntN(String label, int[] value, int components, int flags);
+
+    static native boolean nativeDragFloatRange2(
+        String label,
+        float[] currentMin,
+        float[] currentMax,
+        float speed,
+        float min,
+        float max,
+        String format,
+        String formatMax,
+        int flags
+    );
+
+    static native boolean nativeDragIntRange2(
+        String label,
+        int[] currentMin,
+        int[] currentMax,
+        float speed,
+        int min,
+        int max,
+        String format,
+        String formatMax,
+        int flags
+    );
+
+    static native boolean nativeSliderAngle(
+        String label,
+        float[] value,
+        float degreesMin,
+        float degreesMax,
+        String format,
+        int flags
+    );
+
     static native int[] nativeListClipperStep();
 
     static native void nativeListClipperEnd();
@@ -407,6 +486,8 @@ final class ImGuiNative {
     static native void nativeSetStyleVar(int index, float x, float y);
 
     static native void nativeShowDemoWindow(boolean[] open);
+
+    static native void nativeShowToolWindow(int tool, boolean[] open);
 
     static native void nativeSetDebugMode(boolean enabled);
 
@@ -587,7 +668,9 @@ final class ImGuiNative {
 
     static native boolean nativeTableSetColumnIndex(int columnIndex);
 
-    static native void nativeTableSetupColumn(String label, int flags, float initWidthOrWeight);
+    static native void nativeTableSetupColumn(String label, int flags, float initWidthOrWeight, int userId);
+
+    static native int[] nativeTableGetSortSpecs();
 
     static native void nativeTableSetupScrollFreeze(int columns, int rows);
 

@@ -126,7 +126,7 @@ imgui.createWindow(function (ui, overlay) {
 
 テクスチャとカスタム描画: ウィンドウセッションの準備完了後に `createTexture` を呼び出してください (通常はレンダーコールバック内の初回実行時). 戻り値は `width` / `height`, `update(source)` (ピクセルを置き換え, ハンドルは変わりません. サイズが変わると `width` / `height` も追従します), 冪等な `dispose()` / `close()` を公開します. 残ったテクスチャはセッション終了時に自動解放されます. `image` / `imageButton` でテクスチャを表示し、`getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` で一般的な描画プリミティブを利用できます. DrawList 座標は Surface のピクセル座標です. AutoJs6 の `images.read(...)` やスクリーンショットの `Image`, PNG または JPEG データを含む `ArrayBuffer` や型付き配列を直接渡せます.
 
-ウィンドウセッション: オーバーレイは既定で `TouchMode.Auto` を使い、ImGui ルートウィンドウを操作可能に保ちながら Surface の空白領域を背後のアプリへ渡します。固定する場合は `Touchable` または `Passthrough` を選択します。セッションは透明度/セキュリティ/タッチモードの変更、低 FPS ミニバブルへの折りたたみ、独立した `addButtonEx`、`AlwaysAutoResize` 追従、`iniPath` による配置保存、`on` / `once` / `off` またはオプションのコールバックによるイベント購読に対応します。`imgui.launch(...)` は現在 resumed の AutoJs6 Activity に全画面 Surface を作り、`launchFloaty(...)` はオーバーレイを明示します。スクリプトエンジンごとのネイティブレンダーセッションは 1 つですが、同じコールバックで任意の数の `begin` / `withWindow` ImGui ルートを作成できます。新しいセッションは以前のセッションを閉じます。 描画コールバックやイベントコールバックが例外を投げると, `console.error` にエラーとスタックを出力し (同じエラーが続く場合は 1 回だけ), `error` イベント (`error` / `phase` / `frame`) を発行します. `error` リスナーがない場合, 描画エラーはセッションを閉じます (`closeReason` は `render-error`). リスナーがある場合はそのフレームの残りを飛ばして描画を続けます. オプション `debug: true` は `begin` に対応する `end` がないなどの使い方の誤りを `console.warn` と logcat に報告し, Metrics と Debug Log ウィンドウを表示します. `setTouchable` / `setGlobalAlpha` / `getComponent` などのグローバルメソッドは現在のセッションに作用し, アクティブなセッションがない場合は `imgui.<name>: no active session` を投げます.
+ウィンドウセッション: オーバーレイは既定で `TouchMode.Auto` を使い、ImGui ルートウィンドウを操作可能に保ちながら Surface の空白領域を背後のアプリへ渡します。固定する場合は `Touchable` または `Passthrough` を選択します。セッションは透明度/セキュリティ/タッチモードの変更、低 FPS ミニバブルへの折りたたみ、独立した `addButtonEx`、`AlwaysAutoResize` 追従、`iniPath` による配置保存、`on` / `once` / `off` またはオプションのコールバックによるイベント購読に対応します。`imgui.launch(...)` は現在 resumed の AutoJs6 Activity に全画面 Surface を作り、`launchFloaty(...)` はオーバーレイを明示します。スクリプトエンジンごとのネイティブレンダーセッションは 1 つですが、同じコールバックで任意の数の `begin` / `withWindow` ImGui ルートを作成できます。新しいセッションは以前のセッションを閉じます。 描画コールバックやイベントコールバックが例外を投げると, `console.error` にエラーとスタックを出力し (同じエラーが続く場合は 1 回だけ), `error` イベント (`error` / `phase` / `frame`) を発行します. `error` リスナーがない場合, 描画エラーはセッションを閉じます (`closeReason` は `render-error`). リスナーがある場合はそのフレームの残りを飛ばして描画を続けます. オプション `debug: true` は `begin` に対応する `end` がないなどの使い方の誤りを `console.warn` と logcat に報告し, Metrics と Debug Log ウィンドウを表示します. `setTouchable` / `setGlobalAlpha` / `getComponent` などのグローバルメソッドは現在のセッションに作用し, アクティブなセッションがない場合は `imgui.<name>: no active session` を投げます. `imgui.launch` のセッションでは, `back` リスナーが `event.preventDefault()` を呼ばない限り, 戻るキーでセッションが閉じます (`closeReason` は `back`). ソフトキーボードが表示中なら, 戻るキーはまずキーボードを閉じます. オーバーレイは文字入力にフォーカスがある間だけ戻るキーを受け取り, そのときはキーボードを閉じるだけです. `debug: true` では, 描画コールバックが 250 ms を超えると `threads.start` の利用を勧める `console.warn` も出力します (10 秒に最大 1 回).
 
 高レベルコンポーネントはアクティブなセッションに接続され, ユーザーの描画コールバック後に描画されます. `logWindow` はレベル色分け, 消去, エクスポート, オートスクロール, `toast` は位置指定付き時間通知, `alert` / `confirm` / `singleChoice` / `multiChoice` は Promise, `statsOverlay` はフレーム時間グラフと各フレームの処理時間, `dataTable` は選択と CRUD を提供します. 9 つの内蔵例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling` / `background-task` / `large-list` / `texture-refresh`) は `listExamples` / `getExampleSource` で確認し, `runExample` で実行できます. AutoJs6 6.8 のプラグインセンターは汎用サンプルメタデータをまだ利用しないため, ホスト対応までは次の呼び出しを直接実行してください:
 
@@ -145,15 +145,16 @@ imgui.runExample("widget-overview");
 - セッションランタイム: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 単位換算の `density` / `dp` / `px`, セッション版を含む `on` / `once` / `off`, コールバックのエラーを伝えるセッションの `error` イベント, デバッグモードを有効にする `debug` オプション, 省電力のための `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps`, `idle` / `active` イベント.
 - バックエンドの検出: `getBackendCapabilities` / `BackendStatus` は, ウィンドウ, split-touch, 特権プロセス, direct input, Docking, Multi-Viewport の利用可否と本番運用への対応状況を報告します. 権限昇格は行いません.
 - セッションとウィンドウ: `createWindow`/`closeWindow`/`withWindow`/`withChild`/`setNextWindowPos`/`setNextWindowSize`/`setNextWindowBgAlpha` に加え, `isWindowHovered` などのウィンドウ状態クエリ.
-- テキストとコントロール: `text`/`textColored`/`textWrapped`/`separatorText`/`bulletText`/`labelText`/`button`/`arrowButton`/`invisibleButton`/`checkbox`/`toggle`/`radioButton`/`sliderFloat`/`sliderInt`/`vSliderFloat`/`dragFloat`/`dragInt`/`inputText`/`inputInt`/`inputFloat`/`inputTextMultiline`/`colorEdit3`/`colorEdit4`/`colorPicker4`/`colorButton`/`progressBar`/`plotLines`/`plotHistogram` など.
-- コンテナとナビゲーション: `withTabBar`/`withTabItem`/`withTreeNode`/`treeNodeEx`/`collapsingHeader`/`withTable` テーブルファミリー/`withListBox`/`withCombo`/`selectable`, 長いリスト向けの `listClipper`.
+- テキストとコントロール: `text`/`textColored`/`textWrapped`/`separatorText`/`bulletText`/`labelText`/`button`/`arrowButton`/`invisibleButton`/`checkbox`/`toggle`/`radioButton`/`sliderFloat`/`sliderInt`/`vSliderFloat`/`dragFloat`/`dragInt`/`inputText`/`inputInt`/`inputFloat`/`inputTextMultiline`/`colorEdit3`/`colorEdit4`/`colorPicker4`/`colorButton`/`progressBar`/`plotLines`/`plotHistogram` など. 複数の値を扱うウィジェット: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
+- コンテナとナビゲーション: `withTabBar`/`withTabItem`/`withTreeNode`/`treeNodeEx`/`collapsingHeader`/`withTable` テーブルファミリー/`withListBox`/`withCombo`/`selectable`, 長いリスト向けの `listClipper`. テーブルの並べ替え: `tableGetSortSpecs` / `SortDirection` と, `dataTable` の `sortable: true`.
 - ポップアップとメニュー: `openPopup`/`withPopup`/`withPopupModal`/`beginPopupContextItem`/`beginPopupContextWindow`/`withContextItem`/`withContextWindow`/`closeCurrentPopup`/`withMenuBar`/`withMenu`/`menuItem`/`setTooltip`/`setItemTooltip`/`withItemTooltip`.
 - スタイルとレイアウト: `styleColorsDark`/`styleColorsLight`/`styleColorsClassic`/`pushStyleColor`/`pushStyleVar`/`setWindowFontScale`/`withGroup`/`withDisabled`/`withId`/`indent`/`sameLine`/`separator`/`spacing` に加え, カーソルとスクロールのファミリー.
 - テクスチャと描画: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`、および線・矩形・円・三角形・テキスト・ポリライン・ベジェ曲線・画像プリミティブを備えた `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`.
 - クエリと入力: `isItemClicked`/`isItemHovered`/`isItemActive`/`isItemEdited`/`isMouseDown`/`getMousePos`/`calcTextSize`/`framerate` などの状態クエリ, `setKeyboardFocusHere` による能動的フォーカス, 入力プリミティブ `addInputCharacters`/`sendKey`/`addMouseWheel`/`wantTextInput`. 現在公開中の `InputTextFlags` はすべて Dear ImGui に渡されます. コールバック依存フラグは公開せず, `WordWrap` は複数行入力専用です.
+- デバッグツール: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide` は Dear ImGui 組み込みのツールウィンドウを表示します. それぞれ省略可能な可変 boolean 参照を受け取り, 閉じるボタンで false になります.
 - 高レベルコンポーネントと例: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`、および `listExamples` / `getExampleSource` / `runExample`. 各セッションにも同名のファクトリがあります.
-- 可変参照: 軽量な `imgui.ref` (または通常の `{value: x}` オブジェクト) と、互換 Java 配列ヘルパー `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.strings`.
-- 定数: `BackendStatus` / `Cond`/`WindowFlags`/`ChildFlags`/`InputTextFlags`/`SliderFlags`/`TreeNodeFlags`/`SelectableFlags`/`TabBarFlags`/`TabItemFlags`/`ComboFlags`/`PopupFlags`/`HoveredFlags`/`FocusedFlags`/`ColorEditFlags`/`TableFlags`/`TableColumnFlags`/`TableRowFlags`/`TableBgTarget`/`Col`/`StyleVar`/`Themes`/`Appearance`/`Fonts`/`Icons`/`Dir`/`Key`/`MouseButton`/`ButtonFlags`/`TextureFlags`/`DrawListLayer`/`DrawFlags`/`LogLevel`/`ToastPosition`/`Limits`. Dear ImGui の列挙またはプラグインの同名テーブルに対応します.
+- 可変参照: 軽量な `imgui.ref` (または通常の `{value: x}` オブジェクト) と、互換 Java 配列ヘルパー `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.ints` / `imgui.strings`.
+- 定数: `BackendStatus` / `Cond`/`WindowFlags`/`ChildFlags`/`InputTextFlags`/`SliderFlags`/`TreeNodeFlags`/`SelectableFlags`/`TabBarFlags`/`TabItemFlags`/`ComboFlags`/`PopupFlags`/`HoveredFlags`/`FocusedFlags`/`ColorEditFlags`/`TableFlags`/`TableColumnFlags`/`TableRowFlags`/`TableBgTarget`/`SortDirection`/`Col`/`StyleVar`/`Themes`/`Appearance`/`Fonts`/`Icons`/`Dir`/`Key`/`MouseButton`/`ButtonFlags`/`TextureFlags`/`DrawListLayer`/`DrawFlags`/`LogLevel`/`ToastPosition`/`Limits`. Dear ImGui の列挙またはプラグインの同名テーブルに対応します.
 
 ******
 
@@ -170,6 +171,16 @@ imgui.runExample("widget-overview");
 ### リリース履歴
 
 ******
+
+#### v1.14.0
+
+###### 2026/10/30
+
+* `ヒント` 動作の変更: imgui.launch で開いた全画面ウィンドウは, 戻るキーで閉じるようになりました (session.closeReason は "back"). ウィンドウを残すには session.on("back", e) の中で e.preventDefault() を呼びます. フローティングウィンドウ (launchFloaty) は従来どおりです
+* `機能` デバッグ用ツールウィンドウ: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (別名 ShowMetricsWindow など) で Dear ImGui 組み込みのツールを表示します. imgui.bool(true) を渡すと閉じるボタンで隠せます. 例 widget-overview に, これらを開く Debug メニューを追加しました
+* `機能` テーブルの並べ替え: Sortable フラグ付きのテーブルでは列見出しをタップすると並び順が変わります. tableGetSortSpecs() は並べ替えの列と方向 (imgui.SortDirection) を返し, specsDirty は並び順が変わったフレームだけ true です. tableSetupColumn の 4 番目の引数は列のユーザー id です. dataTable は sortable: true で行を並べ替え, 列の compare 関数で独自の順序を指定できます. 例 data-table-demo を参照してください
+* `機能` 複数の値を扱うウィジェット: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 最小値と最大値を編集する dragFloatRange2 / dragIntRange2, 角度を編集する sliderAngle (ラジアンで保存し度で表示). 値は {value: [x, y, z]}, imgui.floats(...) または新しい imgui.ints(...) で渡します. 例 widget-overview の新しいセクションを参照してください
+* `改善` createWindow({debug: true}) のとき, 描画コールバックが 250 ミリ秒を超えると console.warn で所要時間を示し, sleep, ネットワーク, ファイルなどの遅い処理を threads.start へ移すよう提案します (10 秒に最大 1 回). docs/THREADING.md でやり方を説明しています
 
 #### v1.13.0
 
@@ -201,20 +212,6 @@ imgui.runExample("widget-overview");
 * `改善` サンプルは window.density を掛ける代わりに ui.dp() を使うようになりました
 * `改善` TypeScript 宣言にすべてのサイズ, 位置, オプションの単位と範囲を記載し, Session とフローティングボタンのフィールドを readonly にしました
 * `改善` 各 GitHub リリースに, ダウンロードした APK を検証するための SHA256SUMS ファイルを添付します
-
-#### v1.11.0
-
-###### 2026/10/29
-
-* `ヒント` アクティブなウィンドウセッションに依存するグローバルメソッド (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) は, アクティブなセッションがないとき `imgui.<メソッド名>: no active session` エラーを投げるようになりました. getComponent は以前 null を返していました
-* `ヒント` 描画オプション offset は非推奨になりました. 代わりに valuesOffset を使ってください (offset も引き続き動作します)
-* `機能` ウィンドウセッションの error イベント: 描画コールバックまたはイベントコールバックが例外を投げたときに発生し, error, phase (render または event), frame を含みます. error リスナーがあればセッションは描画を続け, ハンドラー内でセッションを閉じることもできます. リスナーがなければ従来どおり render-error で閉じます
-* `機能` ウィンドウオプション debug: Dear ImGui のエラー回復とデバッグログを有効にし, Begin / End の対応漏れなどの使い方の誤りを console.warn で知らせ, Metrics と Debug Log ウィンドウを表示します
-* `機能` サンプル error-handling: error イベント, debug モード, よくある誤りの調べ方を示します
-* `機能` エイリアス文書 docs/ALIASES.md: すべての PascalCase エイリアスと Dear ImGui C++ シグネチャとの違いを一覧にしました
-* `修正` plotLines / plotHistogram の valuesOffset と stride オプションが効かない問題
-* `改善` 描画コールバックまたはイベントコールバックでエラーが起きると, コンソールにスタックトレース付きで出力し, 同じエラーが続く場合は 1 回だけ出力します
-* `改善` README のエイリアス説明を "よく使う API のエイリアス" に改め, 単一セッションモデル (新しいセッションは前のセッションを閉じる) と新しいメンバーの使い方を追記し, ターゲット SDK を 37 に訂正しました
 
 ##### その他のリリース履歴
 

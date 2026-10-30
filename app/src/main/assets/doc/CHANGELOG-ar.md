@@ -4,6 +4,16 @@
 
 ******
 
+# v1.14.0
+
+###### 2026/10/30
+
+* `تلميح` تغيير في السلوك: في النافذة بملء الشاشة التي تُفتح بـ imgui.launch, يغلق زر الرجوع النافذة الآن (قيمة session.closeReason هي "back"). لإبقاء النافذة مفتوحة, استدعِ e.preventDefault() داخل session.on("back", e). أما النوافذ العائمة (launchFloaty) فلم تتغير
+* `ميزة` نوافذ أدوات التصحيح: تعرض showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (الأسماء البديلة ShowMetricsWindow وغيرها) الأدوات المدمجة في Dear ImGui; ومع imgui.bool(true) يخفيها زر الإغلاق. يحتوي المثال widget-overview على قائمة Debug جديدة تفتحها
+* `ميزة` فرز الجداول: في جدول يحمل العلامة Sortable, يغيّر لمس عنوان العمود ترتيب الفرز; وتعيد tableGetSortSpecs() أعمدة الفرز واتجاهاته (imgui.SortDirection), وتكون specsDirty مساوية لـ true في الإطار الذي يتغير فيه الفرز فقط. الوسيط الرابع لـ tableSetupColumn هو معرّف المستخدم للعمود. ترتب dataTable صفوفها مع sortable: true, وتحدد دالة compare في العمود ترتيبًا مخصصًا; راجع المثال data-table-demo
+* `ميزة` عناصر تحكم بقيمتين إلى أربع قيم: dragFloat2 / 3 / 4 و dragInt2 / 3 / 4 و sliderFloat2 / 3 / 4 و sliderInt2 / 3 / 4 و inputFloat2 / 3 / 4 و inputInt2 / 3 / 4, إضافة إلى dragFloatRange2 / dragIntRange2 لنطاق من الحد الأدنى إلى الأقصى و sliderAngle لزاوية (تُخزَّن بالراديان وتُعرض بالدرجات). تُمرَّر القيم بصيغة {value: [x, y, z]} أو imgui.floats(...) أو imgui.ints(...) الجديدة; راجع القسم الجديد في المثال widget-overview
+* `تحسين` مع createWindow({debug: true}), إذا استغرق رد نداء الرسم أكثر من 250 مللي ثانية تطبع console.warn المدة وتقترح نقل العمل البطيء (sleep والشبكة والملفات) إلى threads.start, مرة واحدة على الأكثر كل 10 ثوانٍ; ويشرح docs/THREADING.md الطريقة
+
 # v1.13.0
 
 ###### 2026/10/30

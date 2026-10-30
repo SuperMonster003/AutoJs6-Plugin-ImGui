@@ -189,6 +189,16 @@ public class ImGuiScriptFacadeTest {
             {"openWindow().setSize(10, 0)", "RangeError", "Session.setSize", "height"},
             {"openWindow().setAlpha(-1)", "RangeError", "Session.setAlpha", "alpha"},
             {"openWindow().on('moved', 1)", "TypeError", "Session.on", "listener"},
+            {"api.showMetricsWindow(true)", "TypeError", "showMetricsWindow", "open"},
+            {"api.tableSetupColumn('c', 0, 0, -1)", "RangeError", "tableSetupColumn", "userId"},
+            {"api.dragFloat3('d', {value: [1, 2]})", "TypeError", "dragFloat3", "value.value"},
+            {"api.dragInt2('d', {value: [1, 'x']})", "TypeError", "dragInt2", "value.value[1]"},
+            {"api.sliderFloat2('s', [1, 2])", "TypeError", "sliderFloat2", "value"},
+            {"api.inputInt4('i', api.floats([1, 2, 3, 4]))", "TypeError", "inputInt4", "value"},
+            {"api.sliderInt2('s', {value: [1, 2]}, 'a')", "TypeError", "sliderInt2", "min"},
+            {"api.dragFloatRange2('r', {value: 0}, 1)", "TypeError", "dragFloatRange2", "currentMax"},
+            {"api.sliderAngle('a', {value: 0}, 'x')", "TypeError", "sliderAngle", "degreesMin"},
+            {"api.ints([1, NaN])", "TypeError", "ints", "values[1]"},
         };
         for (String[] c : cases) {
             String expected = c[1] + ":imgui." + c[2] + ": argument " + '"' + c[3] + '"' + " ";
@@ -434,6 +444,142 @@ public class ImGuiScriptFacadeTest {
             {"api.createWindow(function () {}, {idleFps: 200})", "RangeError", "createWindow", "options.idleFps"},
             {"api.createWindow(function () {}, {idleDelay: 'a'})", "TypeError", "createWindow", "options.idleDelay"},
         });
+    }
+
+    @Test
+    public void toolWindowsPassTheToolAndTheOpenFlag() {
+        eval(
+            "bridge.showToolWindow = function (tool, open) {"
+                + "    calls.push({name: 'tool', args: [tool, open == null ? 'null' : open.length + ':' + open[0]]});"
+                + "    if (open != null) open[0] = false;"
+                + "};"
+        );
+        assertEquals(
+            "0:null|1:1:true|2:null|3:null|4:null|5:null|false|true",
+            String.valueOf(eval(
+                "calls.length = 0; var open = {value: true};"
+                    + "api.showMetricsWindow(); api.showDebugLogWindow(open); api.ShowIDStackToolWindow(null);"
+                    + "api.showStyleEditor(false); api.showAboutWindow(); api.ShowUserGuide();"
+                    + "calls.map(function (c) { return c.args.join(':'); }).join('|') + '|' + open.value"
+                    + " + '|' + (api.ShowStyleEditor === api.showStyleEditor)"
+            ))
+        );
+    }
+
+    @Test
+    public void tableSortSpecsAreCopiedFromTheBridge() {
+        eval("bridge.tableSetupColumn = record('tableSetupColumn');");
+        assertEquals("c,0,0,5", lastCall("api.tableSetupColumn('c', 0, 0, 5)"));
+        assertEquals("c,0,0,0", lastCall("api.tableSetupColumn('c')"));
+        assertEquals(
+            "null|true:0/7/1/0,2/0/2/1|false:",
+            String.valueOf(eval(
+                "var raw = null; bridge.tableGetSortSpecs = function () { return raw; };"
+                    + "function specs() {"
+                    + "    var s = api.TableGetSortSpecs(); if (s == null) return 'null';"
+                    + "    return s.specsDirty + ':' + s.specs.map(function (e) {"
+                    + "        return [e.columnIndex, e.columnUserId, e.sortDirection, e.sortOrder].join('/');"
+                    + "    }).join(',');"
+                    + "}"
+                    + "var out = [specs()]; raw = [1, 2, 0, 7, 1, 0, 2, 0, 2, 1]; out.push(specs());"
+                    + "raw = [0, 0]; out.push(specs()); out.join('|')"
+            ))
+        );
+        assertEquals("0,1,2", String.valueOf(eval(
+            "[api.SortDirection.None, api.SortDirection.Ascending, api.SortDirection.Descending].join(',')"
+        )));
+    }
+
+    @Test
+    public void sortableDataTableSortsItsRowsWhenTheSpecsChange() {
+        eval(
+            "var s = openWindow();"
+                + "['endTable', 'tableSetupColumn', 'tableSetupScrollFreeze', 'tableHeadersRow', 'tableNextRow',"
+                + "    'tableSetColumnIndex', 'selectable', 'text', 'textDisabled'"
+                + "].forEach(function (name) { bridge[name] = record(name); });"
+                + "bridge.beginTable = function () { return true; };"
+                // Like Dear ImGui, reading the specs clears the dirty flag.
+                + "var raw = null;"
+                + "bridge.tableGetSortSpecs = function () {"
+                + "    var result = raw; if (raw != null) raw = [0].concat(raw.slice(1)); return result;"
+                + "};"
+                + "var order = ['New', 'Active', 'Done']; var actions = [];"
+                + "var t = api.dataTable('t', ["
+                + "    {key: 'name'}, {key: 'n'},"
+                + "    {key: 'state', compare: function (a, b) { return order.indexOf(a) - order.indexOf(b); }}"
+                + "], ["
+                + "    {name: 'b', n: 2, state: 'Done'}, {name: 'a', n: 10, state: 'New'},"
+                + "    {name: 'c', n: 1, state: 'New'}, {name: 'd', n: null, state: 'Active'}"
+                + "], {sortable: true, toolbar: false, onRowsChanged: function (rows, action) { actions.push(action); }});"
+                + "function frame(specs) {"
+                + "    if (specs !== undefined) raw = specs;"
+                + "    t.renderTable(); return t.rows.map(function (r) { return r.name; }).join('');"
+                + "}"
+        );
+        assertEquals(
+            "true|bacd|cbad|cbad|abcd|acdb|bacd|ecbad|set,sort,sort,sort,sort,add,sort",
+            String.valueOf(eval(
+                "var out = [t.sortable, frame(null)];"
+                    + "out.push(frame([1, 1, 1, 1, 1, 0]));"
+                    + "out.push(frame());"
+                    + "out.push(frame([1, 1, 1, 1, 2, 0]));"
+                    + "out.push(frame([1, 2, 2, 2, 1, 0, 0, 0, 1, 1]));"
+                    + "out.push(frame([1, 0]));"
+                    + "raw = [0, 1, 1, 1, 1, 0]; t.addRow({name: 'e', n: 0, state: 'New'});"
+                    + "out.push(frame());"
+                    + "out.push(actions.join(','));"
+                    + "out.join('|')"
+            ))
+        );
+    }
+
+    @Test
+    public void multiComponentWidgetsMapTheirArgumentsAndWriteBack() {
+        eval(
+            "function show(a) {"
+                + "    if (a != null && typeof a === 'object' && typeof a.length === 'number') {"
+                + "        var out = []; for (var i = 0; i < a.length; i += 1) out.push(Number(a[i]));"
+                + "        return '[' + out.join(' ') + ']';"
+                + "    }"
+                + "    return String(a);"
+                + "}"
+                + "['dragFloatN', 'dragIntN', 'sliderFloatN', 'sliderIntN', 'inputFloatN', 'inputIntN',"
+                + "    'dragFloatRange2', 'dragIntRange2', 'sliderAngle'"
+                + "].forEach(function (name) {"
+                + "    bridge[name] = function () {"
+                + "        var args = Array.prototype.slice.call(arguments);"
+                + "        calls.push({name: name, args: args.map(show)});"
+                + "        args[1][args[1].length - 1] = 9;"
+                + "        return true;"
+                + "    };"
+                + "});"
+        );
+        String[][] cases = {
+            {"api.dragFloat3('p', {value: [1, 2, 3]}, 0.5, -1, 1, '%.1f', 4)", "p,[1 2 3],3,0.5,-1,1,%.1f,4"},
+            {"api.DragInt2('i', {value: [1.6, 2]})", "i,[2 2],2,1,0,0,%d,0"},
+            {"api.sliderFloat4('s', api.floats([0, 0.25, 0.5, 1]))", "s,[0 0.25 0.5 1],4,0,1,%.3f,0"},
+            {"api.sliderInt3('s', api.ints([1, 2, 3]), 0, 10)", "s,[1 2 3],3,0,10,%d,0"},
+            {"api.sliderInt2('s', {value: [1, 2]})", "s,[1 2],2,0,100,%d,0"},
+            {"api.inputFloat2('f', {value: [1, 2]}, '%.2f')", "f,[1 2],2,%.2f,0"},
+            {"api.inputInt4('n', {value: [1, 2, 3, 4, 5]})", "n,[1 2 3 4 5],4,0"},
+            {"api.dragFloatRange2('r', {value: 0.25}, {value: 0.75}, 0.5, 0, 1, 'Min %.2f', 'Max %.2f')",
+                "r,[0.25],[0.75],0.5,0,1,Min %.2f,Max %.2f,0"},
+            {"api.dragIntRange2('r', {value: 1}, {value: 5})", "r,[1],[5],1,0,0,%d,null,0"},
+            {"api.SliderAngle('a', {value: 0.5})", "a,[0.5],-360,360,%.0f deg,0"},
+        };
+        for (String[] c : cases) {
+            assertEquals(c[0], c[1], lastCall(c[0]));
+        }
+        assertEquals(
+            "true:1 2 9|2 9|9|9",
+            String.valueOf(eval(
+                "var v = {value: [1, 2, 3]}; var changed = api.dragFloat3('p', v);"
+                    + "var w = {value: [1.6, 2]}; api.dragInt2('i', w);"
+                    + "var lo = {value: 1}; api.dragIntRange2('r', lo, {value: 5});"
+                    + "var angle = {value: 0}; api.sliderAngle('a', angle);"
+                    + "changed + ':' + v.value.join(' ') + '|' + w.value.join(' ') + '|' + lo.value + '|' + angle.value"
+            ))
+        );
     }
 
     private void assertFailures(String[][] cases) {

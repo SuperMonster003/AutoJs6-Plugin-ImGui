@@ -16,6 +16,8 @@
  */
 declare namespace ImGui {
     type MutableValue<T> = ValueRef<T> | IndexedRef<T>;
+    /** A mutable number array: imgui.floats([...]) / imgui.ints([...]) or {value: [...]}. */
+    type NumberArrayValue = ValueRef<number[]> | NativeArray<number>;
     type Point = readonly [number, number] | { x: number; y: number };
     /**
      * A color in one of four forms:
@@ -474,7 +476,8 @@ declare namespace ImGui {
         /**
          * Debug mode: usage errors Dear ImGui recovers from (for example begin without end) and failed assertions are
          * printed with console.warn and logged to logcat, and the Metrics and Debug Log windows are shown. Use a window
-         * large enough for them.
+         * large enough for them. A render callback that runs longer than 250 ms also prints a console.warn, at most
+         * once every 10 seconds (docs/THREADING.md).
          */
         debug?: boolean;
         /** Session event listeners; like Session.on, they run on the script thread. */
@@ -495,6 +498,8 @@ declare namespace ImGui {
         onSecureChanged?: SessionEventListener;
         onIdle?: SessionEventListener;
         onActive?: SessionEventListener;
+        /** Listener of the "back" event (Activity mode), see {@link SessionBackEvent}. */
+        onBack?: (event: SessionBackEvent) => void;
         [name: string]: unknown;
     }
 
@@ -517,6 +522,7 @@ declare namespace ImGui {
         | "secureChanged"
         | "idle"
         | "active"
+        | "back"
         | "error";
 
     /**
@@ -530,13 +536,27 @@ declare namespace ImGui {
      * - collapsed: button, fps; expanded: x, y, width, height;
      * - closed: reason; touchableChanged: mode, touchable, interactiveRegionCount;
      * - moreTouchChanged: enabled; alphaChanged: alpha; secureChanged: secure;
-     * - idle: fps (the idle frame rate), idleDelay (ms); active: fps, reason ("input", "screen" or "api").
+     * - idle: fps (the idle frame rate), idleDelay (ms); active: fps, reason ("input", "screen" or "api");
+     * - back: see {@link SessionBackEvent}.
      */
     interface SessionEvent {
         readonly type: string;
         readonly session: Session;
         readonly timestamp: number;
         readonly [name: string]: unknown;
+    }
+
+    /**
+     * The back key of an Activity-mode session (imgui.launch). Unless a listener calls preventDefault(), the session
+     * closes with closeReason "back" after the listeners ran. A shown soft keyboard takes the back key first and hides.
+     * Overlay windows (imgui.launchFloaty) get no back event: Android sends the key to an overlay only while its text
+     * input has focus, and then it hides the keyboard as before.
+     */
+    interface SessionBackEvent extends SessionEvent {
+        readonly type: "back";
+        readonly defaultPrevented: boolean;
+        /** Keeps the session open. */
+        preventDefault(): void;
     }
 
     type SessionEventListener = (event: SessionEvent) => void;
@@ -664,6 +684,24 @@ declare namespace ImGui {
         };
     }
 
+    interface TableColumnSortSpecs {
+        /** Index of the column. */
+        readonly columnIndex: number;
+        /** The userId given to tableSetupColumn, 0 by default. */
+        readonly columnUserId: number;
+        /** SortDirection.Ascending or SortDirection.Descending. */
+        readonly sortDirection: number;
+        /** Position of this spec when sorting on several columns (TableFlags.SortMulti), 0 for the first. */
+        readonly sortOrder: number;
+    }
+
+    interface TableSortSpecs {
+        /** Whether the specs changed since the last read; sort the rows when true. */
+        readonly specsDirty: boolean;
+        /** Usually one spec; more with TableFlags.SortMulti, none with TableFlags.SortTristate. */
+        readonly specs: readonly TableColumnSortSpecs[];
+    }
+
     interface DataTableHeader<Row = any> {
         id?: string;
         label?: string;
@@ -671,6 +709,11 @@ declare namespace ImGui {
         width?: number;
         flags?: number;
         render?: (value: unknown, row: Row, rowIndex: number, table: DataTable<Row>) => void;
+        /**
+         * Order of two cell values of this column in a sortable table, negative, 0 or positive as for Array.sort; by
+         * default numbers compare by value, other values as strings, and empty cells come last in either direction.
+         */
+        compare?: (a: unknown, b: unknown, rowA: Row, rowB: Row) => number;
     }
 
     type DataTableHeaderLike<Row = any> = string | DataTableHeader<Row>;
@@ -681,6 +724,13 @@ declare namespace ImGui {
         visible?: boolean;
         multiSelect?: boolean;
         tableFlags?: number;
+        /**
+         * Adds TableFlags.Sortable: a click on a header sorts the rows by that column (TableFlags.SortMulti and
+         * SortTristate in tableFlags, TableColumnFlags.DefaultSort / NoSort / PreferSortDescending in a header's flags
+         * apply). The sort is stable; rows added or changed are sorted again in the next frame, and onRowsChanged
+         * gets the action "sort".
+         */
+        sortable?: boolean;
         rowKey?: (row: Row, index: number) => unknown;
         onRowClick?: (row: Row, index: number, table: DataTable<Row>) => void;
         onRowsChanged?: (event: unknown, table: DataTable<Row>) => void;
@@ -692,6 +742,7 @@ declare namespace ImGui {
         rows: Row[];
         open: ValueRef<boolean>;
         multiSelect: boolean;
+        readonly sortable: boolean;
         setRows(rows: readonly Row[]): this;
         getRows(): Row[];
         addRow(row: Row, index?: number): number;
@@ -776,8 +827,10 @@ declare namespace ImGui {
         getBackendInfo(): string;
         /** Adds a listener; it runs on the script thread. */
         on(eventName: "error", listener: (event: SessionErrorEvent) => void): this;
+        on(eventName: "back", listener: (event: SessionBackEvent) => void): this;
         on(eventName: SessionEventName | string, listener: SessionEventListener): this;
         once(eventName: "error", listener: (event: SessionErrorEvent) => void): this;
+        once(eventName: "back", listener: (event: SessionBackEvent) => void): this;
         once(eventName: SessionEventName | string, listener: SessionEventListener): this;
         off(eventName: SessionEventName | string, listener?: SessionEventListener | null): this;
         /** Moves the window to (x, y) in dp, clamped to the display; null keeps that coordinate. */
@@ -828,6 +881,8 @@ declare namespace ImGui {
         string(value?: unknown): IndexedRef<string>;
         ref<T>(value: T): ValueRef<T>;
         floats(values?: readonly number[]): NativeArray<number>;
+        /** A Java int array, for dragInt2 .. 4, sliderInt2 .. 4 and inputInt2 .. 4; values are rounded. */
+        ints(values?: readonly number[]): NativeArray<number>;
         bytes(values?: readonly number[]): NativeArray<number>;
         strings(values?: readonly unknown[]): NativeArray<string>;
         version(): string;
@@ -880,6 +935,8 @@ declare namespace ImGui {
         readonly TableColumnFlags: NumericConstants<"None" | "Disabled" | "DefaultHide" | "DefaultSort" | "WidthStretch" | "WidthFixed" | "NoResize" | "NoReorder" | "NoHide" | "NoClip" | "NoSort" | "NoSortAscending" | "NoSortDescending" | "NoHeaderLabel" | "NoHeaderWidth" | "PreferSortAscending" | "PreferSortDescending" | "IndentEnable" | "IndentDisable" | "AngledHeader" | "IsEnabled" | "IsVisible" | "IsSorted" | "IsHovered">;
         readonly TableRowFlags: NumericConstants<"None" | "Headers">;
         readonly TableBgTarget: NumericConstants<"None" | "RowBg0" | "RowBg1" | "CellBg">;
+        /** sortDirection of a {@link TableColumnSortSpecs}. */
+        readonly SortDirection: NumericConstants<"None" | "Ascending" | "Descending">;
         readonly Col: NumericConstants<"Text" | "TextDisabled" | "WindowBg" | "ChildBg" | "PopupBg" | "Border" | "BorderShadow" | "FrameBg" | "FrameBgHovered" | "FrameBgActive" | "TitleBg" | "TitleBgActive" | "TitleBgCollapsed" | "MenuBarBg" | "ScrollbarBg" | "ScrollbarGrab" | "ScrollbarGrabHovered" | "ScrollbarGrabActive" | "CheckMark" | "CheckboxSelectedBg" | "SliderGrab" | "SliderGrabActive" | "Button" | "ButtonHovered" | "ButtonActive" | "Header" | "HeaderHovered" | "HeaderActive" | "Separator" | "SeparatorHovered" | "SeparatorActive" | "ResizeGrip" | "ResizeGripHovered" | "ResizeGripActive" | "InputTextCursor" | "TabHovered" | "Tab" | "TabSelected" | "TabSelectedOverline" | "TabDimmed" | "TabDimmedSelected" | "TabDimmedSelectedOverline" | "PlotLines" | "PlotLinesHovered" | "PlotHistogram" | "PlotHistogramHovered" | "TableHeaderBg" | "TableBorderStrong" | "TableBorderLight" | "TableRowBg" | "TableRowBgAlt" | "TextLink" | "TextSelectedBg" | "TreeLines" | "DragDropTarget" | "DragDropTargetBg" | "UnsavedMarker" | "NavCursor" | "NavWindowingHighlight" | "NavWindowingDimBg" | "ModalWindowDimBg">;
         readonly StyleVar: NumericConstants<"Alpha" | "DisabledAlpha" | "WindowPadding" | "WindowRounding" | "WindowBorderSize" | "WindowMinSize" | "WindowTitleAlign" | "ChildRounding" | "ChildBorderSize" | "PopupRounding" | "PopupBorderSize" | "FramePadding" | "FrameRounding" | "FrameBorderSize" | "ItemSpacing" | "ItemInnerSpacing" | "IndentSpacing" | "CellPadding" | "ScrollbarSize" | "ScrollbarRounding" | "ScrollbarPadding" | "GrabMinSize" | "GrabRounding" | "ImageRounding" | "ImageBorderSize" | "TabRounding" | "TabBorderSize" | "TabMinWidthBase" | "TabMinWidthShrink" | "TabBarBorderSize" | "TabBarOverlineSize" | "TableAngledHeadersAngle" | "TableAngledHeadersTextAlign" | "TreeLinesSize" | "TreeLinesRounding" | "MenuItemRounding" | "SelectableRounding" | "DragDropTargetRounding" | "ButtonTextAlign" | "SelectableTextAlign" | "SeparatorSize" | "SeparatorTextBorderSize" | "SeparatorTextAlign" | "SeparatorTextPadding">;
         readonly Themes: Readonly<{ Dark: "dark"; Light: "light"; Classic: "classic"; Pink: "pink"; Blue: "blue"; ModernDark: "modern-dark"; CyanDusk: "cyan-dusk"; OrangeDark: "orange-dark"; CrystalClear: "crystal-clear"; VibrantNight: "vibrant-night"; PurpleDream: "purple-dream" }>;
@@ -959,6 +1016,18 @@ declare namespace ImGui {
         styleColorsLight(): void;
         styleColorsClassic(): void;
         showDemoWindow(open?: MutableValue<boolean> | null): void;
+        /**
+         * The debug and information windows of Dear ImGui. Each call draws the window, as showDemoWindow does; with an
+         * open reference the window gets a close button that sets it to false, so call it while the reference is true.
+         * showStyleEditor and showUserGuide put the upstream block in a window of its own ("Dear ImGui Style Editor",
+         * "Dear ImGui User Guide"). createWindow({debug: true}) shows the Metrics and Debug Log windows itself.
+         */
+        showMetricsWindow(open?: MutableValue<boolean> | null): void;
+        showDebugLogWindow(open?: MutableValue<boolean> | null): void;
+        showIdStackToolWindow(open?: MutableValue<boolean> | null): void;
+        showStyleEditor(open?: MutableValue<boolean> | null): void;
+        showAboutWindow(open?: MutableValue<boolean> | null): void;
+        showUserGuide(open?: MutableValue<boolean> | null): void;
         separatorText(label: string): void;
         bullet(): void;
         bulletText(text: unknown): void;
@@ -980,6 +1049,35 @@ declare namespace ImGui {
         plotLines(label: string, values: readonly number[] | NativeArray<number>, options?: PlotOptions): void;
         plotHistogram(label: string, values: readonly number[] | NativeArray<number>, options?: PlotOptions): void;
         treeNodeEx(label: string, flags?: number): boolean;
+        /**
+         * Multi-component widgets: value is imgui.floats([...]) / imgui.ints([...]) or {value: [...]} with at least as
+         * many numbers as the widget has components (2, 3 or 4), written back when the user edits them. The other
+         * arguments are those of the one-component form; inputFloat2 .. 4 and inputInt2 .. 4 have no steps, as in
+         * Dear ImGui. For the drags, min equal to max (the default) means no limit.
+         */
+        dragFloat2(label: string, value: NumberArrayValue, speed?: number, min?: number, max?: number, format?: string, flags?: number): boolean;
+        dragFloat3(label: string, value: NumberArrayValue, speed?: number, min?: number, max?: number, format?: string, flags?: number): boolean;
+        dragFloat4(label: string, value: NumberArrayValue, speed?: number, min?: number, max?: number, format?: string, flags?: number): boolean;
+        dragInt2(label: string, value: NumberArrayValue, speed?: number, min?: number, max?: number, format?: string, flags?: number): boolean;
+        dragInt3(label: string, value: NumberArrayValue, speed?: number, min?: number, max?: number, format?: string, flags?: number): boolean;
+        dragInt4(label: string, value: NumberArrayValue, speed?: number, min?: number, max?: number, format?: string, flags?: number): boolean;
+        sliderFloat2(label: string, value: NumberArrayValue, min?: number, max?: number, format?: string, flags?: number): boolean;
+        sliderFloat3(label: string, value: NumberArrayValue, min?: number, max?: number, format?: string, flags?: number): boolean;
+        sliderFloat4(label: string, value: NumberArrayValue, min?: number, max?: number, format?: string, flags?: number): boolean;
+        sliderInt2(label: string, value: NumberArrayValue, min?: number, max?: number, format?: string, flags?: number): boolean;
+        sliderInt3(label: string, value: NumberArrayValue, min?: number, max?: number, format?: string, flags?: number): boolean;
+        sliderInt4(label: string, value: NumberArrayValue, min?: number, max?: number, format?: string, flags?: number): boolean;
+        inputFloat2(label: string, value: NumberArrayValue, format?: string, flags?: number): boolean;
+        inputFloat3(label: string, value: NumberArrayValue, format?: string, flags?: number): boolean;
+        inputFloat4(label: string, value: NumberArrayValue, format?: string, flags?: number): boolean;
+        inputInt2(label: string, value: NumberArrayValue, flags?: number): boolean;
+        inputInt3(label: string, value: NumberArrayValue, flags?: number): boolean;
+        inputInt4(label: string, value: NumberArrayValue, flags?: number): boolean;
+        /** Two mutable values, the lower and the upper end; formatMax (for the upper end) defaults to format. */
+        dragFloatRange2(label: string, currentMin: MutableValue<number>, currentMax: MutableValue<number>, speed?: number, min?: number, max?: number, format?: string, formatMax?: string | null, flags?: number): boolean;
+        dragIntRange2(label: string, currentMin: MutableValue<number>, currentMax: MutableValue<number>, speed?: number, min?: number, max?: number, format?: string, formatMax?: string | null, flags?: number): boolean;
+        /** value is in radians; degreesMin (-360), degreesMax (360) and the shown value ("%.0f deg") are in degrees. */
+        sliderAngle(label: string, value: MutableValue<number>, degreesMin?: number, degreesMax?: number, format?: string, flags?: number): boolean;
         vSliderFloat(label: string, width: number, height: number, value: MutableValue<number>, min: number, max: number, format?: string, flags?: number): boolean;
         vSliderInt(label: string, width: number, height: number, value: MutableValue<number>, min: number, max: number, format?: string, flags?: number): boolean;
         toggle(label: string, value: MutableValue<boolean>): boolean;
@@ -1016,7 +1114,14 @@ declare namespace ImGui {
         tableNextRow(rowFlags?: number, minRowHeight?: number): void;
         tableNextColumn(): boolean;
         tableSetColumnIndex(columnIndex: number): boolean;
-        tableSetupColumn(label: string, flags?: number, initWidthOrWeight?: number): void;
+        /** userId (0 by default) comes back as columnUserId in {@link tableGetSortSpecs}. */
+        tableSetupColumn(label: string, flags?: number, initWidthOrWeight?: number, userId?: number): void;
+        /**
+         * Sort specs of the current table, null when it was begun without TableFlags.Sortable. Call it after the
+         * tableSetupColumn calls; when specsDirty is true, sort the rows. Reading the specs clears specsDirty, so it is
+         * true in the frame the user clicked a header (and in the first frame).
+         */
+        tableGetSortSpecs(): TableSortSpecs | null;
         tableSetupScrollFreeze(columns: number, rows: number): void;
         tableHeadersRow(): void;
         tableSetBgColor(target: number, color: Color, columnIndex?: number): void;
@@ -1226,6 +1331,12 @@ declare namespace ImGui {
         readonly IsAnyItemHovered: ApiCore["isAnyItemHovered"];
         readonly IsAnyItemActive: ApiCore["isAnyItemActive"];
         readonly ShowDemoWindow: ApiCore["showDemoWindow"];
+        readonly ShowMetricsWindow: ApiCore["showMetricsWindow"];
+        readonly ShowDebugLogWindow: ApiCore["showDebugLogWindow"];
+        readonly ShowIDStackToolWindow: ApiCore["showIdStackToolWindow"];
+        readonly ShowStyleEditor: ApiCore["showStyleEditor"];
+        readonly ShowAboutWindow: ApiCore["showAboutWindow"];
+        readonly ShowUserGuide: ApiCore["showUserGuide"];
         readonly StyleColorsDark: ApiCore["styleColorsDark"];
         readonly StyleColorsLight: ApiCore["styleColorsLight"];
         readonly StyleColorsClassic: ApiCore["styleColorsClassic"];
@@ -1251,6 +1362,27 @@ declare namespace ImGui {
         readonly TreeNodeEx: ApiCore["treeNodeEx"];
         readonly VSliderFloat: ApiCore["vSliderFloat"];
         readonly VSliderInt: ApiCore["vSliderInt"];
+        readonly DragFloat2: ApiCore["dragFloat2"];
+        readonly DragFloat3: ApiCore["dragFloat3"];
+        readonly DragFloat4: ApiCore["dragFloat4"];
+        readonly DragInt2: ApiCore["dragInt2"];
+        readonly DragInt3: ApiCore["dragInt3"];
+        readonly DragInt4: ApiCore["dragInt4"];
+        readonly SliderFloat2: ApiCore["sliderFloat2"];
+        readonly SliderFloat3: ApiCore["sliderFloat3"];
+        readonly SliderFloat4: ApiCore["sliderFloat4"];
+        readonly SliderInt2: ApiCore["sliderInt2"];
+        readonly SliderInt3: ApiCore["sliderInt3"];
+        readonly SliderInt4: ApiCore["sliderInt4"];
+        readonly InputFloat2: ApiCore["inputFloat2"];
+        readonly InputFloat3: ApiCore["inputFloat3"];
+        readonly InputFloat4: ApiCore["inputFloat4"];
+        readonly InputInt2: ApiCore["inputInt2"];
+        readonly InputInt3: ApiCore["inputInt3"];
+        readonly InputInt4: ApiCore["inputInt4"];
+        readonly DragFloatRange2: ApiCore["dragFloatRange2"];
+        readonly DragIntRange2: ApiCore["dragIntRange2"];
+        readonly SliderAngle: ApiCore["sliderAngle"];
         readonly Toggle: ApiCore["toggle"];
         readonly ToggleSwitch: ApiCore["toggle"];
         readonly BeginCombo: ApiCore["beginCombo"];
@@ -1280,6 +1412,7 @@ declare namespace ImGui {
         readonly TableNextColumn: ApiCore["tableNextColumn"];
         readonly TableSetColumnIndex: ApiCore["tableSetColumnIndex"];
         readonly TableSetupColumn: ApiCore["tableSetupColumn"];
+        readonly TableGetSortSpecs: ApiCore["tableGetSortSpecs"];
         readonly TableSetupScrollFreeze: ApiCore["tableSetupScrollFreeze"];
         readonly TableHeadersRow: ApiCore["tableHeadersRow"];
         readonly TableSetBgColor: ApiCore["tableSetBgColor"];

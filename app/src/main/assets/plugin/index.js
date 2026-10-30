@@ -233,7 +233,12 @@ module.exports = function (bridge) {
         return withScalarRef(fn, name, value, STRING_REF, callback);
     }
 
-    function withFloatArrayRef(fn, name, value, minimumLength, callback) {
+    // A mutable number array (colors, multi-component widgets): a Java array from imgui.floats() / imgui.ints() or a
+    // {value: [...]} object whose numbers are checked like plain arguments and written back afterwards.
+    var FLOAT_ARRAY_REF = {nativeClass: FLOAT_ARRAY_CLASS, factory: "imgui.floats", check: argNumber, create: floatArray};
+    var INT_ARRAY_REF = {nativeClass: INT_ARRAY_CLASS, factory: "imgui.ints", check: argInt, create: intArray};
+
+    function withArrayRef(fn, name, value, minimumLength, kind, callback) {
         if (isValueRef(value)) {
             var source = value.value;
             if (source == null || isStringLike(source) || typeof source.length !== "number" ||
@@ -246,9 +251,9 @@ module.exports = function (bridge) {
             }
             var values = [];
             for (var index = 0; index < source.length; index += 1) {
-                values.push(argNumber(fn, name + ".value[" + index + "]", source[index]));
+                values.push(kind.check(fn, name + ".value[" + index + "]", source[index]));
             }
-            var nativeRef = floatArray(values);
+            var nativeRef = kind.create(values);
             try {
                 return callback(nativeRef);
             } finally {
@@ -258,26 +263,38 @@ module.exports = function (bridge) {
                 value.value = source;
             }
         }
-        if (value != null && FLOAT_ARRAY_CLASS.isInstance(value) && value.length >= minimumLength) {
+        if (value != null && kind.nativeClass.isInstance(value) && value.length >= minimumLength) {
             return callback(value);
         }
         throw new TypeError(
-            argumentLabel(fn, name) + " must be imgui.floats([...]) or {value: [...]} with at least " +
+            argumentLabel(fn, name) + " must be " + kind.factory + "([...]) or {value: [...]} with at least " +
             minimumLength + " numbers"
         );
+    }
+
+    function withFloatArrayRef(fn, name, value, minimumLength, callback) {
+        return withArrayRef(fn, name, value, minimumLength, FLOAT_ARRAY_REF, callback);
+    }
+
+    function withIntArrayRef(fn, name, value, minimumLength, callback) {
+        return withArrayRef(fn, name, value, minimumLength, INT_ARRAY_REF, callback);
     }
 
     function floatArray(values) {
         return javaArray(FloatType, values);
     }
 
-    function numberList(fn, name, values) {
+    function intArray(values) {
+        return javaArray(IntegerType, values);
+    }
+
+    function numberList(fn, name, values, check) {
         if (values == null || isStringLike(values) || typeof values.length !== "number") {
             throw new TypeError(argumentLabel(fn, name) + " must be an array of numbers");
         }
         var result = [];
         for (var index = 0; index < values.length; index += 1) {
-            result.push(argNumber(fn, name + "[" + index + "]", values[index]));
+            result.push((check || argNumber)(fn, name + "[" + index + "]", values[index]));
         }
         return result;
     }
@@ -323,6 +340,9 @@ module.exports = function (bridge) {
         ref: valueRef,
         floats: function (values) {
             return floatArray(numberList("floats", "values", values));
+        },
+        ints: function (values) {
+            return intArray(numberList("ints", "values", values, argInt));
         },
         bytes: byteArray,
         strings: stringArray,
@@ -799,6 +819,12 @@ module.exports = function (bridge) {
         RowBg0: 1,
         RowBg1: 2,
         CellBg: 3
+    });
+
+    api.SortDirection = freeze({
+        None: 0,
+        Ascending: 1,
+        Descending: 2
     });
 
     api.Col = freeze({
@@ -1666,6 +1692,9 @@ module.exports = function (bridge) {
 
     var MOUSE_BUTTON_MAX = 4;
     var TABLE_MAX_COLUMNS = 512;
+    // Debug mode (R3.5, Q7): a render callback slower than this gets a console.warn, at most one per interval.
+    var SLOW_RENDER_CALLBACK_MS = 250;
+    var SLOW_RENDER_WARNING_INTERVAL_MS = 10000;
     var STYLE_VAR_MAX_INDEX = api.StyleVar.SeparatorTextPadding;
 
     function mouseButton(fn, value) {
@@ -1948,6 +1977,19 @@ module.exports = function (bridge) {
             bridge.showDemoWindow(nativeRef);
         });
     };
+    // The debug and information windows of Dear ImGui (R3.1). As with showDemoWindow, each call draws the window; an
+    // open reference adds a close button that sets it to false, so call them while it is true.
+    function showToolWindow(fn, tool, open) {
+        withOptionalBoolRef(fn, "open", open, function (nativeRef) {
+            bridge.showToolWindow(tool, nativeRef);
+        });
+    }
+    api.showMetricsWindow = function (open) { showToolWindow("showMetricsWindow", 0, open); };
+    api.showDebugLogWindow = function (open) { showToolWindow("showDebugLogWindow", 1, open); };
+    api.showIdStackToolWindow = function (open) { showToolWindow("showIdStackToolWindow", 2, open); };
+    api.showStyleEditor = function (open) { showToolWindow("showStyleEditor", 3, open); };
+    api.showAboutWindow = function (open) { showToolWindow("showAboutWindow", 4, open); };
+    api.showUserGuide = function (open) { showToolWindow("showUserGuide", 5, open); };
 
     api.separatorText = function (label) { bridge.separatorText(String(label)); };
     api.bullet = function () { bridge.bullet(); };
@@ -2116,6 +2158,173 @@ module.exports = function (bridge) {
             ));
         });
     };
+
+    // Multi-component widgets (R3.4): value is imgui.floats([...]) / imgui.ints([...]) or {value: [...]} with at least
+    // as many numbers as the widget has components; the other arguments are those of the one-component form, without
+    // the steps for inputFloat2 .. 4 / inputInt2 .. 4, as in Dear ImGui. min equal to max means no limit for the drags.
+    function dragFloatN(fn, components, label, value, speed, min, max, format, flags) {
+        var resolvedSpeed = argNumber(fn, "speed", speed, 1);
+        var resolvedMin = argNumber(fn, "min", min, 0);
+        var resolvedMax = argNumber(fn, "max", max, 0);
+        var resolvedFlags = argFlags(fn, flags);
+        return withFloatArrayRef(fn, "value", value, components, function (nativeRef) {
+            return Boolean(bridge.dragFloatN(
+                String(label), nativeRef, components, resolvedSpeed, resolvedMin, resolvedMax,
+                String(format || "%.3f"), resolvedFlags
+            ));
+        });
+    }
+
+    function dragIntN(fn, components, label, value, speed, min, max, format, flags) {
+        var resolvedSpeed = argNumber(fn, "speed", speed, 1);
+        var resolvedMin = argInt(fn, "min", min, 0);
+        var resolvedMax = argInt(fn, "max", max, 0);
+        var resolvedFlags = argFlags(fn, flags);
+        return withIntArrayRef(fn, "value", value, components, function (nativeRef) {
+            return Boolean(bridge.dragIntN(
+                String(label), nativeRef, components, resolvedSpeed, resolvedMin, resolvedMax,
+                String(format || "%d"), resolvedFlags
+            ));
+        });
+    }
+
+    function sliderFloatN(fn, components, label, value, min, max, format, flags) {
+        var resolvedMin = argNumber(fn, "min", min, 0);
+        var resolvedMax = argNumber(fn, "max", max, 1);
+        var resolvedFlags = argFlags(fn, flags);
+        return withFloatArrayRef(fn, "value", value, components, function (nativeRef) {
+            return Boolean(bridge.sliderFloatN(
+                String(label), nativeRef, components, resolvedMin, resolvedMax,
+                String(format || "%.3f"), resolvedFlags
+            ));
+        });
+    }
+
+    function sliderIntN(fn, components, label, value, min, max, format, flags) {
+        var resolvedMin = argInt(fn, "min", min, 0);
+        var resolvedMax = argInt(fn, "max", max, 100);
+        var resolvedFlags = argFlags(fn, flags);
+        return withIntArrayRef(fn, "value", value, components, function (nativeRef) {
+            return Boolean(bridge.sliderIntN(
+                String(label), nativeRef, components, resolvedMin, resolvedMax,
+                String(format || "%d"), resolvedFlags
+            ));
+        });
+    }
+
+    function inputFloatN(fn, components, label, value, format, flags) {
+        var resolvedFlags = argFlags(fn, flags);
+        return withFloatArrayRef(fn, "value", value, components, function (nativeRef) {
+            return Boolean(bridge.inputFloatN(
+                String(label), nativeRef, components, String(format || "%.3f"), resolvedFlags
+            ));
+        });
+    }
+
+    function inputIntN(fn, components, label, value, flags) {
+        var resolvedFlags = argFlags(fn, flags);
+        return withIntArrayRef(fn, "value", value, components, function (nativeRef) {
+            return Boolean(bridge.inputIntN(String(label), nativeRef, components, resolvedFlags));
+        });
+    }
+
+    api.dragFloat2 = function (label, value, speed, min, max, format, flags) {
+        return dragFloatN("dragFloat2", 2, label, value, speed, min, max, format, flags);
+    };
+    api.dragFloat3 = function (label, value, speed, min, max, format, flags) {
+        return dragFloatN("dragFloat3", 3, label, value, speed, min, max, format, flags);
+    };
+    api.dragFloat4 = function (label, value, speed, min, max, format, flags) {
+        return dragFloatN("dragFloat4", 4, label, value, speed, min, max, format, flags);
+    };
+    api.dragInt2 = function (label, value, speed, min, max, format, flags) {
+        return dragIntN("dragInt2", 2, label, value, speed, min, max, format, flags);
+    };
+    api.dragInt3 = function (label, value, speed, min, max, format, flags) {
+        return dragIntN("dragInt3", 3, label, value, speed, min, max, format, flags);
+    };
+    api.dragInt4 = function (label, value, speed, min, max, format, flags) {
+        return dragIntN("dragInt4", 4, label, value, speed, min, max, format, flags);
+    };
+    api.sliderFloat2 = function (label, value, min, max, format, flags) {
+        return sliderFloatN("sliderFloat2", 2, label, value, min, max, format, flags);
+    };
+    api.sliderFloat3 = function (label, value, min, max, format, flags) {
+        return sliderFloatN("sliderFloat3", 3, label, value, min, max, format, flags);
+    };
+    api.sliderFloat4 = function (label, value, min, max, format, flags) {
+        return sliderFloatN("sliderFloat4", 4, label, value, min, max, format, flags);
+    };
+    api.sliderInt2 = function (label, value, min, max, format, flags) {
+        return sliderIntN("sliderInt2", 2, label, value, min, max, format, flags);
+    };
+    api.sliderInt3 = function (label, value, min, max, format, flags) {
+        return sliderIntN("sliderInt3", 3, label, value, min, max, format, flags);
+    };
+    api.sliderInt4 = function (label, value, min, max, format, flags) {
+        return sliderIntN("sliderInt4", 4, label, value, min, max, format, flags);
+    };
+    api.inputFloat2 = function (label, value, format, flags) {
+        return inputFloatN("inputFloat2", 2, label, value, format, flags);
+    };
+    api.inputFloat3 = function (label, value, format, flags) {
+        return inputFloatN("inputFloat3", 3, label, value, format, flags);
+    };
+    api.inputFloat4 = function (label, value, format, flags) {
+        return inputFloatN("inputFloat4", 4, label, value, format, flags);
+    };
+    api.inputInt2 = function (label, value, flags) {
+        return inputIntN("inputInt2", 2, label, value, flags);
+    };
+    api.inputInt3 = function (label, value, flags) {
+        return inputIntN("inputInt3", 3, label, value, flags);
+    };
+    api.inputInt4 = function (label, value, flags) {
+        return inputIntN("inputInt4", 4, label, value, flags);
+    };
+    // dragFloatRange2 / dragIntRange2: two mutable values, the lower and the upper end, as in Dear ImGui; formatMax
+    // (the upper end's format) defaults to format.
+    api.dragFloatRange2 = function (label, currentMin, currentMax, speed, min, max, format, formatMax, flags) {
+        var resolvedSpeed = argNumber("dragFloatRange2", "speed", speed, 1);
+        var resolvedMin = argNumber("dragFloatRange2", "min", min, 0);
+        var resolvedMax = argNumber("dragFloatRange2", "max", max, 0);
+        var resolvedFlags = argFlags("dragFloatRange2", flags);
+        return withFloatRef("dragFloatRange2", "currentMin", currentMin, function (minRef) {
+            return withFloatRef("dragFloatRange2", "currentMax", currentMax, function (maxRef) {
+                return Boolean(bridge.dragFloatRange2(
+                    String(label), minRef, maxRef, resolvedSpeed, resolvedMin, resolvedMax,
+                    String(format || "%.3f"), formatMax == null ? null : String(formatMax), resolvedFlags
+                ));
+            });
+        });
+    };
+    api.dragIntRange2 = function (label, currentMin, currentMax, speed, min, max, format, formatMax, flags) {
+        var resolvedSpeed = argNumber("dragIntRange2", "speed", speed, 1);
+        var resolvedMin = argInt("dragIntRange2", "min", min, 0);
+        var resolvedMax = argInt("dragIntRange2", "max", max, 0);
+        var resolvedFlags = argFlags("dragIntRange2", flags);
+        return withIntRef("dragIntRange2", "currentMin", currentMin, function (minRef) {
+            return withIntRef("dragIntRange2", "currentMax", currentMax, function (maxRef) {
+                return Boolean(bridge.dragIntRange2(
+                    String(label), minRef, maxRef, resolvedSpeed, resolvedMin, resolvedMax,
+                    String(format || "%d"), formatMax == null ? null : String(formatMax), resolvedFlags
+                ));
+            });
+        });
+    };
+    // sliderAngle: value in radians, the range and the shown value in degrees.
+    api.sliderAngle = function (label, value, degreesMin, degreesMax, format, flags) {
+        var resolvedDegreesMin = argNumber("sliderAngle", "degreesMin", degreesMin, -360);
+        var resolvedDegreesMax = argNumber("sliderAngle", "degreesMax", degreesMax, 360);
+        var resolvedFlags = argFlags("sliderAngle", flags);
+        return withFloatRef("sliderAngle", "value", value, function (nativeRef) {
+            return Boolean(bridge.sliderAngle(
+                String(label), nativeRef, resolvedDegreesMin, resolvedDegreesMax,
+                String(format || "%.0f deg"), resolvedFlags
+            ));
+        });
+    };
+
     api.toggle = function (label, value) {
         return withBoolRef("toggle", "value", value, function (nativeRef) {
             return Boolean(bridge.toggle(String(label), nativeRef));
@@ -2252,12 +2461,32 @@ module.exports = function (bridge) {
             argInt("tableSetColumnIndex", "columnIndex", columnIndex, undefined, 0, TABLE_MAX_COLUMNS - 1)
         ));
     };
-    api.tableSetupColumn = function (label, flags, initWidthOrWeight) {
+    api.tableSetupColumn = function (label, flags, initWidthOrWeight, userId) {
         bridge.tableSetupColumn(
             String(label),
             argFlags("tableSetupColumn", flags),
-            argNumber("tableSetupColumn", "initWidthOrWeight", initWidthOrWeight, 0)
+            argNumber("tableSetupColumn", "initWidthOrWeight", initWidthOrWeight, 0),
+            argInt("tableSetupColumn", "userId", userId, 0, 0)
         );
+    };
+    // tableGetSortSpecs() (R3.3): null when the current table is not sortable, otherwise {specsDirty, specs}. Sort the
+    // rows when specsDirty is true; reading the specs clears it, so it is true once per change.
+    api.tableGetSortSpecs = function () {
+        var raw = bridge.tableGetSortSpecs();
+        if (raw == null) {
+            return null;
+        }
+        var specs = [];
+        for (var index = 0; index < Number(raw[1]); index += 1) {
+            var base = 2 + index * 4;
+            specs.push({
+                columnIndex: Number(raw[base]),
+                columnUserId: Number(raw[base + 1]),
+                sortDirection: Number(raw[base + 2]),
+                sortOrder: Number(raw[base + 3])
+            });
+        }
+        return {specsDirty: Number(raw[0]) !== 0, specs: specs};
     };
     api.tableSetupScrollFreeze = function (columns, rows) {
         bridge.tableSetupScrollFreeze(
@@ -4136,21 +4365,31 @@ module.exports = function (bridge) {
                         "dataTable", name + ".width", header.width,
                         argNumber("dataTable", name + ".weight", header.weight, 0, 0),
                         0
-                    )
+                    ),
+                    compare: header.compare == null ? null : argFunction("dataTable", name + ".compare", header.compare)
                 });
             } else {
                 result.push({
                     key: String(header),
                     label: String(header),
                     flags: 0,
-                    width: 0
+                    width: 0,
+                    compare: null
                 });
             }
         }
         if (result.length === 0) {
-            result.push({key: 0, label: "Value", flags: 0, width: 0});
+            result.push({key: 0, label: "Value", flags: 0, width: 0, compare: null});
         }
         return result;
+    }
+
+    // Default order of two non-empty cells of a sortable dataTable column: numbers by value, other values as strings.
+    function compareDataTableValues(left, right) {
+        var numeric = isNumberLike(left) && isNumberLike(right);
+        var a = numeric ? Number(left) : String(left);
+        var b = numeric ? Number(right) : String(right);
+        return a < b ? -1 : a > b ? 1 : 0;
     }
 
     function createDataTable(session, id, headers, rows, options) {
@@ -4168,6 +4407,10 @@ module.exports = function (bridge) {
                 api.TableFlags.Borders |
                 api.TableFlags.ScrollY
             : argInt("dataTable", "options.tableFlags", options.tableFlags);
+        var sortable = options.sortable === true;
+        if (sortable) {
+            tableFlags |= api.TableFlags.Sortable;
+        }
         var tableHeight = componentScale(session, "dataTable", options, "tableHeight", 0);
         var rowHeight = argNumber("dataTable", "options.rowHeight", options.rowHeight, 0, 0);
         var selectableFlags = argInt("dataTable", "options.selectableFlags", options.selectableFlags, 0);
@@ -4180,8 +4423,11 @@ module.exports = function (bridge) {
         component.rows = [];
         component.open = valueRef(options.open !== false);
         component.multiSelect = options.multiSelect === true;
+        component.sortable = sortable;
         component._records = [];
         component._selected = {};
+        // Set when rows change, so a sortable table sorts them again with the current specs.
+        component._sortPending = false;
 
         function rowKey(row, index) {
             if (typeof options.rowKey === "function") {
@@ -4248,6 +4494,7 @@ module.exports = function (bridge) {
             for (var index = 0; index < source.length; index += 1) {
                 component._records.push(createRecord(source[index]));
             }
+            component._sortPending = true;
             refreshRows();
             emitRowsChanged("set", null, -1);
             emitSelectionChanged();
@@ -4264,6 +4511,7 @@ module.exports = function (bridge) {
                 component._records.length, 0, component._records.length
             );
             component._records.splice(insertIndex, 0, createRecord(row));
+            component._sortPending = true;
             refreshRows();
             emitRowsChanged("add", row, insertIndex);
             return insertIndex;
@@ -4286,6 +4534,7 @@ module.exports = function (bridge) {
                 next = current;
             }
             component._records[index].row = next;
+            component._sortPending = true;
             refreshRows();
             emitRowsChanged("update", next, index);
             return next;
@@ -4399,17 +4648,20 @@ module.exports = function (bridge) {
             return objectRow;
         }
 
-        function cellValue(row, header, columnIndex) {
-            var value;
+        function rawCellValue(row, header, columnIndex) {
             if (Array.isArray(row) || row != null && typeof row.length === "number" &&
                 typeof row !== "string"
             ) {
-                value = row[columnIndex];
-            } else if (row != null && typeof row === "object") {
-                value = row[header.key];
-            } else if (columnIndex === 0) {
-                value = row;
+                return row[columnIndex];
             }
+            if (row != null && typeof row === "object") {
+                return row[header.key];
+            }
+            return columnIndex === 0 ? row : undefined;
+        }
+
+        function cellValue(row, header, columnIndex) {
+            var value = rawCellValue(row, header, columnIndex);
             if (typeof options.formatCell === "function") {
                 value = options.formatCell(value, row, header, columnIndex, component);
             }
@@ -4461,6 +4713,44 @@ module.exports = function (bridge) {
             api.separator();
         }
 
+        // Stable sort of the rows by the specs (R3.3); with no spec (TableFlags.SortTristate) the rows go back to the
+        // order they were created in.
+        function sortRecords(specs) {
+            var decorated = [];
+            for (var index = 0; index < component._records.length; index += 1) {
+                decorated.push({record: component._records[index], index: index});
+            }
+            decorated.sort(function (left, right) {
+                for (var specIndex = 0; specIndex < specs.length; specIndex += 1) {
+                    var spec = specs[specIndex];
+                    var header = component.headers[spec.columnIndex];
+                    if (header == null) {
+                        continue;
+                    }
+                    var a = rawCellValue(left.record.row, header, spec.columnIndex);
+                    var b = rawCellValue(right.record.row, header, spec.columnIndex);
+                    if (!header.compare && (a == null) !== (b == null)) {
+                        // Without a compare function empty cells come last in either direction.
+                        return a == null ? 1 : -1;
+                    }
+                    var result = header.compare
+                        ? Number(header.compare(a, b, left.record.row, right.record.row)) || 0
+                        : (a == null ? 0 : compareDataTableValues(a, b));
+                    if (result !== 0) {
+                        return spec.sortDirection === api.SortDirection.Descending ? -result : result;
+                    }
+                }
+                return specs.length === 0
+                    ? Number(left.record.uid) - Number(right.record.uid)
+                    : left.index - right.index;
+            });
+            for (var position = 0; position < decorated.length; position += 1) {
+                component._records[position] = decorated[position].record;
+            }
+            refreshRows();
+            emitRowsChanged("sort", null, -1);
+        }
+
         component.renderTable = function () {
             renderToolbar();
             api.withTable(
@@ -4472,7 +4762,14 @@ module.exports = function (bridge) {
                 function () {
                     for (var headerIndex = 0; headerIndex < component.headers.length; headerIndex += 1) {
                         var header = component.headers[headerIndex];
-                        api.tableSetupColumn(header.label, header.flags, header.width);
+                        api.tableSetupColumn(header.label, header.flags, header.width, headerIndex);
+                    }
+                    if (sortable) {
+                        var sortSpecs = api.tableGetSortSpecs();
+                        if (sortSpecs != null && (sortSpecs.specsDirty || component._sortPending)) {
+                            component._sortPending = false;
+                            sortRecords(sortSpecs.specs);
+                        }
                     }
                     if (options.freezeHeader !== false) {
                         api.tableSetupScrollFreeze(0, 1);
@@ -5323,7 +5620,8 @@ module.exports = function (bridge) {
             alphaChanged: "onAlphaChanged",
             secureChanged: "onSecureChanged",
             idle: "onIdle",
-            active: "onActive"
+            active: "onActive",
+            back: "onBack"
         };
         for (var eventOption in eventOptionNames) {
             if (eventOptionNames.hasOwnProperty(eventOption) &&
@@ -5343,6 +5641,12 @@ module.exports = function (bridge) {
         }
 
         api._activeSession = session;
+
+        // The back key (R3.2) reaches only Activity-mode sessions: an overlay window gets it only while the IME proxy
+        // has focus, and then a shown soft keyboard takes it first, as before.
+        if (activityMode) {
+            bridge.setActivityBackListener(surfaceView, new Runnable({run: handleBackPressed}));
+        }
 
         // Listeners run on the script thread with the listeners registered when the event was raised.
         function emitSessionEvent(eventName, details) {
@@ -5372,6 +5676,60 @@ module.exports = function (bridge) {
                     }
                 }
             });
+        }
+
+        // Raised on the UI thread. The "back" listeners run on the script thread; unless one of them calls
+        // event.preventDefault(), the session then closes with the reason "back".
+        function handleBackPressed() {
+            runOnScriptThread(function () {
+                if (state.closed || session._closeRequested) {
+                    return;
+                }
+                var event = {
+                    type: "back",
+                    session: session,
+                    timestamp: Date.now(),
+                    defaultPrevented: false,
+                    preventDefault: function () {
+                        event.defaultPrevented = true;
+                    }
+                };
+                var listeners = (eventListeners.back || []).slice();
+                for (var listenerIndex = 0; listenerIndex < listeners.length; listenerIndex += 1) {
+                    try {
+                        listeners[listenerIndex](event, session);
+                    } catch (error) {
+                        reportSessionError("event", "Session 'back' listener", error, {event: "back"});
+                    }
+                }
+                if (!event.defaultPrevented && !state.closed) {
+                    session.close("back");
+                }
+            });
+        }
+
+        // The next warning counts the slow callbacks left out since the previous one.
+        var slowCallbackWarnedAt = 0;
+        var slowCallbacksSuppressed = 0;
+
+        function warnSlowRenderCallback(elapsedMs) {
+            if (elapsedMs <= SLOW_RENDER_CALLBACK_MS) {
+                return;
+            }
+            var now = Date.now();
+            if (slowCallbackWarnedAt !== 0 && now - slowCallbackWarnedAt < SLOW_RENDER_WARNING_INTERVAL_MS) {
+                slowCallbacksSuppressed += 1;
+                return;
+            }
+            var suppressed = slowCallbacksSuppressed;
+            slowCallbackWarnedAt = now;
+            slowCallbacksSuppressed = 0;
+            console.warn(
+                "[imgui] The render callback blocked the frame for " + Math.round(elapsedMs) + " ms (over " +
+                SLOW_RENDER_CALLBACK_MS + " ms); move slow work such as sleep, network or file access to " +
+                "threads.start and hand the results to the render callback (docs/THREADING.md)" +
+                (suppressed > 0 ? "; " + suppressed + " more slow callbacks since the previous warning" : "")
+            );
         }
 
         var lastReportedError = null;
@@ -6824,7 +7182,11 @@ module.exports = function (bridge) {
                 dispatchFling();
                 frameStarted = Boolean(bridge.newFrame());
                 if (frameStarted) {
+                    var callbackStartedAt = debug ? java.lang.System.nanoTime() : 0;
                     renderCallback(api, session);
+                    if (debug) {
+                        warnSlowRenderCallback((java.lang.System.nanoTime() - callbackStartedAt) / 1e6);
+                    }
                     if (!session._closeRequested) {
                         renderHighLevelComponents(session);
                     }
@@ -7056,6 +7418,12 @@ module.exports = function (bridge) {
         IsAnyItemHovered: "isAnyItemHovered",
         IsAnyItemActive: "isAnyItemActive",
         ShowDemoWindow: "showDemoWindow",
+        ShowMetricsWindow: "showMetricsWindow",
+        ShowDebugLogWindow: "showDebugLogWindow",
+        ShowIDStackToolWindow: "showIdStackToolWindow",
+        ShowStyleEditor: "showStyleEditor",
+        ShowAboutWindow: "showAboutWindow",
+        ShowUserGuide: "showUserGuide",
         StyleColorsDark: "styleColorsDark",
         StyleColorsLight: "styleColorsLight",
         StyleColorsClassic: "styleColorsClassic",
@@ -7081,6 +7449,27 @@ module.exports = function (bridge) {
         TreeNodeEx: "treeNodeEx",
         VSliderFloat: "vSliderFloat",
         VSliderInt: "vSliderInt",
+        DragFloat2: "dragFloat2",
+        DragFloat3: "dragFloat3",
+        DragFloat4: "dragFloat4",
+        DragInt2: "dragInt2",
+        DragInt3: "dragInt3",
+        DragInt4: "dragInt4",
+        SliderFloat2: "sliderFloat2",
+        SliderFloat3: "sliderFloat3",
+        SliderFloat4: "sliderFloat4",
+        SliderInt2: "sliderInt2",
+        SliderInt3: "sliderInt3",
+        SliderInt4: "sliderInt4",
+        InputFloat2: "inputFloat2",
+        InputFloat3: "inputFloat3",
+        InputFloat4: "inputFloat4",
+        InputInt2: "inputInt2",
+        InputInt3: "inputInt3",
+        InputInt4: "inputInt4",
+        DragFloatRange2: "dragFloatRange2",
+        DragIntRange2: "dragIntRange2",
+        SliderAngle: "sliderAngle",
         Toggle: "toggle",
         ToggleSwitch: "toggle",
         BeginCombo: "beginCombo",
@@ -7110,6 +7499,7 @@ module.exports = function (bridge) {
         TableNextColumn: "tableNextColumn",
         TableSetColumnIndex: "tableSetColumnIndex",
         TableSetupColumn: "tableSetupColumn",
+        TableGetSortSpecs: "tableGetSortSpecs",
         TableSetupScrollFreeze: "tableSetupScrollFreeze",
         TableHeadersRow: "tableHeadersRow",
         TableSetBgColor: "tableSetBgColor",

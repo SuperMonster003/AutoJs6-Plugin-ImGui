@@ -11,7 +11,7 @@ state without locks.
 | --- | --- | --- |
 | Render callback `(ui, session) => {...}` | Script thread | Scheduled by a deadline-compensated timer, see [FRAME-LOOP.md](FRAME-LOOP.md). |
 | High-level components (log window, toast, stats overlay, data table) | Script thread | Drawn inside the frame, after the render callback. |
-| Session events (`session.on`, `options.events`, `options.onXxx`): `ready`, `surfaceRestored`, `moved`, `resized`, `configurationChanged`, `collapsed`, `expanded`, `closed`, `touchableChanged`, `moreTouchChanged`, `alphaChanged`, `secureChanged`, `idle`, `active`, `error` | Script thread | An event raised on the Android UI thread (surface, drag, display change) is posted to the script thread and runs between two frames. An event raised on the script thread (for example by `session.setPosition`) runs at once. `idle` and `active` are raised by the frame loop on the script thread; an input or screen change that ends the idle rate is posted there first. |
+| Session events (`session.on`, `options.events`, `options.onXxx`): `ready`, `surfaceRestored`, `moved`, `resized`, `configurationChanged`, `collapsed`, `expanded`, `closed`, `touchableChanged`, `moreTouchChanged`, `alphaChanged`, `secureChanged`, `idle`, `active`, `back`, `error` | Script thread | An event raised on the Android UI thread (surface, drag, display change, the back key) is posted to the script thread and runs between two frames. An event raised on the script thread (for example by `session.setPosition`) runs at once. `idle` and `active` are raised by the frame loop on the script thread; an input or screen change that ends the idle rate is posted there first. |
 | Floating button `onClick` / `onMoved`, collapse button `onClick` | Script thread | Posted from the UI thread that received the touch. |
 | Dialog results (`alert`, `confirm`, `singleChoice`, `multiChoice` promises and `onResult`) | Script thread | Resolved inside the frame that closes the dialog; promise reactions follow on the same thread. |
 | Touch, IME and key input | Android UI thread | Not script callbacks: producers push events to the input FIFO, which the script thread drains before `NewFrame()`. |
@@ -29,6 +29,10 @@ until it returns. `sleep(300)` in a listener is legal (the script thread may blo
 - Change state that the next frame reads, then return.
 - Use `setTimeout` / `setInterval` for delays; they run on the script thread too.
 - Move slow work (network, files, image processing, long loops) to a worker thread.
+
+With `createWindow({debug: true})` a render callback that runs longer than 250 ms prints a `console.warn` with its
+time and a pointer to this page. The warning repeats at most once every 10 seconds and then counts the slow
+callbacks it skipped. Without `debug` nothing is measured.
 
 ## Background tasks
 

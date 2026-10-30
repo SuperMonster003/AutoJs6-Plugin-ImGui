@@ -1,5 +1,6 @@
 package io.github.supermonster003.autojs6.plugin.imgui;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -9,12 +10,14 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PixelFormat;
 import android.net.Uri;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
 import android.os.RemoteException;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceView;
@@ -24,6 +27,8 @@ import android.view.ViewParent;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -31,6 +36,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -793,6 +799,118 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         return ImGuiNative.nativeDragInt(label, value, speed, min, max, format, flags);
     }
 
+    /** DragFloat2 .. DragFloat4: value holds at least {@code components} (2 to 4) values. */
+    public boolean dragFloatN(
+        String label,
+        float[] value,
+        int components,
+        float speed,
+        float min,
+        float max,
+        String format,
+        int flags
+    ) {
+        requireOwner();
+        return ImGuiNative.nativeDragFloatN(label, value, components, speed, min, max, format, flags);
+    }
+
+    public boolean dragIntN(
+        String label,
+        int[] value,
+        int components,
+        float speed,
+        int min,
+        int max,
+        String format,
+        int flags
+    ) {
+        requireOwner();
+        return ImGuiNative.nativeDragIntN(label, value, components, speed, min, max, format, flags);
+    }
+
+    public boolean sliderFloatN(
+        String label,
+        float[] value,
+        int components,
+        float min,
+        float max,
+        String format,
+        int flags
+    ) {
+        requireOwner();
+        return ImGuiNative.nativeSliderFloatN(label, value, components, min, max, format, flags);
+    }
+
+    public boolean sliderIntN(
+        String label,
+        int[] value,
+        int components,
+        int min,
+        int max,
+        String format,
+        int flags
+    ) {
+        requireOwner();
+        return ImGuiNative.nativeSliderIntN(label, value, components, min, max, format, flags);
+    }
+
+    public boolean inputFloatN(String label, float[] value, int components, String format, int flags) {
+        requireOwner();
+        return ImGuiNative.nativeInputFloatN(label, value, components, format, flags);
+    }
+
+    public boolean inputIntN(String label, int[] value, int components, int flags) {
+        requireOwner();
+        return ImGuiNative.nativeInputIntN(label, value, components, flags);
+    }
+
+    public boolean dragFloatRange2(
+        String label,
+        float[] currentMin,
+        float[] currentMax,
+        float speed,
+        float min,
+        float max,
+        String format,
+        String formatMax,
+        int flags
+    ) {
+        requireOwner();
+        return ImGuiNative.nativeDragFloatRange2(
+            label, currentMin, currentMax, speed, min, max, format, formatMax, flags
+        );
+    }
+
+    public boolean dragIntRange2(
+        String label,
+        int[] currentMin,
+        int[] currentMax,
+        float speed,
+        int min,
+        int max,
+        String format,
+        String formatMax,
+        int flags
+    ) {
+        requireOwner();
+        return ImGuiNative.nativeDragIntRange2(
+            label, currentMin, currentMax, speed, min, max, format, formatMax, flags
+        );
+    }
+
+    /** SliderAngle: value is in radians, the range and the shown value in degrees. */
+    public boolean sliderAngle(
+        String label,
+        float[] value,
+        float degreesMin,
+        float degreesMax,
+        String format,
+        int flags
+    ) {
+        requireOwner();
+        return ImGuiNative.nativeSliderAngle(label, value, degreesMin, degreesMax, format, flags);
+    }
+
     public boolean inputText(String label, String[] value, int maxLength, int flags) {
         requireOwner();
         return ImGuiNative.nativeInputText(label, value, maxLength, flags);
@@ -986,6 +1104,12 @@ public final class ImGuiPluginConnection implements ServiceConnection {
     public void showDemoWindow(boolean[] open) {
         requireOwner();
         ImGuiNative.nativeShowDemoWindow(open);
+    }
+
+    /** Shows a debug or information window of Dear ImGui: 0 Metrics, 1 Debug Log, 2 ID Stack Tool, 3 Style Editor, 4 About, 5 User Guide. */
+    public void showToolWindow(int tool, boolean[] open) {
+        requireOwner();
+        ImGuiNative.nativeShowToolWindow(tool, open);
     }
 
     /**
@@ -1327,9 +1451,18 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         return ImGuiNative.nativeTableSetColumnIndex(columnIndex);
     }
 
-    public void tableSetupColumn(String label, int flags, float initWidthOrWeight) {
+    public void tableSetupColumn(String label, int flags, float initWidthOrWeight, int userId) {
         requireOwner();
-        ImGuiNative.nativeTableSetupColumn(label, flags, initWidthOrWeight);
+        ImGuiNative.nativeTableSetupColumn(label, flags, initWidthOrWeight, userId);
+    }
+
+    /**
+     * Sort specs of the current table, null when it is not sortable: specsDirty (0 or 1), the spec count, then
+     * columnIndex, columnUserId, sortDirection and sortOrder per spec. Reading them clears specsDirty.
+     */
+    public int[] tableGetSortSpecs() {
+        requireOwner();
+        return ImGuiNative.nativeTableGetSortSpecs();
     }
 
     public void tableSetupScrollFreeze(int columns, int rows) {
@@ -1904,6 +2037,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
             if (host == null) {
                 return;
             }
+            host.setBackListener(null);
             ViewParent parent = host.root.getParent();
             if (parent instanceof ViewGroup) {
                 ((ViewGroup) parent).removeView(host.root);
@@ -1914,6 +2048,24 @@ public final class ImGuiPluginConnection implements ServiceConnection {
                 window.clearFlags(clearableFlags);
             }
             window.getDecorView().setSystemUiVisibility(host.originalSystemUiVisibility);
+        });
+    }
+
+    /**
+     * Routes the back key of the Activity hosting an Activity-mode surface to the listener (R3.2), on the main thread;
+     * null restores the Activity's own handling. The key is taken from the window callback and, from Android 13, from
+     * an OnBackInvokedCallback, which the system uses instead of the key when the host opts in to predictive back. A
+     * shown soft keyboard still takes the first back press.
+     */
+    public void setActivityBackListener(View anchor, Runnable listener) {
+        if (anchor == null) {
+            return;
+        }
+        runOnMainThread(() -> {
+            ActivitySurfaceHost host = activitySurfaceHosts.get(anchor);
+            if (host != null) {
+                host.setBackListener(listener);
+            }
         });
     }
 
@@ -2658,6 +2810,10 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         final int originalSystemUiVisibility;
         final int originalWindowFlags;
         int addedWindowFlags;
+        private Runnable backListener;
+        private Window.Callback originalCallback;
+        private Window.Callback backCallback;
+        private Object backInvokedCallback;
 
         ActivitySurfaceHost(
             Activity activity,
@@ -2673,6 +2829,99 @@ public final class ImGuiPluginConnection implements ServiceConnection {
             this.originalSystemUiVisibility = originalSystemUiVisibility;
             this.originalWindowFlags = originalWindowFlags;
             this.addedWindowFlags = addedWindowFlags;
+        }
+
+        /** Main thread only. */
+        void setBackListener(Runnable listener) {
+            backListener = listener;
+            Window window = activity.getWindow();
+            if (listener == null) {
+                // Another wrapper may sit on top of ours; ours then stays in the chain and passes every key through.
+                if (backCallback != null && window.getCallback() == backCallback) {
+                    window.setCallback(originalCallback);
+                }
+                backCallback = null;
+                originalCallback = null;
+                if (backInvokedCallback != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    BackInvokedRegistration.unregister(activity, backInvokedCallback);
+                }
+                backInvokedCallback = null;
+                return;
+            }
+            Window.Callback original = window.getCallback();
+            if (backCallback == null && original != null) {
+                originalCallback = original;
+                backCallback = (Window.Callback) Proxy.newProxyInstance(
+                    ActivitySurfaceHost.class.getClassLoader(),
+                    new Class<?>[] {Window.Callback.class},
+                    (proxy, method, args) -> {
+                        switch (method.getName()) {
+                            case "equals":
+                                if (method.getDeclaringClass() == Object.class) {
+                                    return proxy == args[0];
+                                }
+                                break;
+                            case "hashCode":
+                                if (method.getDeclaringClass() == Object.class) {
+                                    return System.identityHashCode(proxy);
+                                }
+                                break;
+                            case "dispatchKeyEvent":
+                                if (args != null && args.length == 1 && args[0] instanceof KeyEvent &&
+                                    handleBackKey((KeyEvent) args[0])
+                                ) {
+                                    return true;
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                        try {
+                            return method.invoke(original, args);
+                        } catch (InvocationTargetException error) {
+                            throw error.getCause();
+                        }
+                    }
+                );
+                window.setCallback(backCallback);
+            }
+            if (backInvokedCallback == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                backInvokedCallback = BackInvokedRegistration.register(activity, this::notifyBack);
+            }
+        }
+
+        private boolean handleBackKey(KeyEvent event) {
+            if (event.getKeyCode() != KeyEvent.KEYCODE_BACK || backListener == null) {
+                return false;
+            }
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
+                notifyBack();
+            }
+            return true;
+        }
+
+        private void notifyBack() {
+            Runnable listener = backListener;
+            if (listener != null) {
+                listener.run();
+            }
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.TIRAMISU)
+    private static final class BackInvokedRegistration {
+
+        static Object register(Activity activity, Runnable listener) {
+            OnBackInvokedCallback callback = listener::run;
+            activity.getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_OVERLAY,
+                callback
+            );
+            return callback;
+        }
+
+        static void unregister(Activity activity, Object callback) {
+            activity.getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback((OnBackInvokedCallback) callback);
         }
     }
 

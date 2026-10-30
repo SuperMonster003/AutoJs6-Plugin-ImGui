@@ -126,7 +126,7 @@ imgui.createWindow(function (ui, overlay) {
 
 纹理与自绘: 请在窗口会话就绪后调用 `createTexture` (通常在渲染回调首次执行时创建). 返回对象包含 `width` / `height`, `update(source)` (替换像素并保持句柄不变, 尺寸变化时 `width` / `height` 随之更新) 与幂等的 `dispose()` / `close()`; 会话关闭时会自动释放剩余纹理. `image` / `imageButton` 用于显示纹理, `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` 提供常用绘制原语. DrawList 坐标采用 Surface 像素坐标. 可直接传入 AutoJs6 `images.read(...)` 与截图得到的 `Image`, 也可传入装有 PNG 或 JPEG 数据的 `ArrayBuffer` 或类型化数组.
 
-窗口会话: 悬浮窗默认采用 `TouchMode.Auto`, ImGui 根窗口保持可交互, Surface 空白区域则直接触达下层应用; 也可用 `Touchable` 或 `Passthrough` 固定策略. 会话支持动态透明度/防截屏/触摸模式、收起为低帧率迷你悬浮球、创建独立可拖动 `addButtonEx`、跟随 `AlwaysAutoResize` 内容、通过 `iniPath` 持久化布局, 并以 `on` / `once` / `off` 或 options 回调订阅事件. `imgui.launch(...)` 会在当前前台 AutoJs6 Activity 中创建全屏 Surface, `launchFloaty(...)` 则显式选择悬浮窗. 每个脚本引擎仅拥有一个原生渲染会话, 但可在同一渲染回调中用 `begin` / `withWindow` 创建任意多个 ImGui 根窗口; 新建会话会关闭旧会话. 渲染回调或事件回调抛错时以 `console.error` 输出错误与调用栈 (同一错误连续出现只输出一次) 并触发 `error` 事件 (含 `error` / `phase` / `frame`); 没有 `error` 监听时渲染错误会关闭会话 (`closeReason` 为 `render-error`), 有监听时跳过本帧剩余部分并继续渲染. 选项 `debug: true` 以 `console.warn` 与 logcat 报告 `begin` 未配对 `end` 等用法错误, 并显示 Metrics 与 Debug Log 窗口. `setTouchable` / `setGlobalAlpha` / `getComponent` 等全局方法作用于当前会话, 没有活动会话时抛出 `imgui.<name>: no active session`.
+窗口会话: 悬浮窗默认采用 `TouchMode.Auto`, ImGui 根窗口保持可交互, Surface 空白区域则直接触达下层应用; 也可用 `Touchable` 或 `Passthrough` 固定策略. 会话支持动态透明度/防截屏/触摸模式、收起为低帧率迷你悬浮球、创建独立可拖动 `addButtonEx`、跟随 `AlwaysAutoResize` 内容、通过 `iniPath` 持久化布局, 并以 `on` / `once` / `off` 或 options 回调订阅事件. `imgui.launch(...)` 会在当前前台 AutoJs6 Activity 中创建全屏 Surface, `launchFloaty(...)` 则显式选择悬浮窗. 每个脚本引擎仅拥有一个原生渲染会话, 但可在同一渲染回调中用 `begin` / `withWindow` 创建任意多个 ImGui 根窗口; 新建会话会关闭旧会话. 渲染回调或事件回调抛错时以 `console.error` 输出错误与调用栈 (同一错误连续出现只输出一次) 并触发 `error` 事件 (含 `error` / `phase` / `frame`); 没有 `error` 监听时渲染错误会关闭会话 (`closeReason` 为 `render-error`), 有监听时跳过本帧剩余部分并继续渲染. 选项 `debug: true` 以 `console.warn` 与 logcat 报告 `begin` 未配对 `end` 等用法错误, 并显示 Metrics 与 Debug Log 窗口. `setTouchable` / `setGlobalAlpha` / `getComponent` 等全局方法作用于当前会话, 没有活动会话时抛出 `imgui.<name>: no active session`. `imgui.launch` 会话中按返回键会关闭会话 (`closeReason` 为 `back`), 除非 `back` 监听器调用 `event.preventDefault()`; 软键盘显示时返回键先收起键盘. 悬浮窗只在文本输入获得焦点时收到返回键, 此时只收起键盘. `debug: true` 时, 渲染回调耗时超过 250 ms 还会以 `console.warn` 提示改用 `threads.start` (每 10 秒最多一次).
 
 高层组件会挂接到当前会话并在用户渲染回调后绘制: `logWindow` 提供等级着色, 清空, 导出回调与自动滚底; `toast` 提供定时定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 返回 Promise; `statsOverlay` 绘制帧耗时并显示每帧工作耗时; `dataTable` 提供行选择与 CRUD. 九个内置示例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling` / `background-task` / `large-list` / `texture-refresh`) 可通过 `listExamples` / `getExampleSource` 发现并用 `runExample` 启动. AutoJs6 6.8 插件中心尚未消费通用示例元数据, 在宿主支持前可直接运行下方调用:
 
@@ -145,15 +145,16 @@ imgui.runExample("widget-overview");
 - 会话运行时: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, `density` / `dp` / `px` 单位换算, 以及会话级 `on` / `once` / `off` 与对应实例方法; 会话 `error` 事件报告回调错误, `debug` 选项开启调试模式; 省电相关的 `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` 与 `idle` / `active` 事件.
 - 后端探测: `getBackendCapabilities` / `BackendStatus` 报告窗口、split-touch、特权进程、direct input、Docking 与 Multi-Viewport 的可用性和生产就绪状态, 不执行提权操作.
 - 会话与窗口: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` 以及 `isWindowHovered` 等窗口状态查询.
-- 文本与控件: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等.
-- 容器与导航: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / `withTable` 表格族 / `withListBox` / `withCombo` / `selectable`, 以及用于长列表的 `listClipper`.
+- 文本与控件: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等. 多值控件: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
+- 容器与导航: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / `withTable` 表格族 / `withListBox` / `withCombo` / `selectable`, 以及用于长列表的 `listClipper`. 表格排序: `tableGetSortSpecs` / `SortDirection`, 以及 `dataTable` 的 `sortable: true`.
 - 弹窗与菜单: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
 - 样式与布局: `styleColorsDark` / `styleColorsLight` / `styleColorsClassic` / `pushStyleColor` / `pushStyleVar` / `setWindowFontScale` / `withGroup` / `withDisabled` / `withId` / `indent` / `sameLine` / `separator` / `spacing` / 光标与滚动控制族.
 - 纹理与自绘: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, 以及带线段/矩形/圆形/三角形/文本/折线/贝塞尔曲线/图像原语的 `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`.
 - 查询与输入: `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate` 等状态查询, `setKeyboardFocusHere` 主动聚焦, 以及 `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput` 输入原语. `InputTextFlags` 当前公开的全部标志都会实际透传至 Dear ImGui; 依赖回调的标志未公开, `WordWrap` 仅用于多行输入.
+- 调试工具: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide` 显示 Dear ImGui 自带的工具窗口; 每个都可传入一个可变布尔引用, 点关闭按钮时它变为 false.
 - 高层组件与示例: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, 以及 `listExamples` / `getExampleSource` / `runExample`; 每个会话也提供同名工厂.
-- 可变引用: 轻量 `imgui.ref` (或普通 `{value: x}` 对象), 以及兼容的 Java 数组辅助方法 `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.strings`.
-- 常量: `BackendStatus` / `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, 取值与 Dear ImGui 同名枚举或插件常量表一一对应.
+- 可变引用: 轻量 `imgui.ref` (或普通 `{value: x}` 对象), 以及兼容的 Java 数组辅助方法 `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.ints` / `imgui.strings`.
+- 常量: `BackendStatus` / `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `SortDirection` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, 取值与 Dear ImGui 同名枚举或插件常量表一一对应.
 
 ******
 
@@ -170,6 +171,16 @@ imgui.runExample("widget-overview");
 ### 发行历史
 
 ******
+
+#### v1.14.0
+
+###### 2026/10/30
+
+* `提示` 行为变化: 用 imgui.launch 打开的全屏窗口现在按返回键会关闭窗口 (session.closeReason 为 "back"). 想保留窗口, 在 session.on("back", e) 里调用 e.preventDefault(). 悬浮窗 (launchFloaty) 不变
+* `新增` 调试工具窗口: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (别名 ShowMetricsWindow 等) 显示 Dear ImGui 自带的调试工具; 传入 imgui.bool(true) 后可用关闭按钮隐藏. 示例 widget-overview 新增 Debug 菜单, 可打开这些窗口
+* `新增` 表格排序: 表格带 Sortable 标志时点击列标题即可切换排序; tableGetSortSpecs() 返回排序列与方向 (imgui.SortDirection), specsDirty 只在排序变化的那一帧为 true. tableSetupColumn 的第四个参数是列的用户 id. dataTable 设 sortable: true 即可按列排序, 列的 compare 函数可自定义顺序; 见示例 data-table-demo
+* `新增` 多值控件: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 以及编辑最小值与最大值的 dragFloatRange2 / dragIntRange2 和编辑角度的 sliderAngle (以弧度保存, 以度显示). 数值用 {value: [x, y, z]}, imgui.floats(...) 或新增的 imgui.ints(...) 传入; 见示例 widget-overview 的新分区
+* `优化` createWindow({debug: true}) 时, 渲染回调耗时超过 250 毫秒会以 console.warn 提示耗时, 并建议把 sleep, 网络, 文件等慢操作移到 threads.start, 每 10 秒最多提示一次; docs/THREADING.md 说明做法
 
 #### v1.13.0
 
@@ -201,20 +212,6 @@ imgui.runExample("widget-overview");
 * `优化` 示例改用 ui.dp(), 不再手动乘以 window.density
 * `优化` TypeScript 声明写明每个尺寸, 位置与选项的单位和取值范围, 并把 Session 与悬浮按钮的字段标为只读
 * `优化` 每个 GitHub Release 附带 SHA256SUMS 文件, 便于校验下载的 APK
-
-#### v1.11.0
-
-###### 2026/10/29
-
-* `提示` 依赖活动窗口会话的全局方法 (setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent) 在没有活动会话时改为抛出 `imgui.<方法名>: no active session` 错误, 其中 getComponent 以前返回 null
-* `提示` 绘图选项 offset 已废弃, 请改用 valuesOffset (旧写法仍然有效)
-* `新增` 窗口会话的 error 事件: 渲染回调或事件回调抛错时触发, 事件含 error, phase (render 或 event) 与 frame; 有 error 监听时会话继续渲染, 可在处理器中自行关闭会话, 没有监听时与以前一样以 render-error 关闭
-* `新增` 窗口选项 debug: 打开 Dear ImGui 的错误恢复与调试日志, Begin / End 不配对等用法错误经 console.warn 提示, 并显示 Metrics 与 Debug Log 窗口
-* `新增` 示例 error-handling, 演示 error 事件, debug 模式与常见错误的排查
-* `新增` 别名文档 docs/ALIASES.md, 列出全部 PascalCase 别名及其与 Dear ImGui C++ 签名的差异
-* `修复` plotLines / plotHistogram 的 valuesOffset 与 stride 选项不生效的问题
-* `优化` 渲染回调或事件回调出错时控制台输出带调用栈的错误信息, 同一错误连续出现时只输出一次
-* `优化` README 的别名说明改为 "常用 API 别名", 补充单会话模型 (新建会话会关闭上一个会话) 与新增成员的使用说明, 目标 SDK 更正为 37
 
 ##### 更多发行历史可参阅
 

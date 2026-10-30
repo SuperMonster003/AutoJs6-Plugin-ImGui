@@ -126,7 +126,7 @@ imgui.createWindow(function (ui, overlay) {
 
 텍스처와 사용자 지정 그리기: 창 세션이 준비된 뒤 `createTexture`를 호출하세요 (일반적으로 렌더 콜백 안에서 처음 한 번 생성). 반환 객체는 `width`, `height`, `update(source)`(픽셀을 바꾸고 핸들은 유지하며, 크기가 바뀌면 `width` / `height`도 따라 바뀜), 멱등인 `dispose()` / `close()`를 제공하며 남은 텍스처는 세션 종료 시 자동으로 해제됩니다. `image` / `imageButton`으로 텍스처를 표시하고 `getWindowDrawList`, `getForegroundDrawList`, `getBackgroundDrawList`로 일반적인 그리기 프리미티브를 사용할 수 있습니다. DrawList 좌표는 Surface 픽셀 좌표입니다. AutoJs6 `images.read(...)`와 스크린샷 `Image` 값, PNG 또는 JPEG 데이터를 담은 `ArrayBuffer`나 형식화 배열을 직접 전달할 수 있습니다.
 
-창 세션: 오버레이는 기본적으로 `TouchMode.Auto`를 사용하여 ImGui 루트 창은 상호작용 가능하게 유지하고 Surface 빈 영역의 입력은 뒤쪽 앱으로 전달합니다. 고정 정책은 `Touchable` 또는 `Passthrough`를 선택하세요. 세션은 투명도/보안/터치 모드 변경, 저 FPS 미니 버블로 접기, 독립적인 `addButtonEx`, `AlwaysAutoResize` 콘텐츠 추적, `iniPath` 레이아웃 저장, `on` / `once` / `off` 또는 옵션 콜백 이벤트를 지원합니다. `imgui.launch(...)`는 현재 resumed 상태인 AutoJs6 Activity에 전체 화면 Surface를 만들고 `launchFloaty(...)`는 오버레이를 명시합니다. 스크립트 엔진당 네이티브 렌더 세션은 하나지만 같은 콜백에서 원하는 수의 `begin` / `withWindow` ImGui 루트를 만들 수 있습니다. 새 세션은 이전 세션을 닫습니다. 렌더 콜백이나 이벤트 콜백이 예외를 던지면 `console.error`로 오류와 스택을 출력하고(같은 오류가 이어지면 한 번만) `error` 이벤트(`error` / `phase` / `frame`)를 발생시킵니다. `error` 리스너가 없으면 렌더 오류는 세션을 닫고(`closeReason`은 `render-error`), 리스너가 있으면 해당 프레임의 나머지를 건너뛰고 렌더링을 계속합니다. 옵션 `debug: true`는 `begin`에 짝이 맞는 `end`가 없는 등의 사용 오류를 `console.warn`과 logcat으로 보고하고 Metrics와 Debug Log 창을 표시합니다. `setTouchable` / `setGlobalAlpha` / `getComponent` 등 전역 메서드는 현재 세션에 작용하며 활성 세션이 없으면 `imgui.<name>: no active session`을 던집니다.
+창 세션: 오버레이는 기본적으로 `TouchMode.Auto`를 사용하여 ImGui 루트 창은 상호작용 가능하게 유지하고 Surface 빈 영역의 입력은 뒤쪽 앱으로 전달합니다. 고정 정책은 `Touchable` 또는 `Passthrough`를 선택하세요. 세션은 투명도/보안/터치 모드 변경, 저 FPS 미니 버블로 접기, 독립적인 `addButtonEx`, `AlwaysAutoResize` 콘텐츠 추적, `iniPath` 레이아웃 저장, `on` / `once` / `off` 또는 옵션 콜백 이벤트를 지원합니다. `imgui.launch(...)`는 현재 resumed 상태인 AutoJs6 Activity에 전체 화면 Surface를 만들고 `launchFloaty(...)`는 오버레이를 명시합니다. 스크립트 엔진당 네이티브 렌더 세션은 하나지만 같은 콜백에서 원하는 수의 `begin` / `withWindow` ImGui 루트를 만들 수 있습니다. 새 세션은 이전 세션을 닫습니다. 렌더 콜백이나 이벤트 콜백이 예외를 던지면 `console.error`로 오류와 스택을 출력하고(같은 오류가 이어지면 한 번만) `error` 이벤트(`error` / `phase` / `frame`)를 발생시킵니다. `error` 리스너가 없으면 렌더 오류는 세션을 닫고(`closeReason`은 `render-error`), 리스너가 있으면 해당 프레임의 나머지를 건너뛰고 렌더링을 계속합니다. 옵션 `debug: true`는 `begin`에 짝이 맞는 `end`가 없는 등의 사용 오류를 `console.warn`과 logcat으로 보고하고 Metrics와 Debug Log 창을 표시합니다. `setTouchable` / `setGlobalAlpha` / `getComponent` 등 전역 메서드는 현재 세션에 작용하며 활성 세션이 없으면 `imgui.<name>: no active session`을 던집니다. `imgui.launch` 세션에서는 `back` 리스너가 `event.preventDefault()`를 호출하지 않는 한 뒤로 키가 세션을 닫습니다(`closeReason`은 `back`). 소프트 키보드가 표시되어 있으면 뒤로 키는 먼저 키보드를 닫습니다. 오버레이 창은 텍스트 입력에 포커스가 있을 때만 뒤로 키를 받으며 이때는 키보드만 닫습니다. `debug: true`에서는 렌더 콜백이 250 ms를 넘으면 `threads.start` 사용을 권하는 `console.warn`도 출력합니다(10초에 최대 한 번).
 
 고수준 컴포넌트는 활성 세션에 연결되어 사용자 렌더 콜백 뒤에 그려집니다. `logWindow`는 레벨 색상, 지우기, 내보내기, 자동 스크롤을, `toast`는 위치 지정 시간 알림을, `alert` / `confirm` / `singleChoice` / `multiChoice`는 Promise를, `statsOverlay`는 프레임 시간 그래프와 프레임별 작업 시간을, `dataTable`은 선택과 CRUD를 제공합니다. 내장 예제 9개(`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling`, `background-task`, `large-list`, `texture-refresh`)는 `listExamples` / `getExampleSource`로 찾고 `runExample`로 실행할 수 있습니다. AutoJs6 6.8 플러그인 센터는 아직 범용 예제 메타데이터를 사용하지 않으므로 호스트 지원 전에는 아래 호출을 직접 실행하세요:
 
@@ -145,15 +145,16 @@ imgui.runExample("widget-overview");
 - 세션 런타임: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 단위 변환 `density` / `dp` / `px`, 세션별 형식을 포함한 `on` / `once` / `off`, 콜백 오류를 알리는 세션 `error` 이벤트, 디버그 모드를 켜는 `debug` 옵션, 절전을 위한 `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps`, `idle` / `active` 이벤트.
 - 백엔드 탐색: `getBackendCapabilities` / `BackendStatus`는 창, split-touch, 권한 있는 프로세스, 직접 입력, Docking 및 Multi-Viewport의 사용 가능 여부와 운영 환경 준비 상태를 보고하며 권한 상승은 수행하지 않습니다.
 - 세션과 창: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `setNextWindowPos`, `setNextWindowSize`, `setNextWindowBgAlpha` 및 `isWindowHovered` 같은 창 상태 조회.
-- 텍스트와 컨트롤: `text`, `textColored`, `textWrapped`, `separatorText`, `bulletText`, `labelText`, `button`, `arrowButton`, `invisibleButton`, `checkbox`, `toggle`, `radioButton`, `sliderFloat`, `sliderInt`, `vSliderFloat`, `dragFloat`, `dragInt`, `inputText`, `inputInt`, `inputFloat`, `inputTextMultiline`, `colorEdit3`, `colorEdit4`, `colorPicker4`, `colorButton`, `progressBar`, `plotLines`, `plotHistogram` 등.
-- 컨테이너와 탐색: `withTabBar`, `withTabItem`, `withTreeNode`, `treeNodeEx`, `collapsingHeader`, `withTable` 테이블 계열, `withListBox`, `withCombo`, `selectable`, 긴 목록용 `listClipper`.
+- 텍스트와 컨트롤: `text`, `textColored`, `textWrapped`, `separatorText`, `bulletText`, `labelText`, `button`, `arrowButton`, `invisibleButton`, `checkbox`, `toggle`, `radioButton`, `sliderFloat`, `sliderInt`, `vSliderFloat`, `dragFloat`, `dragInt`, `inputText`, `inputInt`, `inputFloat`, `inputTextMultiline`, `colorEdit3`, `colorEdit4`, `colorPicker4`, `colorButton`, `progressBar`, `plotLines`, `plotHistogram` 등. 여러 값을 다루는 위젯: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
+- 컨테이너와 탐색: `withTabBar`, `withTabItem`, `withTreeNode`, `treeNodeEx`, `collapsingHeader`, `withTable` 테이블 계열, `withListBox`, `withCombo`, `selectable`, 긴 목록용 `listClipper`. 표 정렬: `tableGetSortSpecs` / `SortDirection`, `dataTable`의 `sortable: true`.
 - 팝업과 메뉴: `openPopup`, `withPopup`, `withPopupModal`, `beginPopupContextItem`, `beginPopupContextWindow`, `withContextItem`, `withContextWindow`, `closeCurrentPopup`, `withMenuBar`, `withMenu`, `menuItem`, `setTooltip`, `setItemTooltip`, `withItemTooltip`.
 - 스타일과 레이아웃: `styleColorsDark`, `styleColorsLight`, `styleColorsClassic`, `pushStyleColor`, `pushStyleVar`, `setWindowFontScale`, `withGroup`, `withDisabled`, `withId`, `indent`, `sameLine`, `separator`, `spacing` 및 커서와 스크롤 계열.
 - 텍스처와 그리기: `createTexture`, `texture.update`, `destroyTexture`, `image`, `imageButton`, `colorU32` 및 선, 사각형, 원, 삼각형, 텍스트, 폴리라인, 베지어 곡선, 이미지 프리미티브를 제공하는 `getWindowDrawList`, `getForegroundDrawList`, `getBackgroundDrawList`.
 - 조회와 입력: `isItemClicked`, `isItemHovered`, `isItemActive`, `isItemEdited`, `isMouseDown`, `getMousePos`, `calcTextSize`, `framerate` 같은 상태 조회, `setKeyboardFocusHere` 능동 포커스, 입력 프리미티브 `addInputCharacters`, `sendKey`, `addMouseWheel`, `wantTextInput`. 현재 공개된 모든 `InputTextFlags` 값은 Dear ImGui로 전달되며 콜백 의존 플래그는 제외되고 `WordWrap`은 여러 줄 입력에만 적용됩니다.
+- 디버그 도구: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide`는 Dear ImGui 내장 도구 창을 표시합니다. 각각 선택적인 가변 boolean 참조를 받으며 닫기 버튼을 누르면 false가 됩니다.
 - 고수준 컴포넌트와 예제: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, 그리고 `listExamples` / `getExampleSource` / `runExample`; 각 세션에도 같은 팩터리가 있습니다.
-- 가변 참조: 가벼운 `imgui.ref`(또는 일반 `{value: x}` 객체)와 호환 Java 배열 헬퍼 `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string`, `imgui.floats`, `imgui.strings`.
-- 상수: `BackendStatus` / `Cond`, `WindowFlags`, `ChildFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags`, `ComboFlags`, `PopupFlags`, `HoveredFlags`, `FocusedFlags`, `ColorEditFlags`, `TableFlags`, `TableColumnFlags`, `TableRowFlags`, `TableBgTarget`, `Col`, `StyleVar`, `Themes`, `Appearance`, `Fonts`, `Icons`, `Dir`, `Key`, `MouseButton`, `ButtonFlags`, `TextureFlags`, `DrawListLayer`, `DrawFlags`, `LogLevel`, `ToastPosition`, `Limits`. 값은 같은 이름의 Dear ImGui 열거형 또는 플러그인 표와 일치합니다.
+- 가변 참조: 가벼운 `imgui.ref`(또는 일반 `{value: x}` 객체)와 호환 Java 배열 헬퍼 `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string`, `imgui.floats`, `imgui.ints`, `imgui.strings`.
+- 상수: `BackendStatus` / `Cond`, `WindowFlags`, `ChildFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags`, `ComboFlags`, `PopupFlags`, `HoveredFlags`, `FocusedFlags`, `ColorEditFlags`, `TableFlags`, `TableColumnFlags`, `TableRowFlags`, `TableBgTarget`, `SortDirection`, `Col`, `StyleVar`, `Themes`, `Appearance`, `Fonts`, `Icons`, `Dir`, `Key`, `MouseButton`, `ButtonFlags`, `TextureFlags`, `DrawListLayer`, `DrawFlags`, `LogLevel`, `ToastPosition`, `Limits`. 값은 같은 이름의 Dear ImGui 열거형 또는 플러그인 표와 일치합니다.
 
 ******
 
@@ -170,6 +171,16 @@ imgui.runExample("widget-overview");
 ### 릴리스 기록
 
 ******
+
+#### v1.14.0
+
+###### 2026/10/30
+
+* `힌트` 동작 변경: imgui.launch로 연 전체 화면 창은 이제 뒤로 키를 누르면 닫힙니다(session.closeReason은 "back"). 창을 유지하려면 session.on("back", e) 안에서 e.preventDefault()를 호출하세요. 플로팅 창(launchFloaty)은 이전과 같습니다
+* `기능` 디버그 도구 창: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide(별칭 ShowMetricsWindow 등)로 Dear ImGui 내장 도구를 표시합니다. imgui.bool(true)를 넘기면 닫기 버튼으로 숨길 수 있습니다. widget-overview 예제에 이 창들을 여는 Debug 메뉴가 추가되었습니다
+* `기능` 표 정렬: Sortable 플래그가 있는 표에서는 열 머리글을 누르면 정렬이 바뀝니다. tableGetSortSpecs()는 정렬 열과 방향(imgui.SortDirection)을 반환하며 specsDirty는 정렬이 바뀐 프레임에서만 true입니다. tableSetupColumn의 네 번째 인수는 열의 사용자 id입니다. dataTable은 sortable: true로 행을 정렬하고 열의 compare 함수로 순서를 직접 정할 수 있습니다. data-table-demo 예제를 참고하세요
+* `기능` 여러 값을 다루는 위젯: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 최솟값과 최댓값을 편집하는 dragFloatRange2 / dragIntRange2, 각도를 편집하는 sliderAngle(라디안으로 저장하고 도로 표시). 값은 {value: [x, y, z]}, imgui.floats(...) 또는 새 imgui.ints(...)로 넘깁니다. widget-overview 예제의 새 섹션을 참고하세요
+* `개선` createWindow({debug: true})일 때 렌더 콜백이 250밀리초를 넘기면 console.warn으로 걸린 시간을 알리고 sleep, 네트워크, 파일 같은 느린 작업을 threads.start로 옮기라고 안내합니다(10초에 최대 한 번). 방법은 docs/THREADING.md에 있습니다
 
 #### v1.13.0
 
@@ -201,20 +212,6 @@ imgui.runExample("widget-overview");
 * `개선` 예제가 window.density를 곱하는 대신 ui.dp()를 사용합니다
 * `개선` TypeScript 선언에 모든 크기, 위치, 옵션의 단위와 허용 범위를 적고 Session과 플로팅 버튼의 필드를 readonly로 표시했습니다
 * `개선` 각 GitHub 릴리스에 내려받은 APK를 검증할 수 있는 SHA256SUMS 파일을 첨부합니다
-
-#### v1.11.0
-
-###### 2026/10/29
-
-* `힌트` 활성 창 세션에 의존하는 전역 메서드(setTouchable / setMoreTouch / setGlobalAlpha / setSecure / collapseWindow / expandWindow / addButtonEx / getComponent)는 활성 세션이 없을 때 `imgui.<메서드 이름>: no active session` 오류를 던지도록 바뀌었습니다. getComponent는 이전에 null을 반환했습니다
-* `힌트` 그리기 옵션 offset은 더 이상 권장되지 않습니다. 대신 valuesOffset을 사용하세요(offset도 계속 동작합니다)
-* `기능` 창 세션의 error 이벤트: 렌더 콜백이나 이벤트 콜백이 예외를 던지면 발생하며 error, phase(render 또는 event), frame을 담습니다. error 리스너가 있으면 세션은 계속 렌더링하고 핸들러에서 세션을 닫을 수도 있으며, 리스너가 없으면 이전처럼 render-error로 닫힙니다
-* `기능` 창 옵션 debug: Dear ImGui의 오류 복구와 디버그 로그를 켜고, Begin / End 짝이 맞지 않는 등의 사용 오류를 console.warn으로 알리며, Metrics와 Debug Log 창을 표시합니다
-* `기능` 예제 error-handling: error 이벤트, debug 모드, 흔한 오류를 찾는 방법을 보여 줍니다
-* `기능` 별칭 문서 docs/ALIASES.md: 모든 PascalCase 별칭과 Dear ImGui C++ 시그니처와의 차이를 정리했습니다
-* `수정` plotLines / plotHistogram의 valuesOffset과 stride 옵션이 적용되지 않던 문제
-* `개선` 렌더 콜백이나 이벤트 콜백에서 오류가 나면 콘솔에 스택 트레이스와 함께 출력하고, 같은 오류가 이어지면 한 번만 출력합니다
-* `개선` README의 별칭 설명을 "자주 쓰는 API 별칭"으로 바꾸고 단일 세션 모델(새 세션은 이전 세션을 닫음)과 새 멤버 사용법을 추가했으며 대상 SDK를 37로 바로잡았습니다
 
 ##### 더 많은 릴리스 기록
 

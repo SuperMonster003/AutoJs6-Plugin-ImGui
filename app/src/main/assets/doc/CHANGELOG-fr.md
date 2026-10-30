@@ -4,6 +4,16 @@
 
 ******
 
+# v1.14.0
+
+###### 2026/10/30
+
+* `Note` Changement de comportement: dans une fenêtre plein écran ouverte avec imgui.launch, la touche Retour ferme maintenant la fenêtre (session.closeReason vaut "back"). Pour la garder ouverte, appelez e.preventDefault() dans session.on("back", e). Les fenêtres flottantes (launchFloaty) ne changent pas
+* `Fonctionnalité` Fenêtres d'outils de débogage: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (alias ShowMetricsWindow, etc.) affichent les outils intégrés de Dear ImGui; avec imgui.bool(true), le bouton de fermeture les masque. L'exemple widget-overview a un nouveau menu Debug qui les ouvre
+* `Fonctionnalité` Tri des tableaux: dans un tableau avec l'indicateur Sortable, toucher l'en-tête d'une colonne change le tri; tableGetSortSpecs() renvoie les colonnes et sens de tri (imgui.SortDirection), et specsDirty vaut true seulement dans l'image où ils changent. Le quatrième argument de tableSetupColumn est l'id utilisateur de la colonne. dataTable trie ses lignes avec sortable: true, et la fonction compare d'une colonne définit un ordre propre; voir l'exemple data-table-demo
+* `Fonctionnalité` Contrôles de 2 à 4 valeurs: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, ainsi que dragFloatRange2 / dragIntRange2 pour une plage minimum-maximum et sliderAngle pour un angle (stocké en radians, affiché en degrés). Les valeurs se passent sous forme de {value: [x, y, z]}, imgui.floats(...) ou du nouveau imgui.ints(...); voir la nouvelle section de l'exemple widget-overview
+* `Amélioration` Avec createWindow({debug: true}), un rappel de rendu qui dure plus de 250 ms affiche un console.warn avec la durée et conseille de déplacer le travail lent (sleep, réseau, fichiers) vers threads.start, au plus une fois toutes les 10 secondes; docs/THREADING.md explique comment
+
 # v1.13.0
 
 ###### 2026/10/30

@@ -3039,6 +3039,67 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeShowDemoWi
     WriteOptionalBoolean(env, open, hasOpen, openValue);
 }
 
+// The debug and information windows of Dear ImGui (R3.1), numbered as the script facade's showToolWindow calls them.
+// ShowStyleEditor and ShowUserGuide draw a block, not a window, upstream, so they get a window of their own here.
+enum ToolWindow {
+    kToolWindowMetrics = 0,
+    kToolWindowDebugLog = 1,
+    kToolWindowIdStackTool = 2,
+    kToolWindowStyleEditor = 3,
+    kToolWindowAbout = 4,
+    kToolWindowUserGuide = 5,
+};
+
+void ShowToolWindow(int tool, bool* open) {
+    switch (tool) {
+        case kToolWindowMetrics:
+            ImGui::ShowMetricsWindow(open);
+            break;
+        case kToolWindowDebugLog:
+            ImGui::ShowDebugLogWindow(open);
+            break;
+        case kToolWindowIdStackTool:
+            ImGui::ShowIDStackToolWindow(open);
+            break;
+        case kToolWindowStyleEditor:
+            if (ImGui::Begin("Dear ImGui Style Editor", open)) {
+                ImGui::ShowStyleEditor();
+            }
+            ImGui::End();
+            break;
+        case kToolWindowAbout:
+            ImGui::ShowAboutWindow(open);
+            break;
+        case kToolWindowUserGuide:
+            if (ImGui::Begin("Dear ImGui User Guide", open)) {
+                ImGui::ShowUserGuide();
+            }
+            ImGui::End();
+            break;
+        default:
+            break;
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeShowToolWindow(
+    JNIEnv* env,
+    jclass,
+    jint tool,
+    jbooleanArray open
+) {
+    if (!RequireFrame(env)) return;
+    if (tool < kToolWindowMetrics || tool > kToolWindowUserGuide) {
+        ThrowIllegalArgument(env, "Unknown tool window");
+        return;
+    }
+    bool openValue = true;
+    bool hasOpen = false;
+    if (!ReadOptionalBoolean(env, open, openValue, hasOpen)) return;
+    ShowToolWindow(tool, hasOpen ? &openValue : nullptr);
+    WriteOptionalBoolean(env, open, hasOpen, openValue);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetDebugMode(
     JNIEnv* env,
@@ -3068,10 +3129,10 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeShowDebugW
     if (!RequireFrame(env) || !gState.debugMode) return;
     ImGui::ErrorRecoveryTryToRecoverState(&GImGui->StackSizesInNewFrame);
     if (gState.showMetricsWindow) {
-        ImGui::ShowMetricsWindow(&gState.showMetricsWindow);
+        ShowToolWindow(kToolWindowMetrics, &gState.showMetricsWindow);
     }
     if (gState.showDebugLogWindow) {
-        ImGui::ShowDebugLogWindow(&gState.showDebugLogWindow);
+        ShowToolWindow(kToolWindowDebugLog, &gState.showDebugLogWindow);
     }
 }
 
@@ -3570,6 +3631,322 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeVSliderInt
     return changed ? JNI_TRUE : JNI_FALSE;
 }
 
+// Multi-component and range widgets (R3.4). The script facade passes the components in one array (imgui.floats /
+// imgui.ints or a {value: [...]} reference), as DragFloat2 .. 4 and the other forms take float v[2] .. v[4]; they are
+// the DragScalarN / SliderScalarN / InputScalarN calls the upstream forms make.
+static_assert(sizeof(jint) == sizeof(int), "ImGuiDataType_S32 widgets write jint arrays in place");
+
+bool ValidateComponents(JNIEnv* env, jarray array, jint components) {
+    if (components < 2 || components > 4) {
+        ThrowIllegalArgument(env, "Multi-component widgets take 2 to 4 components");
+        return false;
+    }
+    return ValidateArrayLength(env, array, components, "The reference has fewer values than the widget has components");
+}
+
+const char* FormatOrDefault(const std::string& format, const char* fallback) {
+    return format.empty() ? fallback : format.c_str();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDragFloatN(
+    JNIEnv* env,
+    jclass,
+    jstring label,
+    jfloatArray value,
+    jint components,
+    jfloat speed,
+    jfloat min,
+    jfloat max,
+    jstring format,
+    jint flags
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    if (!ValidateComponents(env, value, components)) return JNI_FALSE;
+    jfloat* data = env->GetFloatArrayElements(value, nullptr);
+    if (data == nullptr) return JNI_FALSE;
+    const std::string text = JStringToUtf8(env, label);
+    const std::string formatText = JStringToUtf8(env, format);
+    const bool changed = ImGui::DragScalarN(
+        text.c_str(),
+        ImGuiDataType_Float,
+        data,
+        components,
+        speed,
+        &min,
+        &max,
+        FormatOrDefault(formatText, "%.3f"),
+        static_cast<ImGuiSliderFlags>(flags)
+    );
+    env->ReleaseFloatArrayElements(value, data, 0);
+    return changed ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDragIntN(
+    JNIEnv* env,
+    jclass,
+    jstring label,
+    jintArray value,
+    jint components,
+    jfloat speed,
+    jint min,
+    jint max,
+    jstring format,
+    jint flags
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    if (!ValidateComponents(env, value, components)) return JNI_FALSE;
+    jint* data = env->GetIntArrayElements(value, nullptr);
+    if (data == nullptr) return JNI_FALSE;
+    const std::string text = JStringToUtf8(env, label);
+    const std::string formatText = JStringToUtf8(env, format);
+    const bool changed = ImGui::DragScalarN(
+        text.c_str(),
+        ImGuiDataType_S32,
+        data,
+        components,
+        speed,
+        &min,
+        &max,
+        FormatOrDefault(formatText, "%d"),
+        static_cast<ImGuiSliderFlags>(flags)
+    );
+    env->ReleaseIntArrayElements(value, data, 0);
+    return changed ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSliderFloatN(
+    JNIEnv* env,
+    jclass,
+    jstring label,
+    jfloatArray value,
+    jint components,
+    jfloat min,
+    jfloat max,
+    jstring format,
+    jint flags
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    if (!ValidateComponents(env, value, components)) return JNI_FALSE;
+    jfloat* data = env->GetFloatArrayElements(value, nullptr);
+    if (data == nullptr) return JNI_FALSE;
+    const std::string text = JStringToUtf8(env, label);
+    const std::string formatText = JStringToUtf8(env, format);
+    const bool changed = ImGui::SliderScalarN(
+        text.c_str(),
+        ImGuiDataType_Float,
+        data,
+        components,
+        &min,
+        &max,
+        FormatOrDefault(formatText, "%.3f"),
+        static_cast<ImGuiSliderFlags>(flags)
+    );
+    env->ReleaseFloatArrayElements(value, data, 0);
+    return changed ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSliderIntN(
+    JNIEnv* env,
+    jclass,
+    jstring label,
+    jintArray value,
+    jint components,
+    jint min,
+    jint max,
+    jstring format,
+    jint flags
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    if (!ValidateComponents(env, value, components)) return JNI_FALSE;
+    jint* data = env->GetIntArrayElements(value, nullptr);
+    if (data == nullptr) return JNI_FALSE;
+    const std::string text = JStringToUtf8(env, label);
+    const std::string formatText = JStringToUtf8(env, format);
+    const bool changed = ImGui::SliderScalarN(
+        text.c_str(),
+        ImGuiDataType_S32,
+        data,
+        components,
+        &min,
+        &max,
+        FormatOrDefault(formatText, "%d"),
+        static_cast<ImGuiSliderFlags>(flags)
+    );
+    env->ReleaseIntArrayElements(value, data, 0);
+    return changed ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeInputFloatN(
+    JNIEnv* env,
+    jclass,
+    jstring label,
+    jfloatArray value,
+    jint components,
+    jstring format,
+    jint flags
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    if (!ValidateComponents(env, value, components)) return JNI_FALSE;
+    jfloat* data = env->GetFloatArrayElements(value, nullptr);
+    if (data == nullptr) return JNI_FALSE;
+    const std::string text = JStringToUtf8(env, label);
+    const std::string formatText = JStringToUtf8(env, format);
+    const bool changed = ImGui::InputScalarN(
+        text.c_str(),
+        ImGuiDataType_Float,
+        data,
+        components,
+        nullptr,
+        nullptr,
+        FormatOrDefault(formatText, "%.3f"),
+        static_cast<ImGuiInputTextFlags>(flags)
+    );
+    env->ReleaseFloatArrayElements(value, data, 0);
+    return changed ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeInputIntN(
+    JNIEnv* env,
+    jclass,
+    jstring label,
+    jintArray value,
+    jint components,
+    jint flags
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    if (!ValidateComponents(env, value, components)) return JNI_FALSE;
+    jint* data = env->GetIntArrayElements(value, nullptr);
+    if (data == nullptr) return JNI_FALSE;
+    const std::string text = JStringToUtf8(env, label);
+    const bool changed = ImGui::InputScalarN(
+        text.c_str(),
+        ImGuiDataType_S32,
+        data,
+        components,
+        nullptr,
+        nullptr,
+        "%d",
+        static_cast<ImGuiInputTextFlags>(flags)
+    );
+    env->ReleaseIntArrayElements(value, data, 0);
+    return changed ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDragFloatRange2(
+    JNIEnv* env,
+    jclass,
+    jstring label,
+    jfloatArray currentMin,
+    jfloatArray currentMax,
+    jfloat speed,
+    jfloat min,
+    jfloat max,
+    jstring format,
+    jstring formatMax,
+    jint flags
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    if (!ValidateArrayLength(env, currentMin, 1, "Float reference must contain at least one value")) return JNI_FALSE;
+    if (!ValidateArrayLength(env, currentMax, 1, "Float reference must contain at least one value")) return JNI_FALSE;
+    jfloat low = 0.0F;
+    jfloat high = 0.0F;
+    env->GetFloatArrayRegion(currentMin, 0, 1, &low);
+    env->GetFloatArrayRegion(currentMax, 0, 1, &high);
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    const std::string text = JStringToUtf8(env, label);
+    const std::string formatText = JStringToUtf8(env, format);
+    const std::string formatMaxText = JStringToUtf8(env, formatMax);
+    const bool changed = ImGui::DragFloatRange2(
+        text.c_str(),
+        &low,
+        &high,
+        speed,
+        min,
+        max,
+        FormatOrDefault(formatText, "%.3f"),
+        formatMaxText.empty() ? nullptr : formatMaxText.c_str(),
+        static_cast<ImGuiSliderFlags>(flags)
+    );
+    env->SetFloatArrayRegion(currentMin, 0, 1, &low);
+    env->SetFloatArrayRegion(currentMax, 0, 1, &high);
+    return changed ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDragIntRange2(
+    JNIEnv* env,
+    jclass,
+    jstring label,
+    jintArray currentMin,
+    jintArray currentMax,
+    jfloat speed,
+    jint min,
+    jint max,
+    jstring format,
+    jstring formatMax,
+    jint flags
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    jint low = 0;
+    jint high = 0;
+    if (!ReadIntReference(env, currentMin, low) || !ReadIntReference(env, currentMax, high)) return JNI_FALSE;
+    const std::string text = JStringToUtf8(env, label);
+    const std::string formatText = JStringToUtf8(env, format);
+    const std::string formatMaxText = JStringToUtf8(env, formatMax);
+    int nativeLow = low;
+    int nativeHigh = high;
+    const bool changed = ImGui::DragIntRange2(
+        text.c_str(),
+        &nativeLow,
+        &nativeHigh,
+        speed,
+        min,
+        max,
+        FormatOrDefault(formatText, "%d"),
+        formatMaxText.empty() ? nullptr : formatMaxText.c_str(),
+        static_cast<ImGuiSliderFlags>(flags)
+    );
+    WriteIntReference(env, currentMin, nativeLow);
+    WriteIntReference(env, currentMax, nativeHigh);
+    return changed ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSliderAngle(
+    JNIEnv* env,
+    jclass,
+    jstring label,
+    jfloatArray value,
+    jfloat degreesMin,
+    jfloat degreesMax,
+    jstring format,
+    jint flags
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    if (!ValidateArrayLength(env, value, 1, "Float reference must contain at least one value")) return JNI_FALSE;
+    jfloat* data = env->GetFloatArrayElements(value, nullptr);
+    if (data == nullptr) return JNI_FALSE;
+    const std::string text = JStringToUtf8(env, label);
+    const std::string formatText = JStringToUtf8(env, format);
+    const bool changed = ImGui::SliderAngle(
+        text.c_str(),
+        data,
+        degreesMin,
+        degreesMax,
+        FormatOrDefault(formatText, "%.0f deg"),
+        static_cast<ImGuiSliderFlags>(flags)
+    );
+    env->ReleaseFloatArrayElements(value, data, 0);
+    return changed ? JNI_TRUE : JNI_FALSE;
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeToggle(
     JNIEnv* env,
@@ -3922,15 +4299,50 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTableSetup
     jclass,
     jstring label,
     jint flags,
-    jfloat initWidthOrWeight
+    jfloat initWidthOrWeight,
+    jint userId
 ) {
     if (!RequireFrame(env)) return;
     const std::string value = JStringToUtf8(env, label);
     ImGui::TableSetupColumn(
         value.c_str(),
         static_cast<ImGuiTableColumnFlags>(flags),
-        initWidthOrWeight
+        initWidthOrWeight,
+        static_cast<ImGuiID>(userId)
     );
+}
+
+// R3.3: the sort specs of the current table, null when there is no table or it is not sortable, otherwise
+// [specsDirty, count, then columnIndex, columnUserId, sortDirection, sortOrder per spec]. The caller sorts when
+// specsDirty is set, so reading the specs clears it, as Dear ImGui expects after sorting.
+extern "C" JNIEXPORT jintArray JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeTableGetSortSpecs(
+    JNIEnv* env,
+    jclass
+) {
+    if (!RequireFrame(env)) return nullptr;
+    ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs();
+    if (sortSpecs == nullptr) {
+        return nullptr;
+    }
+    const int count = std::max(0, sortSpecs->SpecsCount);
+    std::vector<jint> values;
+    values.reserve(static_cast<size_t>(2 + count * 4));
+    values.push_back(sortSpecs->SpecsDirty ? 1 : 0);
+    values.push_back(static_cast<jint>(count));
+    for (int index = 0; index < count; ++index) {
+        const ImGuiTableColumnSortSpecs& spec = sortSpecs->Specs[index];
+        values.push_back(static_cast<jint>(spec.ColumnIndex));
+        values.push_back(static_cast<jint>(spec.ColumnUserID));
+        values.push_back(static_cast<jint>(spec.SortDirection));
+        values.push_back(static_cast<jint>(spec.SortOrder));
+    }
+    sortSpecs->SpecsDirty = false;
+    jintArray result = env->NewIntArray(static_cast<jsize>(values.size()));
+    if (result != nullptr) {
+        env->SetIntArrayRegion(result, 0, static_cast<jsize>(values.size()), values.data());
+    }
+    return result;
 }
 
 extern "C" JNIEXPORT void JNICALL

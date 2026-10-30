@@ -5,6 +5,20 @@
   "changelog_label_improvement": "Improvement",
   "changelog_label_dependency": "Dependency",
   "$data": {
+    "v1.14.0": {
+      "released_date": "2026/10/30",
+      "hint": [
+        "Behavior change: in a full-screen window opened with imgui.launch, the back key now closes the window (session.closeReason is \"back\"). To keep the window open, call e.preventDefault() in session.on(\"back\", e). Floating windows (launchFloaty) behave as before"
+      ],
+      "feature": [
+        "Debug tool windows: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (aliases ShowMetricsWindow and so on) show the built-in Dear ImGui tools; pass imgui.bool(true) to let the close button hide them. The widget-overview example has a new Debug menu that opens them",
+        "Table sorting: in a table with the Sortable flag, a tap on a column header changes the sort; tableGetSortSpecs() returns the sort columns and directions (imgui.SortDirection), and specsDirty is true only in the frame they change. The fourth argument of tableSetupColumn is the column's user id. dataTable sorts its rows with sortable: true, and a column's compare function sets a custom order; see the data-table-demo example",
+        "Widgets with 2 to 4 values: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, plus dragFloatRange2 / dragIntRange2 for a min-max range and sliderAngle for an angle (stored in radians, shown in degrees). Pass the values as {value: [x, y, z]}, imgui.floats(...) or the new imgui.ints(...); see the new section of the widget-overview example"
+      ],
+      "improvement": [
+        "With createWindow({debug: true}), a render callback that takes more than 250 ms prints a console.warn with the time and a hint to move slow work (sleep, network, files) to threads.start, at most once every 10 seconds; docs/THREADING.md explains how"
+      ]
+    },
     "v1.13.0": {
       "released_date": "2026/10/30",
       "hint": [

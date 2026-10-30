@@ -4,6 +4,16 @@
 
 ******
 
+# v1.14.0
+
+###### 2026/10/30
+
+* `힌트` 동작 변경: imgui.launch로 연 전체 화면 창은 이제 뒤로 키를 누르면 닫힙니다(session.closeReason은 "back"). 창을 유지하려면 session.on("back", e) 안에서 e.preventDefault()를 호출하세요. 플로팅 창(launchFloaty)은 이전과 같습니다
+* `기능` 디버그 도구 창: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide(별칭 ShowMetricsWindow 등)로 Dear ImGui 내장 도구를 표시합니다. imgui.bool(true)를 넘기면 닫기 버튼으로 숨길 수 있습니다. widget-overview 예제에 이 창들을 여는 Debug 메뉴가 추가되었습니다
+* `기능` 표 정렬: Sortable 플래그가 있는 표에서는 열 머리글을 누르면 정렬이 바뀝니다. tableGetSortSpecs()는 정렬 열과 방향(imgui.SortDirection)을 반환하며 specsDirty는 정렬이 바뀐 프레임에서만 true입니다. tableSetupColumn의 네 번째 인수는 열의 사용자 id입니다. dataTable은 sortable: true로 행을 정렬하고 열의 compare 함수로 순서를 직접 정할 수 있습니다. data-table-demo 예제를 참고하세요
+* `기능` 여러 값을 다루는 위젯: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 최솟값과 최댓값을 편집하는 dragFloatRange2 / dragIntRange2, 각도를 편집하는 sliderAngle(라디안으로 저장하고 도로 표시). 값은 {value: [x, y, z]}, imgui.floats(...) 또는 새 imgui.ints(...)로 넘깁니다. widget-overview 예제의 새 섹션을 참고하세요
+* `개선` createWindow({debug: true})일 때 렌더 콜백이 250밀리초를 넘기면 console.warn으로 걸린 시간을 알리고 sleep, 네트워크, 파일 같은 느린 작업을 threads.start로 옮기라고 안내합니다(10초에 최대 한 번). 방법은 docs/THREADING.md에 있습니다
+
 # v1.13.0
 
 ###### 2026/10/30

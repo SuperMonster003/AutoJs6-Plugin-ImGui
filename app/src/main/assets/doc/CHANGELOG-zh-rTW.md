@@ -4,6 +4,16 @@
 
 ******
 
+# v1.14.0
+
+###### 2026/10/30
+
+* `提示` 行為變更: 以 imgui.launch 開啟的全螢幕視窗現在按返回鍵會關閉視窗 (session.closeReason 為 "back"). 若要保留視窗, 請在 session.on("back", e) 中呼叫 e.preventDefault(). 懸浮視窗 (launchFloaty) 不變
+* `新增` 偵錯工具視窗: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (別名 ShowMetricsWindow 等) 顯示 Dear ImGui 內建的偵錯工具; 傳入 imgui.bool(true) 後可用關閉按鈕隱藏. 範例 widget-overview 新增 Debug 選單, 可開啟這些視窗
+* `新增` 表格排序: 表格帶有 Sortable 旗標時輕觸欄標題即可切換排序; tableGetSortSpecs() 傳回排序欄與方向 (imgui.SortDirection), specsDirty 只在排序變化的那一幀為 true. tableSetupColumn 的第四個參數是欄的使用者 id. dataTable 設定 sortable: true 即可依欄排序, 欄的 compare 函式可自訂順序; 請參閱範例 data-table-demo
+* `新增` 多值控制項: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 以及編輯最小值與最大值的 dragFloatRange2 / dragIntRange2 和編輯角度的 sliderAngle (以弧度儲存, 以度顯示). 數值以 {value: [x, y, z]}, imgui.floats(...) 或新增的 imgui.ints(...) 傳入; 請參閱範例 widget-overview 的新區段
+* `優化` createWindow({debug: true}) 時, 渲染回呼耗時超過 250 毫秒會以 console.warn 提示耗時, 並建議把 sleep, 網路, 檔案等慢速操作移到 threads.start, 每 10 秒最多提示一次; docs/THREADING.md 說明做法
+
 # v1.13.0
 
 ###### 2026/10/30

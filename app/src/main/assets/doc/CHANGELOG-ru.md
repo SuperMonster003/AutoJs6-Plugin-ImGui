@@ -4,6 +4,16 @@
 
 ******
 
+# v1.14.0
+
+###### 2026/10/30
+
+* `Подсказка` Изменение поведения: полноэкранное окно, открытое через imgui.launch, теперь закрывается клавишей "Назад" (session.closeReason равен "back"). Чтобы окно осталось открытым, вызовите e.preventDefault() в session.on("back", e). Плавающие окна (launchFloaty) работают как прежде
+* `Функция` Отладочные окна: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (псевдонимы ShowMetricsWindow и т. д.) показывают встроенные инструменты Dear ImGui; с imgui.bool(true) окно можно скрыть кнопкой закрытия. В примере widget-overview появилось меню Debug, которое их открывает
+* `Функция` Сортировка таблиц: в таблице с флагом Sortable нажатие на заголовок столбца меняет сортировку; tableGetSortSpecs() возвращает столбцы и направления сортировки (imgui.SortDirection), а specsDirty равен true только в том кадре, где сортировка изменилась. Четвёртый аргумент tableSetupColumn - пользовательский id столбца. dataTable сортирует строки при sortable: true, а функция compare столбца задаёт свой порядок; см. пример data-table-demo
+* `Функция` Элементы с 2-4 значениями: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, а также dragFloatRange2 / dragIntRange2 для диапазона от минимума до максимума и sliderAngle для угла (хранится в радианах, показывается в градусах). Значения передаются как {value: [x, y, z]}, imgui.floats(...) или новый imgui.ints(...); см. новый раздел примера widget-overview
+* `Улучшение` При createWindow({debug: true}) обратный вызов отрисовки дольше 250 мс выводит console.warn с временем и советом перенести медленную работу (sleep, сеть, файлы) в threads.start, не чаще раза в 10 секунд; как это сделать, описано в docs/THREADING.md
+
 # v1.13.0
 
 ###### 2026/10/30

@@ -5,6 +5,20 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.14.0": {
+      "released_date": "2026/10/30",
+      "hint": [
+        "動作の変更: imgui.launch で開いた全画面ウィンドウは, 戻るキーで閉じるようになりました (session.closeReason は \"back\"). ウィンドウを残すには session.on(\"back\", e) の中で e.preventDefault() を呼びます. フローティングウィンドウ (launchFloaty) は従来どおりです"
+      ],
+      "feature": [
+        "デバッグ用ツールウィンドウ: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (別名 ShowMetricsWindow など) で Dear ImGui 組み込みのツールを表示します. imgui.bool(true) を渡すと閉じるボタンで隠せます. 例 widget-overview に, これらを開く Debug メニューを追加しました",
+        "テーブルの並べ替え: Sortable フラグ付きのテーブルでは列見出しをタップすると並び順が変わります. tableGetSortSpecs() は並べ替えの列と方向 (imgui.SortDirection) を返し, specsDirty は並び順が変わったフレームだけ true です. tableSetupColumn の 4 番目の引数は列のユーザー id です. dataTable は sortable: true で行を並べ替え, 列の compare 関数で独自の順序を指定できます. 例 data-table-demo を参照してください",
+        "複数の値を扱うウィジェット: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 最小値と最大値を編集する dragFloatRange2 / dragIntRange2, 角度を編集する sliderAngle (ラジアンで保存し度で表示). 値は {value: [x, y, z]}, imgui.floats(...) または新しい imgui.ints(...) で渡します. 例 widget-overview の新しいセクションを参照してください"
+      ],
+      "improvement": [
+        "createWindow({debug: true}) のとき, 描画コールバックが 250 ミリ秒を超えると console.warn で所要時間を示し, sleep, ネットワーク, ファイルなどの遅い処理を threads.start へ移すよう提案します (10 秒に最大 1 回). docs/THREADING.md でやり方を説明しています"
+      ]
+    },
     "v1.13.0": {
       "released_date": "2026/10/30",
       "hint": [
