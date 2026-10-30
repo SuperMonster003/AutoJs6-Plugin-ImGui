@@ -376,38 +376,53 @@ if (wanted('rotation')) steps.push(function () {
     });
 
     function geometry() {
-        return [session.x, session.y, session.width, session.height].join(',');
+        return [session.x, session.y, session.width, session.height];
+    }
+
+    // The window sits on whole pixels, so its dp values can differ by a fraction of a dp from the options.
+    function sameGeometry(a, b) {
+        return a.every(function (value, index) { return Math.abs(value - b[index]) < 0.6; });
+    }
+
+    function describe() {
+        return geometry().map(round3).join(',') + ' density=' + session.density + ' surface=' + surfaceSize(session).join('x');
+    }
+
+    function orientation() {
+        var metrics = context.getResources().getDisplayMetrics();
+        return metrics.widthPixels >= metrics.heightPixels ? 'landscape' : 'portrait';
     }
 
     waitFor(function () { return frames > 8; }, 8000, guarded('rotation', session, function () {
         var before = geometry();
         var density = session.density;
         var surfaceBefore = surfaceSize(session).join('x');
-        action('rotate-1');
-        waitFor(function () { return changes.indexOf('landscape') >= 0; }, 10000, guarded('rotation', session, function (turned) {
-            if (!turned) {
-                skip('rotation', 'the display did not turn: ' + changes.join(','));
-                action('rotate-restore');
-                session.close('done');
-                later(300, next);
-                return;
-            }
-            later(800, guarded('rotation', session, function () {
-                report('rotation-landscape', geometry() === before && session.density === density &&
-                    surfaceSize(session).join('x') === surfaceBefore,
-                    geometry() + ' density=' + session.density + ' surface=' + surfaceSize(session).join('x'));
-                changes.length = 0;
-                action('rotate-0');
-                waitFor(function () { return changes.indexOf('portrait') >= 0; }, 10000, guarded('rotation', session, function (back) {
-                    later(800, guarded('rotation', session, function () {
-                        report('rotation-portrait', back && geometry() === before && frames > 0,
-                            geometry() + ' surface=' + surfaceSize(session).join('x'));
-                        action('rotate-restore');
-                        session.close('done');
-                        later(600, next);
-                    }));
+
+        function turn(name, rotation, expected, done) {
+            changes.length = 0;
+            action('rotate-' + rotation);
+            waitFor(function () { return changes.indexOf(expected) >= 0; }, 10000, guarded('rotation', session, function (turned) {
+                later(800, guarded('rotation', session, function () {
+                    report(name, turned && sameGeometry(geometry(), before) && session.density === density &&
+                        surfaceSize(session).join('x') === surfaceBefore, expected + ' ' + describe());
+                    done();
                 }));
             }));
+        }
+
+        // The display may already be at rotation 1 and turning off auto-rotation passes through rotation 0,
+        // so settle first and take the two turns from there.
+        action('rotate-1');
+        later(3000, guarded('rotation', session, function () {
+            var settled = orientation();
+            var other = settled === 'portrait' ? 'landscape' : 'portrait';
+            turn('rotation-turned', 0, other, function () {
+                turn('rotation-back', 1, settled, function () {
+                    action('rotate-restore');
+                    session.close('done');
+                    later(600, next);
+                });
+            });
         }));
     }));
 });
@@ -764,7 +779,8 @@ if (wanted('privileged')) steps.push(function () {
     var multi = imgui.ref('');
     var enterReturned = 0;
     var active = {single: false, multi: false};
-    var session = imgui.launchPrivileged(function (ui) {
+    var session;
+    function render(ui) {
         frames++;
         fixedWindow(ui, 'R5 privileged', ui.dp(300), ui.dp(300), function () {
             if (focusNext === 'single') {
@@ -791,8 +807,16 @@ if (wanted('privileged')) steps.push(function () {
                 inFrame = String(e);
             }
         }
-    }, {x: 20, y: 300, width: 300, height: 300, contentAutoResize: false, idleDelay: 600000, startupTimeout: 10000,
-        onError: function (e) { lastError = String(e.message).slice(0, 160); }});
+    }
+    try {
+        session = imgui.launchPrivileged(render, {x: 20, y: 300, width: 300, height: 300, contentAutoResize: false,
+            idleDelay: 600000, startupTimeout: 10000,
+            onError: function (e) { lastError = String(e.message).slice(0, 160); }});
+    } catch (e) {
+        skip('privileged', 'no backend: ' + String(e).slice(0, 120));
+        next();
+        return;
+    }
 
     var EditorInfo = android.view.inputmethod.EditorInfo;
 
