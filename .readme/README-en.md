@@ -61,6 +61,7 @@ Once the plugin is enabled in the Plugin Center, scripts use the global `imgui` 
 - Windows, tabs, tree nodes, tables, popups, menus, tooltips, and 60+ immediate-mode widgets, including a mobile-style `toggle` switch.
 - Visual and font system with 11 `Themes`, bulk styles, rounded/bordered/shadowed appearances, a multi-font stack, CJK fallback, and a Material Icons subset.
 - Managed textures accept file paths, encoded bytes, Android `Bitmap`, and AutoJs6 `Image` objects; `image` / `imageButton` and three DrawList layers cover image display and custom overlay drawing.
+- `session.capture()` returns the window as an AutoJs6 `Image`; with `systemCjkFont: true` the system draws the CJK characters outside the bundled font, with `pinchZoom: true` two fingers change the font scale, and windows follow changes of the display density and the system font size.
 - Lightweight `imgui.ref(value)` / `{value: x}` references work with every stateful control while the legacy Java-array reference helpers remain fully compatible.
 - Session-managed `logWindow`, stacked `toast`, Promise dialogs, threshold-colored `statsOverlay`, and selectable CRUD `dataTable` components provide ready-made debugging UI.
 - Common APIs and constant enums have PascalCase aliases (e.g. `ui.Button`) that keep the plugin's argument style; the alias list and the differences from the upstream C++ signatures are in [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
@@ -165,13 +166,23 @@ Common APIs also have PascalCase aliases (e.g. `ui.Button` equals `ui.button`). 
 
 - Each script engine supports one native renderer session at a time; create multiple ImGui root windows inside that session when several panels are needed. Creating another overlay or Activity session closes the previous one.
 - `imgui.launch` requires a currently resumed AutoJs6 Activity; use `launchFloaty` when the script must keep rendering without a foreground host Activity.
-- Privileged mode is fixed full-display and pointer-only in v1.9: it has no IME/key input, host-layer alpha/security, collapse, companion Android buttons, or live rotation rebuild. Direct input observes without `EVIOCGRAB`, and OEM SurfaceControl/SELinux policy may still reject startup; capability probing never executes `su` or requests a Shizuku grant.
+- Privileged mode is fixed full-display and pointer-only: text fields use a temporary AutoJs6 input box that needs the overlay permission and only adds text at the cursor, and it has no key input, host-layer alpha/security, collapse, companion Android buttons, or live rotation rebuild. Direct input observes without `EVIOCGRAB`, and OEM SurfaceControl/SELinux policy may still reject startup; capability probing never executes `su` or requests a Shizuku grant.
 
 ******
 
 ### Release History
 
 ******
+
+#### v1.16.0
+
+###### 2026/10/31
+
+* `Feature` session.capture(options) takes a picture of the window and returns an image for the images module, for example images.save(session.capture(), path). options.region picks a part of the window, in dp. A window in privileged mode can only be captured between two frames, for example from setTimeout(fn, 0)
+* `Feature` createWindow({systemCjkFont: true}) shows every CJK character the device has, including rare ones like 龘 that are missing from the bundled font. Android draws each character when it is first used, so this takes almost no extra memory; docs/LIMITS.md lists what the bundled font covers
+* `Feature` createWindow({pinchZoom: true}) lets two fingers change the text size from 0.5 to 3 times; moving both fingers together still scrolls. Read the scale from session.fontScale, set it with session.setFontScale(scale), and listen to the new fontScaleChanged event. The widget-overview example shows all of this
+* `Feature` Text input in privileged mode: tapping an inputText now opens a small input box of AutoJs6 with the keyboard (this needs the overlay permission of AutoJs6). The OK button, the done key or a tap elsewhere enters the text at the cursor of the field; text already in the field can not be edited in the box
+* `Improvement` Windows now follow changes of the display size (density) and the system font size while they run: text and controls get the new size, and the window keeps its size in dp. configurationChanged has the new fields density, oldDensity, fontScale and oldFontScale. A full-screen window of imgui.launch closes instead (session.closeReason is "configuration-changed"), because Android recreates the Activity it lives in
 
 #### v1.15.0
 
@@ -192,18 +203,6 @@ Common APIs also have PascalCase aliases (e.g. `ui.Button` equals `ui.button`). 
 * `Feature` Table sorting: in a table with the Sortable flag, a tap on a column header changes the sort; tableGetSortSpecs() returns the sort columns and directions (imgui.SortDirection), and specsDirty is true only in the frame they change. The fourth argument of tableSetupColumn is the column's user id. dataTable sorts its rows with sortable: true, and a column's compare function sets a custom order; see the data-table-demo example
 * `Feature` Widgets with 2 to 4 values: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, plus dragFloatRange2 / dragIntRange2 for a min-max range and sliderAngle for an angle (stored in radians, shown in degrees). Pass the values as {value: [x, y, z]}, imgui.floats(...) or the new imgui.ints(...); see the new section of the widget-overview example
 * `Improvement` With createWindow({debug: true}), a render callback that takes more than 250 ms prints a console.warn with the time and a hint to move slow work (sleep, network, files) to threads.start, at most once every 10 seconds; docs/THREADING.md explains how
-
-#### v1.13.0
-
-###### 2026/10/30
-
-* `Hint` Behavior change: to save battery, a window now draws only 10 frames per second after 3 seconds without touch or key input, and stops drawing while the screen is off or locked; the next touch brings back the full frame rate at once. If the window shows an animation or data that changes without input (a timer, a chart, a progress bar), pass idleFps: 0 to createWindow or call session.setIdleFps(0) to keep the full rate
-* `Feature` ui.listClipper(itemCount, options, callback) (alias ListClipper) draws only the visible rows, so a list of 100000 rows scrolls smoothly; see the new large-list example
-* `Feature` Frame rate control: createWindow options idleFps / idleDelay, session.setFps / setIdleFps / getFps, the session idle / active events and the idle / paused fields
-* `Feature` texture.update(source) replaces the picture of a texture and keeps its handle, so the image calls that show it need no change; texture.width / height follow a new size. See the new texture-refresh example, which refreshes a preview twice a second
-* `Feature` createTexture and texture.update also accept an ArrayBuffer or a typed array (such as Uint8Array) holding PNG or JPEG data
-* `Feature` statsOverlay shows the work time of each frame (the time spent drawing, without waiting for the screen), and snapshot() returns it as workTime
-* `Improvement` docs/FRAME-LOOP.md explains the frame rates and power saving, and docs/LIMITS.md the limits of listClipper
 
 ##### For more release history
 

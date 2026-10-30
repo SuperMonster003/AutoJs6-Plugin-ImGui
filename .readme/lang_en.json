@@ -17,6 +17,7 @@
     "Windows, tabs, tree nodes, tables, popups, menus, tooltips, and 60+ immediate-mode widgets, including a mobile-style `toggle` switch.",
     "Visual and font system with 11 `Themes`, bulk styles, rounded/bordered/shadowed appearances, a multi-font stack, CJK fallback, and a Material Icons subset.",
     "Managed textures accept file paths, encoded bytes, Android `Bitmap`, and AutoJs6 `Image` objects; `image` / `imageButton` and three DrawList layers cover image display and custom overlay drawing.",
+    "`session.capture()` returns the window as an AutoJs6 `Image`; with `systemCjkFont: true` the system draws the CJK characters outside the bundled font, with `pinchZoom: true` two fingers change the font scale, and windows follow changes of the display density and the system font size.",
     "Lightweight `imgui.ref(value)` / `{value: x}` references work with every stateful control while the legacy Java-array reference helpers remain fully compatible.",
     "Session-managed `logWindow`, stacked `toast`, Promise dialogs, threshold-colored `statsOverlay`, and selectable CRUD `dataTable` components provide ready-made debugging UI.",
     "Common APIs and constant enums have PascalCase aliases (e.g. `ui.Button`) that keep the plugin's argument style; the alias list and the differences from the upstream C++ signatures are in [ALIASES.md]({{ repo_url }}/blob/master/docs/ALIASES.md).",
@@ -60,7 +61,7 @@
   "limitations": [
     "Each script engine supports one native renderer session at a time; create multiple ImGui root windows inside that session when several panels are needed. Creating another overlay or Activity session closes the previous one.",
     "`imgui.launch` requires a currently resumed AutoJs6 Activity; use `launchFloaty` when the script must keep rendering without a foreground host Activity.",
-    "Privileged mode is fixed full-display and pointer-only in v1.9: it has no IME/key input, host-layer alpha/security, collapse, companion Android buttons, or live rotation rebuild. Direct input observes without `EVIOCGRAB`, and OEM SurfaceControl/SELinux policy may still reject startup; capability probing never executes `su` or requests a Shizuku grant."
+    "Privileged mode is fixed full-display and pointer-only: text fields use a temporary AutoJs6 input box that needs the overlay permission and only adds text at the cursor, and it has no key input, host-layer alpha/security, collapse, companion Android buttons, or live rotation rebuild. Direct input observes without `EVIOCGRAB`, and OEM SurfaceControl/SELinux policy may still reject startup; capability probing never executes `su` or requests a Shizuku grant."
   ],
   "h3_release_history": "Release History",
   "h5_for_more_release_history": "For more release history",

@@ -61,6 +61,7 @@ ImGui 플러그인은 [Dear ImGui](https://github.com/ocornut/imgui) 즉시 모�
 - 창, 탭, 트리 노드, 테이블, 팝업, 메뉴, 툴팁과 모바일 스타일 `toggle` 스위치를 포함한 60개 이상의 즉시 모드 컨트롤을 제공합니다.
 - 11개 `Themes`, 일괄 스타일, 둥근 모서리/테두리/그림자 외형, 다중 글꼴 스택, CJK 대체 글꼴, Material Icons 하위 집합을 제공합니다.
 - 관리형 텍스처는 파일 경로, 인코딩된 바이트, Android `Bitmap`, AutoJs6 `Image`를 지원하며 `image` / `imageButton`과 3개 DrawList 레이어로 이미지 표시와 사용자 지정 그리기를 제공합니다.
+- `session.capture()`는 창 내용을 AutoJs6 `Image`로 반환합니다. `systemCjkFont: true`는 내장 글꼴에 없는 CJK 문자를 시스템이 그리게 하고, `pinchZoom: true`는 두 손가락 핀치로 글꼴 배율을 바꾸며, 창은 화면 밀도와 시스템 글꼴 크기의 변경도 따라갑니다.
 - 가벼운 `imgui.ref(value)` / `{value: x}` 참조는 모든 상태형 컨트롤에서 작동하며 기존 Java 배열 참조 헬퍼도 완전히 호환됩니다.
 - 세션 관리 `logWindow`, 스택형 `toast`, Promise 대화상자, 임계값 색상 `statsOverlay`, 선택/CRUD `dataTable`로 즉시 디버그 UI를 구성할 수 있습니다.
 - 자주 쓰는 API와 상수 열거형에는 PascalCase 별칭(예: `ui.Button`)이 있으며 인수는 플러그인 형식을 따릅니다. 별칭 목록과 업스트림 C++ 시그니처와의 차이는 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md)를 참고하세요.
@@ -165,13 +166,23 @@ imgui.runExample("widget-overview");
 
 - 각 스크립트 엔진은 한 번에 하나의 네이티브 렌더 세션만 지원합니다. 여러 패널이 필요하면 해당 세션 안에 여러 ImGui 루트 창을 만드세요. 새 오버레이 또는 Activity 세션은 이전 세션을 닫습니다.
 - `imgui.launch`에는 현재 resumed 상태인 AutoJs6 Activity가 필요합니다. 전면 호스트 Activity 없이 계속 렌더링해야 하면 `launchFloaty`를 사용하세요.
-- v1.9 권한 모드는 고정 전체 화면의 포인터 전용이며 IME/키 입력, 호스트 레이어 알파/보안, 접기, 보조 Android 버튼, 회전 시 동적 재생성을 지원하지 않습니다. 직접 입력은 `EVIOCGRAB`을 쓰지 않으며 OEM SurfaceControl/SELinux 정책으로 시작이 거부될 수 있습니다. 기능 탐지는 `su` 실행이나 Shizuku 권한 요청을 하지 않습니다.
+- 권한 모드는 고정 전체 화면의 포인터 전용이며, 텍스트 입력란은 AutoJs6 임시 입력 상자를 사용합니다 (오버레이 권한 필요, 커서 위치에 추가만 가능). 키 입력, 호스트 레이어 알파/보안, 접기, 보조 Android 버튼, 회전 시 동적 재생성을 지원하지 않습니다. 직접 입력은 `EVIOCGRAB`을 쓰지 않으며 OEM SurfaceControl/SELinux 정책으로 시작이 거부될 수 있습니다. 기능 탐지는 `su` 실행이나 Shizuku 권한 요청을 하지 않습니다.
 
 ******
 
 ### 릴리스 기록
 
 ******
+
+#### v1.16.0
+
+###### 2026/10/31
+
+* `기능` session.capture(options)는 창의 이미지를 캡처하여 images 모듈에서 쓸 수 있는 이미지를 반환합니다. 예: images.save(session.capture(), path). options.region으로 창의 일부를 dp 단위로 지정할 수 있습니다. 권한 모드의 창은 두 프레임 사이에서만 캡처할 수 있습니다. 예: setTimeout(fn, 0) 안에서 호출
+* `기능` createWindow({systemCjkFont: true})는 기기에 있는 모든 CJK 문자를 표시합니다. 내장 글꼴에 없는 龘 같은 희귀 문자도 표시됩니다. 각 문자는 처음 사용할 때 Android가 그리므로 추가 메모리가 거의 필요하지 않습니다. 내장 글꼴의 범위는 docs/LIMITS.md에서 확인할 수 있습니다
+* `기능` createWindow({pinchZoom: true})를 사용하면 두 손가락 핀치로 글자 크기를 0.5배에서 3배까지 바꿀 수 있습니다. 두 손가락을 같은 방향으로 움직이면 이전처럼 스크롤됩니다. 배율은 session.fontScale로 읽고 session.setFontScale(scale)로 설정하며, 새 fontScaleChanged 이벤트로 변경을 받습니다. widget-overview 예제에서 확인할 수 있습니다
+* `기능` 권한 모드의 텍스트 입력: inputText를 누르면 AutoJs6의 작은 입력 상자와 키보드가 열립니다 (AutoJs6의 오버레이 권한 필요). OK 버튼, 키보드의 완료 키 또는 다른 곳을 누르면 글자가 입력란의 커서 위치에 들어갑니다. 입력란에 이미 있는 글자는 상자에서 편집할 수 없습니다
+* `개선` 창이 실행 중에 화면 크기 (밀도)와 시스템 글꼴 크기의 변경을 따라갑니다. 글자와 컨트롤은 새 크기가 되고 창의 dp 크기는 그대로입니다. configurationChanged에 density, oldDensity, fontScale, oldFontScale 필드를 추가했습니다. imgui.launch의 전체 화면 창은 닫힙니다 (session.closeReason은 "configuration-changed"). Android가 해당 Activity를 다시 만들기 때문입니다
 
 #### v1.15.0
 
@@ -192,18 +203,6 @@ imgui.runExample("widget-overview");
 * `기능` 표 정렬: Sortable 플래그가 있는 표에서는 열 머리글을 누르면 정렬이 바뀝니다. tableGetSortSpecs()는 정렬 열과 방향(imgui.SortDirection)을 반환하며 specsDirty는 정렬이 바뀐 프레임에서만 true입니다. tableSetupColumn의 네 번째 인수는 열의 사용자 id입니다. dataTable은 sortable: true로 행을 정렬하고 열의 compare 함수로 순서를 직접 정할 수 있습니다. data-table-demo 예제를 참고하세요
 * `기능` 여러 값을 다루는 위젯: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 최솟값과 최댓값을 편집하는 dragFloatRange2 / dragIntRange2, 각도를 편집하는 sliderAngle(라디안으로 저장하고 도로 표시). 값은 {value: [x, y, z]}, imgui.floats(...) 또는 새 imgui.ints(...)로 넘깁니다. widget-overview 예제의 새 섹션을 참고하세요
 * `개선` createWindow({debug: true})일 때 렌더 콜백이 250밀리초를 넘기면 console.warn으로 걸린 시간을 알리고 sleep, 네트워크, 파일 같은 느린 작업을 threads.start로 옮기라고 안내합니다(10초에 최대 한 번). 방법은 docs/THREADING.md에 있습니다
-
-#### v1.13.0
-
-###### 2026/10/30
-
-* `힌트` 동작 변경: 배터리를 아끼기 위해 3초 동안 터치나 키 입력이 없으면 창은 초당 10프레임만 그리고, 화면이 꺼지거나 잠겨 있는 동안에는 그리기를 멈춥니다. 다시 터치하면 즉시 정상 프레임 속도로 돌아옵니다. 애니메이션이 있거나 입력 없이 바뀌는 데이터(타이머, 차트, 진행 막대)를 보여 주는 창은 createWindow에 idleFps: 0을 넘기거나 session.setIdleFps(0)을 호출해 정상 프레임 속도를 유지하세요
-* `기능` ui.listClipper(itemCount, options, callback)(별칭 ListClipper)는 보이는 행만 그리므로 10만 행 목록도 부드럽게 스크롤됩니다. 새 예제 large-list를 참고하세요
-* `기능` 프레임 속도 제어: createWindow 옵션 idleFps / idleDelay, session.setFps / setIdleFps / getFps, 세션 이벤트 idle / active, 필드 idle / paused
-* `기능` texture.update(source)는 텍스처의 이미지를 바꾸고 핸들은 그대로 두므로 이를 표시하는 image 호출은 고칠 필요가 없습니다. 크기가 바뀌면 texture.width / height도 따라 바뀝니다. 1초에 두 번 미리보기를 새로 고치는 새 예제 texture-refresh를 참고하세요
-* `기능` createTexture와 texture.update는 PNG 또는 JPEG 데이터를 담은 ArrayBuffer나 형식화 배열(Uint8Array 등)도 받습니다
-* `기능` statsOverlay는 각 프레임의 작업 시간(화면 갱신 대기를 뺀 그리기 시간)을 표시하고, snapshot()은 이를 workTime으로 반환합니다
-* `개선` docs/FRAME-LOOP.md에서 프레임 속도와 절전 방식을, docs/LIMITS.md에서 listClipper의 제한을 설명합니다
 
 ##### 더 많은 릴리스 기록
 

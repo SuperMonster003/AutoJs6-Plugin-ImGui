@@ -9,16 +9,19 @@ import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Process;
 import android.os.RemoteException;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.PixelCopy;
 import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.View;
@@ -26,6 +29,7 @@ import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
@@ -48,6 +52,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
@@ -90,6 +95,9 @@ public final class ImGuiPluginConnection implements ServiceConnection {
     private static final long MAX_TEXTURE_PIXELS = 32L * 1024L * 1024L;
     private static final int MAX_PRIVILEGED_SURFACE_SIZE = 16_384;
     private static final long MAX_PRIVILEGED_START_TIMEOUT_MILLIS = 15_000L;
+    private static final long CAPTURE_TIMEOUT_MILLIS = 5_000L;
+    private static final int MAX_SHOW_KEYBOARD_ATTEMPTS = 8;
+    private static final long SHOW_KEYBOARD_RETRY_DELAY_MILLIS = 75L;
     private static final String PRIVILEGE_BROKER_DESCRIPTOR =
         "io.github.supermonster003.autojs6.plugin.imgui.IImGuiPrivilegeBroker";
     private static final String PRIVILEGED_PROCESS_CLASS =
@@ -123,6 +131,8 @@ public final class ImGuiPluginConnection implements ServiceConnection {
     private volatile boolean lastAnyItemActive;
     private volatile boolean lastWantCaptureMouse;
     private volatile boolean lastWantTextInput;
+    private volatile int lastTextInputFlags;
+    private volatile boolean privilegedPointerDown;
 
     ImGuiPluginConnection(Context hostContext, Context pluginContext, Object runtime) {
         if (hostContext.getApplicationContext() == null) {
@@ -201,6 +211,28 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         String[] additionalFontPaths,
         float[] additionalFontSizes
     ) {
+        return init(
+            surface,
+            density,
+            fontPath,
+            fontSize,
+            iniPath,
+            additionalFontPaths,
+            additionalFontSizes,
+            false
+        );
+    }
+
+    public boolean init(
+        Surface surface,
+        float density,
+        String fontPath,
+        float fontSize,
+        String iniPath,
+        String[] additionalFontPaths,
+        float[] additionalFontSizes,
+        boolean systemCjkFont
+    ) {
         if (surface == null || !surface.isValid()) {
             return false;
         }
@@ -233,7 +265,8 @@ public final class ImGuiPluginConnection implements ServiceConnection {
                 fontSize,
                 iniPath,
                 resolvedFontPaths,
-                resolvedFontSizes
+                resolvedFontSizes,
+                systemCjkFont
             );
             if (initialized) {
                 ImGuiNative.setClipboard(clipboard);
@@ -264,6 +297,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
             lastAnyItemActive = false;
             lastWantCaptureMouse = false;
             lastWantTextInput = false;
+            lastTextInputFlags = 0;
         } finally {
             NATIVE_LOCK.unlock();
             activityMonitor.stopAll();
@@ -370,11 +404,13 @@ public final class ImGuiPluginConnection implements ServiceConnection {
                 lastAnyItemActive = ImGuiNative.nativeIsAnyItemActive();
                 lastWantCaptureMouse = ImGuiNative.nativeWantCaptureMouse();
                 lastWantTextInput = ImGuiNative.nativeWantTextInput();
+                lastTextInputFlags = ImGuiNative.nativeGetTextInputFlags();
             } else {
                 lastAnyItemHovered = false;
                 lastAnyItemActive = false;
                 lastWantCaptureMouse = false;
                 lastWantTextInput = false;
+                lastTextInputFlags = 0;
             }
             return rendered;
         } finally {
@@ -1358,6 +1394,103 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         ImGuiNative.nativeShowDebugWindows();
     }
 
+    /** Applies a density or system font scale change between two frames; fontScale is relative to the session's start. */
+    public void setDisplayScale(float density, float fontScale) {
+        NATIVE_LOCK.lock();
+        try {
+            requireOwner();
+            ImGuiNative.nativeSetDisplayScale(density, fontScale);
+        } finally {
+            NATIVE_LOCK.unlock();
+        }
+    }
+
+    public void setFontScale(float scale) {
+        NATIVE_LOCK.lock();
+        try {
+            requireOwner();
+            ImGuiNative.nativeSetFontScale(scale);
+        } finally {
+            NATIVE_LOCK.unlock();
+        }
+    }
+
+    /** While hidden the frame loop runs and the frames are presented empty, so windows below the surface can be seen. */
+    public void setFrameHidden(boolean hidden) {
+        NATIVE_LOCK.lock();
+        try {
+            requireOwner();
+            ImGuiNative.nativeSetFrameHidden(hidden);
+        } finally {
+            NATIVE_LOCK.unlock();
+        }
+    }
+
+    /** The last frame presented on the SurfaceView of an overlay or Activity window (R5.1); works during a frame too. */
+    public Bitmap captureSurface(SurfaceView surfaceView, int x, int y, int width, int height) {
+        if (surfaceView == null) {
+            throw new IllegalArgumentException("Capture surface must not be null");
+        }
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        // The script thread blocks below and may be the main thread, so the result arrives on a thread of its own.
+        HandlerThread resultThread = new HandlerThread("ImGuiCapture");
+        resultThread.start();
+        boolean copyFinished = false;
+        boolean captured = false;
+        try {
+            CountDownLatch done = new CountDownLatch(1);
+            AtomicInteger status = new AtomicInteger(PixelCopy.ERROR_UNKNOWN);
+            PixelCopy.request(
+                surfaceView,
+                new Rect(x, y, x + width, y + height),
+                bitmap,
+                result -> {
+                    status.set(result);
+                    done.countDown();
+                },
+                new Handler(resultThread.getLooper())
+            );
+            copyFinished = done.await(CAPTURE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+            if (!copyFinished) {
+                throw new IllegalStateException("Timed out waiting for the window pixels");
+            }
+            if (status.get() != PixelCopy.SUCCESS) {
+                throw new IllegalStateException("PixelCopy failed with status " + status.get());
+            }
+            captured = true;
+            return bitmap;
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for the window pixels", error);
+        } finally {
+            resultThread.quitSafely();
+            // A copy still running writes to the bitmap, which is then left to the collector.
+            if (copyFinished && !captured) {
+                bitmap.recycle();
+            }
+        }
+    }
+
+    /** The last frame of a privileged window (R5.1), read with glReadPixels; not available during a frame. */
+    public Bitmap captureFrame(int x, int y, int width, int height) {
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        boolean captured = false;
+        NATIVE_LOCK.lock();
+        try {
+            requireOwner();
+            captured = ImGuiNative.nativeCaptureFrame(bitmap, x, y);
+            if (!captured) {
+                throw new IllegalStateException("The window has not rendered a frame yet");
+            }
+            return bitmap;
+        } finally {
+            NATIVE_LOCK.unlock();
+            if (!captured) {
+                bitmap.recycle();
+            }
+        }
+    }
+
     /** Closes what a failed render callback left open in the current frame, so the frame can still be rendered. */
     public void recoverFrame() {
         if (frameThread != Thread.currentThread()) {
@@ -2131,6 +2264,11 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         return isOwner() && lastWantTextInput;
     }
 
+    /** The field being edited: bit 0 multi-line, bit 1 password, bit 2 Enter ends the edit and Ctrl+Enter adds a line. */
+    public int getTextInputFlags() {
+        return isOwner() ? lastTextInputFlags : 0;
+    }
+
     /**
      * Creates a SurfaceFlinger layer in a host-authorized root/Shizuku process, then transfers only
      * the resulting {@link Surface} back to this ordinary plugin bridge. Dear ImGui and every widget
@@ -2183,6 +2321,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
                 IImGuiInputCallback inputCallback = new IImGuiInputCallback.Stub() {
                     @Override
                     public void onTouch(int action, float x, float y, int trackingId) {
+                        privilegedPointerDown = action == 0 || action == 2;
                         touchEvent(action, x, y, 0);
                     }
 
@@ -2277,6 +2416,10 @@ public final class ImGuiPluginConnection implements ServiceConnection {
                 return false;
             }
         }
+    }
+
+    public boolean isPrivilegedPointerDown() {
+        return privilegedPointerDown;
     }
 
     public void closePrivilegedSurface(Surface surface) {
@@ -2506,6 +2649,13 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         });
     }
 
+    public boolean isActivityChangingConfigurations(View anchor) {
+        return callOnMainThread(() -> {
+            ActivitySurfaceHost host = activitySurfaceHosts.get(anchor);
+            return host != null && host.activity.isChangingConfigurations();
+        });
+    }
+
     public int[] getViewSize(View anchor) {
         if (anchor == null) {
             return new int[] {0, 0};
@@ -2587,6 +2737,64 @@ public final class ImGuiPluginConnection implements ServiceConnection {
             return;
         }
         runOnMainThread(((ImGuiImeView) inputView)::hideKeyboard);
+    }
+
+    /** Opens the keyboard for a text field of a window that may still be gaining the focus (R5.4). */
+    public void showSoftKeyboard(View view) {
+        if (view != null) {
+            runOnMainThread(() -> tryShowSoftKeyboard(view, 1));
+        }
+    }
+
+    public void hideSoftKeyboard(View view) {
+        if (view == null) {
+            return;
+        }
+        runOnMainThread(() -> {
+            InputMethodManager manager = view.getContext().getSystemService(InputMethodManager.class);
+            if (manager != null) {
+                manager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+            }
+        });
+    }
+
+    private static void tryShowSoftKeyboard(View view, int attempt) {
+        InputMethodManager manager = view.getContext().getSystemService(InputMethodManager.class);
+        if (manager == null || !view.isAttachedToWindow()) {
+            return;
+        }
+        view.requestFocus();
+        if ((!view.hasWindowFocus() || !manager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)) &&
+            attempt < MAX_SHOW_KEYBOARD_ATTEMPTS
+        ) {
+            view.postDelayed(() -> tryShowSoftKeyboard(view, attempt + 1), SHOW_KEYBOARD_RETRY_DELAY_MILLIS);
+        }
+    }
+
+    /**
+     * Reports a touch outside the overlay window of {@code anchor} on the main thread: a focusable overlay keeps the
+     * focus while the user touches what is below it, so the window focus alone does not tell (R5.4).
+     */
+    public boolean setWindowOutsideTouchListener(View anchor, Runnable listener) {
+        if (anchor == null || listener == null) {
+            return false;
+        }
+        return callOnMainThread(() -> {
+            View root = anchor.getRootView();
+            WindowManager.LayoutParams params = getWindowLayoutParams(root);
+            if (params == null) {
+                return false;
+            }
+            root.setOnTouchListener((view, event) -> {
+                if (event.getActionMasked() != MotionEvent.ACTION_OUTSIDE) {
+                    return false;
+                }
+                listener.run();
+                return true;
+            });
+            params.flags |= WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
+            return updateWindowLayout(root, params);
+        });
     }
 
     @Override

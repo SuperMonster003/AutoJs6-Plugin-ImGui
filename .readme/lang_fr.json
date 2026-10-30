@@ -17,6 +17,7 @@
     "Fenêtres, onglets, nœuds d'arbre, tableaux, popups, menus, infobulles et plus de 60 contrôles en mode immédiat, dont un interrupteur `toggle` de style mobile.",
     "Système visuel et typographique avec 11 `Themes`, styles groupés, apparences arrondies/bordées/ombrées, pile multi-police, secours CJK et sous-ensemble Material Icons.",
     "Les textures gérées acceptent chemins de fichiers, octets encodés, `Bitmap` Android et objets `Image` AutoJs6 ; `image` / `imageButton` et trois couches DrawList couvrent l’affichage d’images et le dessin personnalisé.",
+    "`session.capture()` renvoie la fenêtre sous forme d'`Image` AutoJs6; avec `systemCjkFont: true` le système dessine les caractères CJK absents de la police intégrée, avec `pinchZoom: true` deux doigts changent l'échelle de la police, et les fenêtres suivent les changements de densité d'affichage et de taille de police du système.",
     "Les références légères `imgui.ref(value)` / `{value: x}` fonctionnent avec tous les contrôles avec état, tandis que les assistants historiques à tableaux Java restent entièrement compatibles.",
     "Les composants de session `logWindow`, `toast` empilés, dialogues Promise, `statsOverlay` à seuils colorés et `dataTable` CRUD sélectionnable fournissent une interface de débogage prête à l'emploi.",
     "Les API courantes et les énumérations de constantes disposent d'alias PascalCase (p. ex. `ui.Button`) qui conservent le style d'arguments du plugin; la liste des alias et les différences avec les signatures C++ amont figurent dans [ALIASES.md]({{ repo_url }}/blob/master/docs/ALIASES.md).",
@@ -60,7 +61,7 @@
   "limitations": [
     "Chaque moteur de script prend en charge une seule session de rendu native à la fois ; créez plusieurs fenêtres racines ImGui dans cette session pour plusieurs panneaux. Une nouvelle session superposée ou Activity ferme la précédente.",
     "`imgui.launch` nécessite une Activity AutoJs6 actuellement à l’état resumed ; utilisez `launchFloaty` lorsque le script doit continuer sans Activity hôte au premier plan.",
-    "En v1.9, le mode privilégié est fixe en plein écran et limité au pointeur: pas d'IME/clavier, d'alpha/sécurité du calque hôte, de réduction, de boutons Android annexes ni de reconstruction dynamique après rotation. L'entrée directe n'utilise pas `EVIOCGRAB` et les politiques OEM SurfaceControl/SELinux peuvent encore refuser le démarrage; la sonde n'exécute pas `su` et ne demande pas Shizuku."
+    "Le mode privilégié est fixe en plein écran et limité au pointeur: les champs de texte utilisent une zone de saisie temporaire d'AutoJs6, qui demande l'autorisation de superposition et ajoute le texte au curseur seulement; pas de clavier, d'alpha/sécurité du calque hôte, de réduction, de boutons Android annexes ni de reconstruction dynamique après rotation. L'entrée directe n'utilise pas `EVIOCGRAB` et les politiques OEM SurfaceControl/SELinux peuvent encore refuser le démarrage; la sonde n'exécute pas `su` et ne demande pas Shizuku."
   ],
   "h3_release_history": "Historique des versions",
   "h5_for_more_release_history": "Pour consulter davantage de versions",

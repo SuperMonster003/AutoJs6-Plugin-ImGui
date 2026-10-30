@@ -42,6 +42,8 @@ var overlay = imgui.createWindow(function (ui, window) {
 
 `setMoreTouch(true)` はメインウィンドウと独立ボタンで Android の split-touch を有効にします。`launchPrivileged(callback, {backend: "auto"})` は本番 SurfaceFlinger モードを明示的に選択し、AutoJs6 の既存 Shizuku/root 認可を再利用するためオーバーレイ権限は不要です。`/dev/input` は観測のみでタッチスクリーンを独占しません。`getBackendCapabilities()` は昇格せずホスト状態を報告します。
 
+`session.capture({region})` はウィンドウを `Image` として返し, `images.save` に渡せます. region の単位は dp で, 特権モードのウィンドウは 2 フレームの間でのみ取得できます. `createWindow({systemCjkFont: true})` は同梱フォントにない CJK 文字をシステムに描画させ, `pinchZoom: true` は 2 本指でフォント倍率を変更します (`session.fontScale`, `session.setFontScale`). 特権モードのテキスト欄は AutoJs6 の一時入力ボックスを開き, オーバーレイ権限が必要です.
+
 テーブル/コンテキストポップアップ/メニュー/ツールチップ/スタイルスタックと 60 以上のコントロールを利用できます. `withTable`, `withPopupModal`, `withContextItem`, `withMenuBar` は begin/end 呼び出しを安全にペアリングします. API の全体像はプロジェクトの README とロードマップを参照してください.
 
 ステートフルコントロールは `imgui.ref(value)` で作る軽量参照や通常の `{ value: ... }` オブジェクトも受け付け、従来の `bool`、`float`、`int`、`string`、カラー配列ヘルパーとの互換性も維持します。セッション管理の `logWindow`、`toast`、Promise ダイアログ、`statsOverlay`、`dataTable` はユーザーコールバックの後に描画され、セッションとともに自動終了します。

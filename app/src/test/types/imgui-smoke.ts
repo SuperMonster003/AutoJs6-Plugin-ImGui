@@ -70,6 +70,19 @@ idleSession.setFps(30).setIdleFps(0, 1000);
 const idleState: string = `${idleSession.idle}:${idleSession.paused}:${idleSession.idleFps}:${idleSession.idleDelay}`;
 plugin.text(`${idleState}:${idleSession.getFps()}:${workTime}`);
 idleSession.close("type-smoke-complete");
+const androidSession: ImGui.Session = plugin.createWindow(ui => {
+    ui.text("龘");
+}, {
+    systemCjkFont: true,
+    pinchZoom: true,
+    onFontScaleChanged: event => plugin.text(`${event.scale}`),
+});
+androidSession.setFontScale(1.5);
+const fontScale: number = androidSession.fontScale;
+const captured: ImGui.CapturedImage = androidSession.capture({region: {x: 10, y: 10, width: 100, height: 40}});
+plugin.text(`${fontScale}:${captured.getWidth()}x${captured.getHeight()}`);
+captured.recycle();
+androidSession.close("type-smoke-complete");
 plugin.SetMoreTouch(false);
 session.close("type-smoke-complete");
 

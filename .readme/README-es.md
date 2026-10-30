@@ -61,6 +61,7 @@ Una vez habilitado el plugin en el Centro de plugins, los scripts usan directame
 - Ventanas, pestañas, nodos de árbol, tablas, ventanas emergentes, menús, tooltips y más de 60 controles de modo inmediato, incluido un interruptor `toggle` de estilo móvil.
 - Sistema visual y tipográfico con 11 `Themes`, estilos por lotes, apariencias redondeadas/con borde/sombra, pila multifuente, respaldo CJK y subconjunto Material Icons.
 - Las texturas administradas aceptan rutas de archivo, bytes codificados, `Bitmap` de Android y objetos `Image` de AutoJs6; `image` / `imageButton` y tres capas DrawList cubren la visualización de imágenes y el dibujo personalizado.
+- `session.capture()` devuelve la ventana como `Image` de AutoJs6; con `systemCjkFont: true` el sistema dibuja los caracteres CJK que faltan en la fuente integrada, con `pinchZoom: true` dos dedos cambian la escala de la fuente, y las ventanas siguen los cambios de densidad de pantalla y de tamaño de fuente del sistema.
 - Las referencias ligeras `imgui.ref(value)` / `{value: x}` funcionan con todos los controles con estado y los helpers de arrays Java existentes siguen siendo totalmente compatibles.
 - Los componentes de sesión `logWindow`, `toast` apilados, diálogos Promise, `statsOverlay` con umbrales y `dataTable` CRUD seleccionable ofrecen interfaces de depuración listas para usar.
 - Las API comunes y las enumeraciones de constantes tienen alias en PascalCase (p. ej., `ui.Button`) que conservan el estilo de argumentos del plugin; la lista de alias y las diferencias con las firmas C++ originales están en [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
@@ -165,13 +166,23 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 
 - Cada motor de scripts admite una sola sesión de renderizado nativa; cree varias ventanas raíz ImGui en esa sesión si necesita varios paneles. Una nueva sesión superpuesta o Activity cierra la anterior.
 - `imgui.launch` requiere una Activity AutoJs6 actualmente en estado resumed; use `launchFloaty` si el script debe seguir renderizando sin una Activity anfitriona en primer plano.
-- En v1.9 el modo privilegiado es fijo a pantalla completa y solo admite puntero: no incluye IME/teclas, alfa/seguridad de capa, reducción, botones Android auxiliares ni reconstrucción dinámica al rotar. La entrada directa no usa `EVIOCGRAB` y las políticas OEM SurfaceControl/SELinux aún pueden impedir el inicio; el sondeo no ejecuta `su` ni solicita Shizuku.
+- El modo privilegiado es fijo a pantalla completa y solo admite puntero: los campos de texto usan un cuadro de entrada temporal de AutoJs6 que requiere el permiso de superposición y solo añade texto en el cursor, y no incluye teclas, alfa/seguridad de capa, reducción, botones Android auxiliares ni reconstrucción dinámica al rotar. La entrada directa no usa `EVIOCGRAB` y las políticas OEM SurfaceControl/SELinux aún pueden impedir el inicio; el sondeo no ejecuta `su` ni solicita Shizuku.
 
 ******
 
 ### Historial de versiones
 
 ******
+
+#### v1.16.0
+
+###### 2026/10/31
+
+* `Función` session.capture(options) toma una imagen de la ventana y devuelve una imagen para el módulo images, por ejemplo images.save(session.capture(), path). options.region elige una parte de la ventana, en dp. Una ventana en modo privilegiado solo se puede capturar entre dos fotogramas, por ejemplo desde setTimeout(fn, 0)
+* `Función` createWindow({systemCjkFont: true}) muestra todos los caracteres CJK del dispositivo, incluidos los raros como 龘 que faltan en la fuente integrada. Android dibuja cada carácter la primera vez que se usa, así que casi no necesita memoria adicional; docs/LIMITS.md indica lo que cubre la fuente integrada
+* `Función` createWindow({pinchZoom: true}) permite cambiar el tamaño del texto de 0.5 a 3 veces con dos dedos; mover los dos dedos juntos sigue desplazando. Lea la escala en session.fontScale, cámbiela con session.setFontScale(scale) y escuche el nuevo evento fontScaleChanged. El ejemplo widget-overview lo muestra todo
+* `Función` Entrada de texto en modo privilegiado: tocar un inputText ahora abre un pequeño cuadro de entrada de AutoJs6 con el teclado (requiere el permiso de superposición de AutoJs6). El botón OK, la tecla de finalizar o un toque en otro lugar introducen el texto en el cursor del campo; el texto que ya está en el campo no se puede editar en el cuadro
+* `Mejora` Las ventanas ahora siguen los cambios de tamaño de pantalla (densidad) y de tamaño de fuente del sistema mientras se ejecutan: el texto y los controles toman el nuevo tamaño, y la ventana conserva su tamaño en dp. configurationChanged tiene los nuevos campos density, oldDensity, fontScale y oldFontScale. Una ventana a pantalla completa de imgui.launch se cierra en su lugar (session.closeReason es "configuration-changed"), porque Android recrea su Activity
 
 #### v1.15.0
 
@@ -192,18 +203,6 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 * `Función` Ordenación de tablas: en una tabla con la marca Sortable, tocar el encabezado de una columna cambia el orden; tableGetSortSpecs() devuelve las columnas y direcciones de orden (imgui.SortDirection), y specsDirty es true solo en el fotograma en que cambian. El cuarto argumento de tableSetupColumn es el id de usuario de la columna. dataTable ordena sus filas con sortable: true, y la función compare de una columna define un orden propio; vea el ejemplo data-table-demo
 * `Función` Controles de 2 a 4 valores: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, además de dragFloatRange2 / dragIntRange2 para un rango mínimo-máximo y sliderAngle para un ángulo (guardado en radianes, mostrado en grados). Los valores se pasan como {value: [x, y, z]}, imgui.floats(...) o el nuevo imgui.ints(...); vea la nueva sección del ejemplo widget-overview
 * `Mejora` Con createWindow({debug: true}), una devolución de llamada de dibujo que tarda más de 250 ms muestra un console.warn con el tiempo y sugiere pasar el trabajo lento (sleep, red, archivos) a threads.start, como mucho una vez cada 10 segundos; docs/THREADING.md explica cómo
-
-#### v1.13.0
-
-###### 2026/10/30
-
-* `Aviso` Cambio de comportamiento: para ahorrar batería, una ventana dibuja ahora solo 10 fotogramas por segundo tras 3 segundos sin toques ni teclas, y deja de dibujar con la pantalla apagada o bloqueada; el siguiente toque recupera de inmediato la frecuencia completa. Si la ventana muestra una animación o datos que cambian sin entrada (un temporizador, un gráfico, una barra de progreso), pase idleFps: 0 a createWindow o llame a session.setIdleFps(0) para mantener la frecuencia completa
-* `Función` ui.listClipper(itemCount, options, callback) (alias ListClipper) dibuja solo las filas visibles, de modo que una lista de 100000 filas se desplaza con fluidez; vea el nuevo ejemplo large-list
-* `Función` Control de la frecuencia de fotogramas: opciones idleFps / idleDelay de createWindow, session.setFps / setIdleFps / getFps, los eventos de sesión idle / active y los campos idle / paused
-* `Función` texture.update(source) reemplaza la imagen de una textura y conserva su identificador, así que las llamadas a image que la muestran no cambian; texture.width / height siguen el nuevo tamaño. Vea el nuevo ejemplo texture-refresh, que actualiza una vista previa dos veces por segundo
-* `Función` createTexture y texture.update también aceptan un ArrayBuffer o un arreglo tipado (como Uint8Array) con datos PNG o JPEG
-* `Función` statsOverlay muestra el tiempo de trabajo de cada fotograma (el tiempo de dibujo, sin esperar a la pantalla) y snapshot() lo devuelve como workTime
-* `Mejora` docs/FRAME-LOOP.md explica las frecuencias de fotogramas y el ahorro de energía, y docs/LIMITS.md los límites de listClipper
 
 ##### Para consultar más versiones
 

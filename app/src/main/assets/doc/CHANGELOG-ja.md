@@ -4,6 +4,16 @@
 
 ******
 
+# v1.16.0
+
+###### 2026/10/31
+
+* `機能` session.capture(options) はウィンドウの画像を取得し, images モジュールで使える画像を返します. 例: images.save(session.capture(), path). options.region でウィンドウの一部を dp で指定できます. 特権モードのウィンドウは 2 フレームの間でのみ取得できます. 例: setTimeout(fn, 0) の中で呼び出します
+* `機能` createWindow({systemCjkFont: true}) はデバイスにあるすべての CJK 文字を表示します. 同梱フォントにない 龘 のような珍しい文字も表示できます. 各文字は最初に使うときに Android が描画するので, 追加メモリはほとんど必要ありません. 同梱フォントの範囲は docs/LIMITS.md を参照してください
+* `機能` createWindow({pinchZoom: true}) で, 2 本指のピンチにより文字サイズを 0.5 倍から 3 倍まで変更できます. 2 本指を同じ方向に動かすとこれまで通りスクロールします. 倍率は session.fontScale で読み取り, session.setFontScale(scale) で設定し, 新しい fontScaleChanged イベントで変更を受け取れます. widget-overview の例で確認できます
+* `機能` 特権モードのテキスト入力: inputText をタップすると AutoJs6 の小さな入力ボックスとキーボードが開きます (AutoJs6 のオーバーレイ権限が必要です). OK ボタン, キーボードの完了キー, またはほかの場所をタップすると, 文字が入力欄のカーソル位置に入ります. 入力欄の既存の文字はボックスでは編集できません
+* `改善` ウィンドウは実行中の表示サイズ (密度) とシステムのフォントサイズの変更に追従するようになりました. 文字とコントロールは新しいサイズになり, ウィンドウの dp サイズは変わりません. configurationChanged に density, oldDensity, fontScale, oldFontScale を追加しました. imgui.launch の全画面ウィンドウは閉じます (session.closeReason は "configuration-changed"). Android がそのウィンドウのある Activity を作り直すためです
+
 # v1.15.0
 
 ###### 2026/10/30

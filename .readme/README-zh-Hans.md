@@ -61,6 +61,7 @@ ImGui 插件将 [Dear ImGui](https://github.com/ocornut/imgui) 即时模式图�
 - 窗口/标签页/树形节点/表格/弹窗/菜单/工具提示与 60 余个即时控件, 含移动端风格 `toggle` 开关.
 - 视觉与字体系统: 11 套 `Themes` 主题、批量样式、圆角/边框/阴影外观、多字体栈、CJK 兜底与 Material Icons 子集.
 - 托管纹理支持文件路径、编码字节、Android `Bitmap` 与 AutoJs6 `Image`; `image` / `imageButton` 和三层 DrawList 可完成图片显示与浮窗自绘.
+- `session.capture()` 把窗口内容返回为 AutoJs6 `Image`; `systemCjkFont: true` 让系统绘制内置字体之外的 CJK 字符, `pinchZoom: true` 让双指捏合调整字体缩放, 窗口还会跟随显示密度与系统字体大小的变化.
 - 轻量 `imgui.ref(value)` / `{value: x}` 引用可用于全部有状态控件, 现有 Java 数组引用辅助方法保持完全兼容.
 - 会话托管的 `logWindow`、堆叠 `toast`、Promise 对话框、阈值变色 `statsOverlay` 与可选择 CRUD `dataTable` 可直接组成调试界面.
 - 常用 API 与常量枚举提供 PascalCase 别名 (如 `ui.Button`), 参数沿用插件风格; 别名清单及与上游 C++ 签名的差异见 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
@@ -165,13 +166,23 @@ imgui.runExample("widget-overview");
 
 - 同一脚本引擎同一时刻仅支持一个原生渲染会话; 多面板场景应在该会话内创建多个 ImGui 根窗口. 新建悬浮窗或 Activity 会话会关闭旧会话.
 - `imgui.launch` 需要当前存在处于 resumed 状态的 AutoJs6 Activity; 脚本需要脱离前台 Activity 持续渲染时请使用 `launchFloaty`.
-- v1.9 特权模式固定全屏且仅支持指针: 暂无 IME/按键、宿主层透明度/防截屏、收起、独立 Android 按钮或动态旋转重建. Direct input 不使用 `EVIOCGRAB`, OEM SurfaceControl/SELinux 策略仍可能拒绝启动; 能力探测不会执行 `su` 或请求 Shizuku 授权.
+- 特权模式固定全屏且仅支持指针: 文本框使用 AutoJs6 的临时输入框 (需要悬浮窗权限, 只能在光标处追加文字), 暂无按键、宿主层透明度/防截屏、收起、独立 Android 按钮或动态旋转重建. Direct input 不使用 `EVIOCGRAB`, OEM SurfaceControl/SELinux 策略仍可能拒绝启动; 能力探测不会执行 `su` 或请求 Shizuku 授权.
 
 ******
 
 ### 发行历史
 
 ******
+
+#### v1.16.0
+
+###### 2026/10/31
+
+* `新增` session.capture(options) 截取窗口画面, 返回 images 模块可用的图像, 例如 images.save(session.capture(), path). options.region 指定窗口的一部分, 单位 dp. 特权模式的窗口只能在两帧之间截取, 例如放进 setTimeout(fn, 0)
+* `新增` createWindow({systemCjkFont: true}) 可以显示设备上所有的中日韩字符, 包括内置字体缺少的生僻字 (例如 龘). 每个字符在首次使用时由 Android 绘制, 几乎不占额外内存; docs/LIMITS.md 列出了内置字体的覆盖范围
+* `新增` createWindow({pinchZoom: true}) 可以用双指捏合把文字缩放到 0.5 到 3 倍, 双指同向移动仍然是滚动. 用 session.fontScale 读取缩放值, session.setFontScale(scale) 设置, 新事件 fontScaleChanged 通知变化. widget-overview 示例演示了这些功能
+* `新增` 特权模式支持文本输入: 点击 inputText 会打开 AutoJs6 的小输入框和键盘 (需要 AutoJs6 的悬浮窗权限). 点 OK, 键盘的完成键或其他位置后, 文字写入控件的光标处; 控件里已有的文字不能在小输入框里修改
+* `优化` 窗口运行时会跟随显示大小 (密度) 和系统字体大小的变化: 文字和控件换成新尺寸, 窗口的 dp 尺寸不变. configurationChanged 事件新增 density, oldDensity, fontScale, oldFontScale 字段. imgui.launch 打开的全屏窗口则会关闭 (session.closeReason 为 "configuration-changed"), 因为 Android 会重建它所在的 Activity
 
 #### v1.15.0
 
@@ -192,18 +203,6 @@ imgui.runExample("widget-overview");
 * `新增` 表格排序: 表格带 Sortable 标志时点击列标题即可切换排序; tableGetSortSpecs() 返回排序列与方向 (imgui.SortDirection), specsDirty 只在排序变化的那一帧为 true. tableSetupColumn 的第四个参数是列的用户 id. dataTable 设 sortable: true 即可按列排序, 列的 compare 函数可自定义顺序; 见示例 data-table-demo
 * `新增` 多值控件: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 以及编辑最小值与最大值的 dragFloatRange2 / dragIntRange2 和编辑角度的 sliderAngle (以弧度保存, 以度显示). 数值用 {value: [x, y, z]}, imgui.floats(...) 或新增的 imgui.ints(...) 传入; 见示例 widget-overview 的新分区
 * `优化` createWindow({debug: true}) 时, 渲染回调耗时超过 250 毫秒会以 console.warn 提示耗时, 并建议把 sleep, 网络, 文件等慢操作移到 threads.start, 每 10 秒最多提示一次; docs/THREADING.md 说明做法
-
-#### v1.13.0
-
-###### 2026/10/30
-
-* `提示` 行为变化: 为了省电, 窗口在 3 秒内没有触摸或按键输入后每秒只绘制 10 帧, 屏幕熄灭或锁屏时停止绘制; 再次触摸后立即恢复正常帧率. 如果窗口有动画, 或显示不靠输入就会变化的数据 (定时器, 图表, 进度条), 请给 createWindow 传 idleFps: 0 或调用 session.setIdleFps(0) 保持正常帧率
-* `新增` ui.listClipper(itemCount, options, callback) (别名 ListClipper) 只绘制可见的行, 10 万行的列表也能流畅滚动; 见新示例 large-list
-* `新增` 帧率控制: createWindow 选项 idleFps / idleDelay, session.setFps / setIdleFps / getFps, 会话事件 idle / active 以及字段 idle / paused
-* `新增` texture.update(source) 替换纹理的图像并保持句柄不变, 显示它的 image 调用无需修改; 尺寸变化时 texture.width / height 随之更新. 见新示例 texture-refresh, 每秒刷新两次预览
-* `新增` createTexture 与 texture.update 也接受装有 PNG 或 JPEG 数据的 ArrayBuffer 或类型化数组 (如 Uint8Array)
-* `新增` statsOverlay 显示每帧的工作耗时 (绘制所用时间, 不含等待屏幕刷新), snapshot() 以 workTime 返回该值
-* `优化` docs/FRAME-LOOP.md 说明帧率与省电机制, docs/LIMITS.md 补充 listClipper 的限制
 
 ##### 更多发行历史可参阅
 

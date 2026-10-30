@@ -42,6 +42,8 @@ Overlay sessions use `TouchMode.Auto` by default, keeping ImGui windows interact
 
 `setMoreTouch(true)` enables Android split touch for the main window and independent buttons. `launchPrivileged(callback, {backend: "auto"})` explicitly selects the production SurfaceFlinger mode and reuses AutoJs6's existing Shizuku/root authorization without overlay permission; direct `/dev/input` is observational and never grabs the touchscreen. `getBackendCapabilities()` reports the host state without elevating privileges.
 
+`session.capture({region})` returns the window as an `Image` for `images.save`; the region is in dp, and a privileged window can only be captured between two frames. `createWindow({systemCjkFont: true})` lets the system draw CJK characters outside the bundled font, and `pinchZoom: true` lets two fingers change the font scale (`session.fontScale`, `session.setFontScale`). In privileged mode a text field opens a temporary AutoJs6 input box, which needs the overlay permission.
+
 Tables, context popups, menus, tooltips, style stacks, and 60+ widgets are available; helpers such as `withTable`, `withPopupModal`, `withContextItem`, and `withMenuBar` pair begin/end calls safely. See the project README and Roadmap for the full API overview.
 
 Stateful controls also accept lightweight references from `imgui.ref(value)` or plain `{ value: ... }` objects; the legacy `bool`, `float`, `int`, `string`, and color-array helpers remain compatible. Session-managed `logWindow`, `toast`, Promise dialogs, `statsOverlay`, and `dataTable` components render after the user callback and close automatically with their session.

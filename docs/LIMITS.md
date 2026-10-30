@@ -47,6 +47,79 @@ position and a change of button in separate frames, so one call per frame is not
 that position first to count as a press on the item below it. The events reach only Dear ImGui: nothing happens on the
 apps below the window, and a session in `launchPrivileged` ignores them.
 
+## Window capture
+
+`session.capture(options)` returns the pixels of the window as an AutoJs6 image, the class `images.read` returns, so
+`images.save` and the rest of the `images` module take it. Its size is the window in px. `options.region` picks a part in
+dp, like the window parameters, and is cut at the window; `width` and `height` default to the rest of the window.
+`recycle()` frees the image at once, and the end of the script frees what is left. 20 captures in a row, each recycled,
+left the PSS and the native heap unchanged on the test devices.
+
+- Overlay and Activity windows are copied from the last presented frame with `PixelCopy`, waiting up to 5 s. This also
+  works inside a render callback, where it returns the previous frame.
+- A privileged window has no view to copy from: its last frame is drawn a second time and read with `glReadPixels`. This
+  needs the draw data of a finished frame, so `capture` throws inside a render callback; call it between two frames, for
+  example from `setTimeout(fn, 0)`.
+- A window that is closed, collapsed or has not shown a frame yet throws.
+
+## Display changes
+
+The frame loop looks at the density and the system font size four times a second, and applies a change between two
+frames.
+
+- A new density scales the fonts and all style sizes by the ratio. Windows and floating buttons keep their size and
+  position in dp, also with `responsive: false`, which only concerns the display size. Style sizes are whole pixels, so
+  a value can end up a pixel or two smaller after a change and its way back (frame height 56 -> 83 -> 54 px).
+- A new system font size scales the fonts only, because controls sized in dp do not follow it on Android either. It
+  counts relative to the moment of `createWindow`: `fontSize` is dp, so the system font size at that moment has no
+  effect.
+- `configurationChanged` reports `density`, `oldDensity`, `fontScale` and `oldFontScale` besides the display size.
+- Rotation keeps the dp position and size of a window, as long as the window fits the display.
+- A window of `imgui.launch` lives in an AutoJs6 Activity, and Android recreates that Activity on a change of density or
+  font size. The session then closes with `closeReason` `"configuration-changed"`, like a privileged session on a change
+  of the display size; create the window again in the `closed` listener if needed.
+
+## CJK coverage
+
+The bundled `fonts/AutoJs6CjkFallback-Regular.otf` has 8,284 code points: everyday simplified Chinese, kana and CJK
+punctuation. Traditional-only and rare characters (for example 龘, 镕, 喆, 堃) and Korean syllables are missing and show
+as `?`.
+
+| Block | Code points in the font |
+| --- | ---: |
+| CJK Unified Ideographs | 6,763 of 20,992: exactly GB 2312 |
+| CJK Extension A, CJK Compatibility Ideographs, Hangul Syllables, beyond the BMP | 0 |
+| CJK Symbols and Punctuation | 64 of 64 |
+| Hiragana | 93 of 96 |
+| Katakana | 96 of 96 |
+| Bopomofo | 43 of 48 |
+| Hangul Compatibility Jamo | 93 of 96 |
+| Halfwidth and Fullwidth Forms | 224 of 240 |
+| Basic Latin and Latin-1 | 191 of 224 |
+| General Punctuation | 34 of 112 |
+
+Without `fontPath` the runtime first tries the system CJK font files, but only static fonts work. Android 13 and older
+ship `NotoSansCJK-Regular.ttc` as a static CFF font (44,776 code points). On Android 15 and 16 it is a variable CFF2 font
+that the font loader (stb_truetype) cannot read, so the bundled subset is the default font there.
+
+`createWindow({systemCjkFont: true})` adds a last source to every font: for characters in the CJK and Hangul blocks of
+the BMP that the other sources lack, the Android text stack draws one glyph at a time, on first use, into the font atlas.
+This reads any font the system has, including a font a vendor put in place of Noto, and picks the regional forms of the
+device language. No font file stays in memory: with the window open the native heap differed by 0.8 MB on a Xiaomi
+23046RP50C (Android 15) and by less than the noise of the measurement on a Sony G8441 (Android 9). A device without CJK
+system fonts keeps the bundled subset. Characters beyond the BMP stay out of reach, because `ImWchar` has 16 bits here.
+
+## Font scale and pinch
+
+`session.setFontScale(scale)` sets the scale of all text, 0.5 to 3, default 1, from the next frame on (Dear ImGui's
+`style.FontScaleMain`). `session.fontScale` reads the scale in use and the `fontScaleChanged` event reports `scale`,
+`oldScale` and `source` (`"pinch"` or `"api"`). Only text and what is derived from it change size; padding and spacing
+stay.
+
+With `createWindow({pinchZoom: true})` two fingers on a window still scroll; once their distance has changed by 24 dp, the
+gesture turns into a pinch until they lift, and the scale follows the ratio of the distances. Privileged windows have no
+pinch, because their direct input follows one finger.
+
 ## Large selections
 
 For a data source larger than `imgui.Limits.SelectionMaxItems`, open the popup with `beginCombo` (or use

@@ -1052,7 +1052,8 @@ public final class ImGuiPrivilegedProcess {
                     18.0F,
                     null,
                     new String[0],
-                    new float[0]
+                    new float[0],
+                    false
                 );
                 if (!initialized) {
                     throw new IllegalStateException("Dear ImGui renderer initialization failed");

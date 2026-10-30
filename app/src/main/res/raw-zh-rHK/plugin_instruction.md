@@ -42,6 +42,8 @@ var overlay = imgui.createWindow(function (ui, window) {
 
 `setMoreTouch(true)` 可為主視窗和獨立按鈕啟用 Android split-touch. `launchPrivileged(callback, {backend: "auto"})` 明確選擇生產級 SurfaceFlinger 模式, 重用 AutoJs6 現有 Shizuku/root 授權且毋須懸浮視窗權限; `/dev/input` 只作觀察且不會獨佔觸控螢幕. `getBackendCapabilities()` 可在不提權的情況下報告宿主狀態.
 
+`session.capture({region})` 把視窗傳回為 `Image`, 可交給 `images.save`; region 的單位是 dp, 特權模式的視窗只能在兩幀之間擷取. `createWindow({systemCjkFont: true})` 讓系統繪製內置字型之外的 CJK 字元, `pinchZoom: true` 讓雙指捏合調整字型縮放 (`session.fontScale`, `session.setFontScale`). 特權模式下文字欄會開啟 AutoJs6 的臨時輸入框, 需要懸浮視窗權限.
+
 插件提供表格/快顯選單/選單/工具提示/樣式堆疊與 60 餘個控制項, `withTable`, `withPopupModal`, `withContextItem`, `withMenuBar` 等輔助方法可安全配對 begin/end 呼叫. 完整 API 概覽可參閱專案 README 與 Roadmap.
 
 有狀態控制項亦支援 `imgui.ref(value)` 輕量引用或普通 `{ value: ... }` 物件; 原有 `bool`、`float`、`int`、`string` 與顏色陣列輔助方法保持相容. 會話託管的 `logWindow`、`toast`、Promise 對話框、`statsOverlay` 和 `dataTable` 會在用戶回調之後渲染, 並隨會話自動關閉.

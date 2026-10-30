@@ -185,6 +185,23 @@
                 .addCircleFilled([left + size * 4.8, top + size / 2], size * 0.45, [0.30, 0.69, 0.31, 1])
                 .popClipRect();
 
+            ui.separatorText("Window");
+            ui.text("Font scale: " + window.fontScale.toFixed(2) + ", pinch with two fingers to change it");
+            ui.text("A character outside the bundled font: 龘");
+            if (ui.button("100%")) {
+                window.setFontScale(1);
+            }
+            ui.sameLine();
+            if (ui.button("150%")) {
+                window.setFontScale(1.5);
+            }
+            ui.sameLine();
+            if (ui.button("Capture")) {
+                var shot = window.capture();
+                logWindow.info("Captured " + shot.getWidth() + "x" + shot.getHeight() + " px");
+                shot.recycle();
+            }
+
             ui.separatorText("Toast and log");
             if (ui.button("Info toast")) {
                 toast("Hello, " + name.value, ui.LogLevel.Info);
@@ -284,7 +301,9 @@
         theme: options.theme || imgui.Themes.ModernDark,
         touchMode: imgui.TouchMode.Auto,
         contentAutoResize: false,
-        collapseButton: true
+        collapseButton: true,
+        pinchZoom: true,
+        systemCjkFont: true
     });
 
     function numberOption(value, fallback) {

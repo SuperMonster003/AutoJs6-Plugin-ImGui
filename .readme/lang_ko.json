@@ -17,6 +17,7 @@
     "창, 탭, 트리 노드, 테이블, 팝업, 메뉴, 툴팁과 모바일 스타일 `toggle` 스위치를 포함한 60개 이상의 즉시 모드 컨트롤을 제공합니다.",
     "11개 `Themes`, 일괄 스타일, 둥근 모서리/테두리/그림자 외형, 다중 글꼴 스택, CJK 대체 글꼴, Material Icons 하위 집합을 제공합니다.",
     "관리형 텍스처는 파일 경로, 인코딩된 바이트, Android `Bitmap`, AutoJs6 `Image`를 지원하며 `image` / `imageButton`과 3개 DrawList 레이어로 이미지 표시와 사용자 지정 그리기를 제공합니다.",
+    "`session.capture()`는 창 내용을 AutoJs6 `Image`로 반환합니다. `systemCjkFont: true`는 내장 글꼴에 없는 CJK 문자를 시스템이 그리게 하고, `pinchZoom: true`는 두 손가락 핀치로 글꼴 배율을 바꾸며, 창은 화면 밀도와 시스템 글꼴 크기의 변경도 따라갑니다.",
     "가벼운 `imgui.ref(value)` / `{value: x}` 참조는 모든 상태형 컨트롤에서 작동하며 기존 Java 배열 참조 헬퍼도 완전히 호환됩니다.",
     "세션 관리 `logWindow`, 스택형 `toast`, Promise 대화상자, 임계값 색상 `statsOverlay`, 선택/CRUD `dataTable`로 즉시 디버그 UI를 구성할 수 있습니다.",
     "자주 쓰는 API와 상수 열거형에는 PascalCase 별칭(예: `ui.Button`)이 있으며 인수는 플러그인 형식을 따릅니다. 별칭 목록과 업스트림 C++ 시그니처와의 차이는 [ALIASES.md]({{ repo_url }}/blob/master/docs/ALIASES.md)를 참고하세요.",
@@ -60,7 +61,7 @@
   "limitations": [
     "각 스크립트 엔진은 한 번에 하나의 네이티브 렌더 세션만 지원합니다. 여러 패널이 필요하면 해당 세션 안에 여러 ImGui 루트 창을 만드세요. 새 오버레이 또는 Activity 세션은 이전 세션을 닫습니다.",
     "`imgui.launch`에는 현재 resumed 상태인 AutoJs6 Activity가 필요합니다. 전면 호스트 Activity 없이 계속 렌더링해야 하면 `launchFloaty`를 사용하세요.",
-    "v1.9 권한 모드는 고정 전체 화면의 포인터 전용이며 IME/키 입력, 호스트 레이어 알파/보안, 접기, 보조 Android 버튼, 회전 시 동적 재생성을 지원하지 않습니다. 직접 입력은 `EVIOCGRAB`을 쓰지 않으며 OEM SurfaceControl/SELinux 정책으로 시작이 거부될 수 있습니다. 기능 탐지는 `su` 실행이나 Shizuku 권한 요청을 하지 않습니다."
+    "권한 모드는 고정 전체 화면의 포인터 전용이며, 텍스트 입력란은 AutoJs6 임시 입력 상자를 사용합니다 (오버레이 권한 필요, 커서 위치에 추가만 가능). 키 입력, 호스트 레이어 알파/보안, 접기, 보조 Android 버튼, 회전 시 동적 재생성을 지원하지 않습니다. 직접 입력은 `EVIOCGRAB`을 쓰지 않으며 OEM SurfaceControl/SELinux 정책으로 시작이 거부될 수 있습니다. 기능 탐지는 `su` 실행이나 Shizuku 권한 요청을 하지 않습니다."
   ],
   "h3_release_history": "릴리스 기록",
   "h5_for_more_release_history": "더 많은 릴리스 기록",

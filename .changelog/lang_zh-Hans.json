@@ -5,6 +5,18 @@
   "changelog_label_improvement": "优化",
   "changelog_label_dependency": "依赖",
   "$data": {
+    "v1.16.0": {
+      "released_date": "2026/10/31",
+      "feature": [
+        "session.capture(options) 截取窗口画面, 返回 images 模块可用的图像, 例如 images.save(session.capture(), path). options.region 指定窗口的一部分, 单位 dp. 特权模式的窗口只能在两帧之间截取, 例如放进 setTimeout(fn, 0)",
+        "createWindow({systemCjkFont: true}) 可以显示设备上所有的中日韩字符, 包括内置字体缺少的生僻字 (例如 龘). 每个字符在首次使用时由 Android 绘制, 几乎不占额外内存; docs/LIMITS.md 列出了内置字体的覆盖范围",
+        "createWindow({pinchZoom: true}) 可以用双指捏合把文字缩放到 0.5 到 3 倍, 双指同向移动仍然是滚动. 用 session.fontScale 读取缩放值, session.setFontScale(scale) 设置, 新事件 fontScaleChanged 通知变化. widget-overview 示例演示了这些功能",
+        "特权模式支持文本输入: 点击 inputText 会打开 AutoJs6 的小输入框和键盘 (需要 AutoJs6 的悬浮窗权限). 点 OK, 键盘的完成键或其他位置后, 文字写入控件的光标处; 控件里已有的文字不能在小输入框里修改"
+      ],
+      "improvement": [
+        "窗口运行时会跟随显示大小 (密度) 和系统字体大小的变化: 文字和控件换成新尺寸, 窗口的 dp 尺寸不变. configurationChanged 事件新增 density, oldDensity, fontScale, oldFontScale 字段. imgui.launch 打开的全屏窗口则会关闭 (session.closeReason 为 \"configuration-changed\"), 因为 Android 会重建它所在的 Activity"
+      ]
+    },
     "v1.15.0": {
       "released_date": "2026/10/30",
       "feature": [

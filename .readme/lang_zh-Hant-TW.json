@@ -17,6 +17,7 @@
     "視窗/分頁/樹狀節點/表格/彈窗/選單/工具提示與 60 餘個立即模式控制項, 含行動裝置風格 `toggle` 開關.",
     "視覺與字型系統: 11 套 `Themes` 主題、批次樣式、圓角/邊框/陰影外觀、多字型堆疊、CJK 備援與 Material Icons 子集.",
     "代管紋理支援檔案路徑、編碼位元組、Android `Bitmap` 與 AutoJs6 `Image`; `image` / `imageButton` 和三層 DrawList 可完成圖片顯示與浮動視窗自繪.",
+    "`session.capture()` 將視窗內容回傳為 AutoJs6 `Image`; `systemCjkFont: true` 讓系統繪製內建字型之外的 CJK 字元, `pinchZoom: true` 讓雙指捏合調整字型縮放, 視窗也會跟隨顯示密度與系統字型大小的變化.",
     "輕量 `imgui.ref(value)` / `{value: x}` 參照可用於所有具狀態控制項, 現有 Java 陣列參照輔助方法保持完全相容.",
     "工作階段託管的 `logWindow`、堆疊 `toast`、Promise 對話框、閾值變色 `statsOverlay` 與可選取 CRUD `dataTable` 可直接組成偵錯介面.",
     "常用 API 與常數列舉提供 PascalCase 別名 (如 `ui.Button`), 參數沿用外掛風格; 別名清單及與上游 C++ 簽章的差異見 [ALIASES.md]({{ repo_url }}/blob/master/docs/ALIASES.md).",
@@ -60,7 +61,7 @@
   "limitations": [
     "同一指令碼引擎同一時刻僅支援一個原生渲染工作階段; 多面板情境應在該工作階段內建立多個 ImGui 根視窗. 新建懸浮窗或 Activity 工作階段會關閉舊工作階段.",
     "`imgui.launch` 需要目前存在處於 resumed 狀態的 AutoJs6 Activity; 指令碼需要脫離前景 Activity 持續渲染時請使用 `launchFloaty`.",
-    "v1.9 特權模式固定全螢幕且只支援指標: 暫無 IME/按鍵、宿主層透明度/防擷取、收合、獨立 Android 按鈕或動態旋轉重建. Direct input 不使用 `EVIOCGRAB`, OEM SurfaceControl/SELinux 原則仍可能拒絕啟動; 能力探測不會執行 `su` 或要求 Shizuku 授權."
+    "特權模式固定全螢幕且只支援指標: 文字欄位使用 AutoJs6 的臨時輸入框 (需要懸浮視窗權限, 只能在游標處追加文字), 暫無按鍵、宿主層透明度/防擷取、收合、獨立 Android 按鈕或動態旋轉重建. Direct input 不使用 `EVIOCGRAB`, OEM SurfaceControl/SELinux 原則仍可能拒絕啟動; 能力探測不會執行 `su` 或要求 Shizuku 授權."
   ],
   "h3_release_history": "發行歷史",
   "h5_for_more_release_history": "更多發行歷史可參閱",

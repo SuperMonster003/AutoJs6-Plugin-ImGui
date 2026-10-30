@@ -5,6 +5,18 @@
   "changelog_label_improvement": "Improvement",
   "changelog_label_dependency": "Dependency",
   "$data": {
+    "v1.16.0": {
+      "released_date": "2026/10/31",
+      "feature": [
+        "session.capture(options) takes a picture of the window and returns an image for the images module, for example images.save(session.capture(), path). options.region picks a part of the window, in dp. A window in privileged mode can only be captured between two frames, for example from setTimeout(fn, 0)",
+        "createWindow({systemCjkFont: true}) shows every CJK character the device has, including rare ones like 龘 that are missing from the bundled font. Android draws each character when it is first used, so this takes almost no extra memory; docs/LIMITS.md lists what the bundled font covers",
+        "createWindow({pinchZoom: true}) lets two fingers change the text size from 0.5 to 3 times; moving both fingers together still scrolls. Read the scale from session.fontScale, set it with session.setFontScale(scale), and listen to the new fontScaleChanged event. The widget-overview example shows all of this",
+        "Text input in privileged mode: tapping an inputText now opens a small input box of AutoJs6 with the keyboard (this needs the overlay permission of AutoJs6). The OK button, the done key or a tap elsewhere enters the text at the cursor of the field; text already in the field can not be edited in the box"
+      ],
+      "improvement": [
+        "Windows now follow changes of the display size (density) and the system font size while they run: text and controls get the new size, and the window keeps its size in dp. configurationChanged has the new fields density, oldDensity, fontScale and oldFontScale. A full-screen window of imgui.launch closes instead (session.closeReason is \"configuration-changed\"), because Android recreates the Activity it lives in"
+      ]
+    },
     "v1.15.0": {
       "released_date": "2026/10/30",
       "feature": [

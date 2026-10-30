@@ -61,6 +61,7 @@ ImGui プラグインは [Dear ImGui](https://github.com/ocornut/imgui) 即時�
 - ウィンドウ/タブ/ツリーノード/テーブル/ポップアップ/メニュー/ツールチップのほか, モバイルスタイルの `toggle` スイッチを含む 60 以上の即時モードコントロールを提供します.
 - 11 種類の `Themes`、一括スタイル、角丸/境界線/影の外観、複数フォントスタック、CJK フォールバック、Material Icons サブセットを備えます.
 - 管理対象テクスチャはファイルパス、エンコード済みバイト列、Android `Bitmap`、AutoJs6 `Image` に対応し、`image` / `imageButton` と 3 層の DrawList で画像表示とカスタム描画を行えます.
+- `session.capture()` はウィンドウの内容を AutoJs6 の `Image` として返します. `systemCjkFont: true` は同梱フォントにない CJK 文字をシステムに描画させ, `pinchZoom: true` は 2 本指のピンチでフォント倍率を変更します. ウィンドウは表示密度とシステムのフォントサイズの変更にも追従します.
 - 軽量な `imgui.ref(value)` / `{value: x}` 参照はすべての状態付きコントロールで使用でき、従来の Java 配列参照ヘルパーも完全互換です.
 - セッション管理の `logWindow`、積み重ね可能な `toast`、Promise ダイアログ、しきい値色付き `statsOverlay`、選択/CRUD 対応 `dataTable` でデバッグ UI をすぐ構築できます.
 - よく使う API と定数列挙には PascalCase エイリアス (例: `ui.Button`) があり, 引数はプラグインの形式に従います. エイリアス一覧と上流 C++ シグネチャとの違いは [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md) を参照してください.
@@ -165,13 +166,23 @@ imgui.runExample("widget-overview");
 
 - 各スクリプトエンジンが同時に持てるネイティブレンダーセッションは 1 つです。複数パネルはそのセッション内に複数の ImGui ルートウィンドウとして作成してください。新しいオーバーレイまたは Activity セッションは以前のセッションを閉じます。
 - `imgui.launch` には現在 resumed の AutoJs6 Activity が必要です。フォアグラウンドのホスト Activity なしで描画を続ける場合は `launchFloaty` を使います。
-- v1.9 の特権モードは固定全画面かつポインター専用で、IME/キー入力、ホストレイヤーの透明度/セキュリティ、折りたたみ、補助 Android ボタン、回転時の動的再構築には未対応です。直接入力は `EVIOCGRAB` を使わず、OEM の SurfaceControl/SELinux 方針で起動できない場合があります。能力検査は `su` 実行や Shizuku 許可要求を行いません。
+- 特権モードは固定全画面かつポインター専用です. テキスト欄は AutoJs6 の一時入力ボックスを使い (オーバーレイ権限が必要, カーソル位置への追加のみ), キー入力, ホストレイヤーの透明度/セキュリティ、折りたたみ、補助 Android ボタン、回転時の動的再構築には未対応です。直接入力は `EVIOCGRAB` を使わず、OEM の SurfaceControl/SELinux 方針で起動できない場合があります。能力検査は `su` 実行や Shizuku 許可要求を行いません。
 
 ******
 
 ### リリース履歴
 
 ******
+
+#### v1.16.0
+
+###### 2026/10/31
+
+* `機能` session.capture(options) はウィンドウの画像を取得し, images モジュールで使える画像を返します. 例: images.save(session.capture(), path). options.region でウィンドウの一部を dp で指定できます. 特権モードのウィンドウは 2 フレームの間でのみ取得できます. 例: setTimeout(fn, 0) の中で呼び出します
+* `機能` createWindow({systemCjkFont: true}) はデバイスにあるすべての CJK 文字を表示します. 同梱フォントにない 龘 のような珍しい文字も表示できます. 各文字は最初に使うときに Android が描画するので, 追加メモリはほとんど必要ありません. 同梱フォントの範囲は docs/LIMITS.md を参照してください
+* `機能` createWindow({pinchZoom: true}) で, 2 本指のピンチにより文字サイズを 0.5 倍から 3 倍まで変更できます. 2 本指を同じ方向に動かすとこれまで通りスクロールします. 倍率は session.fontScale で読み取り, session.setFontScale(scale) で設定し, 新しい fontScaleChanged イベントで変更を受け取れます. widget-overview の例で確認できます
+* `機能` 特権モードのテキスト入力: inputText をタップすると AutoJs6 の小さな入力ボックスとキーボードが開きます (AutoJs6 のオーバーレイ権限が必要です). OK ボタン, キーボードの完了キー, またはほかの場所をタップすると, 文字が入力欄のカーソル位置に入ります. 入力欄の既存の文字はボックスでは編集できません
+* `改善` ウィンドウは実行中の表示サイズ (密度) とシステムのフォントサイズの変更に追従するようになりました. 文字とコントロールは新しいサイズになり, ウィンドウの dp サイズは変わりません. configurationChanged に density, oldDensity, fontScale, oldFontScale を追加しました. imgui.launch の全画面ウィンドウは閉じます (session.closeReason は "configuration-changed"). Android がそのウィンドウのある Activity を作り直すためです
 
 #### v1.15.0
 
@@ -192,18 +203,6 @@ imgui.runExample("widget-overview");
 * `機能` テーブルの並べ替え: Sortable フラグ付きのテーブルでは列見出しをタップすると並び順が変わります. tableGetSortSpecs() は並べ替えの列と方向 (imgui.SortDirection) を返し, specsDirty は並び順が変わったフレームだけ true です. tableSetupColumn の 4 番目の引数は列のユーザー id です. dataTable は sortable: true で行を並べ替え, 列の compare 関数で独自の順序を指定できます. 例 data-table-demo を参照してください
 * `機能` 複数の値を扱うウィジェット: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 最小値と最大値を編集する dragFloatRange2 / dragIntRange2, 角度を編集する sliderAngle (ラジアンで保存し度で表示). 値は {value: [x, y, z]}, imgui.floats(...) または新しい imgui.ints(...) で渡します. 例 widget-overview の新しいセクションを参照してください
 * `改善` createWindow({debug: true}) のとき, 描画コールバックが 250 ミリ秒を超えると console.warn で所要時間を示し, sleep, ネットワーク, ファイルなどの遅い処理を threads.start へ移すよう提案します (10 秒に最大 1 回). docs/THREADING.md でやり方を説明しています
-
-#### v1.13.0
-
-###### 2026/10/30
-
-* `ヒント` 動作の変更: 電池を節約するため, タッチやキー入力が 3 秒ないとウィンドウは毎秒 10 フレームだけ描画し, 画面がオフまたはロック中は描画を止めます. 次にタッチするとすぐに通常のフレームレートに戻ります. アニメーションや入力なしで変わるデータ (タイマー, グラフ, 進捗バー) を表示するウィンドウでは, createWindow に idleFps: 0 を渡すか session.setIdleFps(0) を呼んで通常のフレームレートを保ってください
-* `機能` ui.listClipper(itemCount, options, callback) (エイリアス ListClipper) は見えている行だけを描画するため, 10 万行のリストもなめらかにスクロールできます. 新しいサンプル large-list を参照してください
-* `機能` フレームレートの制御: createWindow のオプション idleFps / idleDelay, session.setFps / setIdleFps / getFps, セッションイベント idle / active, フィールド idle / paused
-* `機能` texture.update(source) はテクスチャの画像を置き換え, ハンドルは変わらないため, それを表示する image の呼び出しはそのままで構いません. サイズが変わると texture.width / height も更新されます. 1 秒に 2 回プレビューを更新する新しいサンプル texture-refresh を参照してください
-* `機能` createTexture と texture.update は PNG または JPEG データを含む ArrayBuffer や型付き配列 (Uint8Array など) も受け付けます
-* `機能` statsOverlay は各フレームの処理時間 (画面の更新待ちを除いた描画時間) を表示し, snapshot() はそれを workTime として返します
-* `改善` docs/FRAME-LOOP.md でフレームレートと省電力の仕組みを, docs/LIMITS.md で listClipper の制限を説明します
 
 ##### その他のリリース履歴
 

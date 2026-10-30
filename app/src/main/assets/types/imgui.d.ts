@@ -561,7 +561,26 @@ declare namespace ImGui {
         fontSize?: number;
         /** Additional fonts, at most 16; FontDefinition.size is dp, 8..128. */
         fonts?: readonly (string | FontDefinition)[];
+        /**
+         * Lets Android draw the CJK characters that fontPath and each entry of fonts lack, from the system fonts, for
+         * characters outside the bundled subset (docs/LIMITS.md lists its coverage), default false. Each glyph is drawn
+         * when first used and no font file stays in memory. A device without CJK system fonts keeps the bundled subset.
+         */
+        systemCjkFont?: boolean;
+        /**
+         * Lets two fingers change the font scale of the session, default false: a change of 24 dp in their distance
+         * turns the two-finger scroll into a pinch until they lift. Read the result from Session.fontScale or the
+         * "fontScaleChanged" event. Not available in privileged windows, whose direct input tracks one finger.
+         */
+        pinchZoom?: boolean;
         iniPath?: string | false | null;
+        /**
+         * Text input, default true. Overlay and Activity windows connect inputText to the system IME. A privileged window
+         * has no view for the IME: an active text field opens a temporary floaty text box instead (needs the overlay
+         * permission of AutoJs6), and the layer is hidden until the box closes, because it covers the box and the
+         * keyboard. The done key, the OK button or a touch outside the box insert the text at the cursor of the field.
+         * false disables both.
+         */
         ime?: boolean;
         fling?: boolean;
         /** Fling deceleration, 0.5..30, default 5.5. */
@@ -636,7 +655,25 @@ declare namespace ImGui {
         onActive?: SessionEventListener;
         /** Listener of the "back" event (Activity mode), see {@link SessionBackEvent}. */
         onBack?: (event: SessionBackEvent) => void;
+        onFontScaleChanged?: SessionEventListener;
         [name: string]: unknown;
+    }
+
+    /** Session.capture. */
+    interface CaptureOptions {
+        /**
+         * The part of the window to capture, in dp from its top left corner, cut off at the edges of the window; the
+         * whole window by default. x and y default to 0, width and height to the rest of the window.
+         */
+        region?: {x?: number; y?: number; width?: number; height?: number};
+    }
+
+    /** An Image of the AutoJs6 images module. Recycle it when done; the end of the script releases the rest. */
+    interface CapturedImage {
+        getWidth(): number;
+        getHeight(): number;
+        recycle(): void;
+        [member: string]: any;
     }
 
     interface StyleProperties {
@@ -659,6 +696,7 @@ declare namespace ImGui {
         | "idle"
         | "active"
         | "back"
+        | "fontScaleChanged"
         | "error";
 
     /**
@@ -668,7 +706,11 @@ declare namespace ImGui {
      * - moved: x, y, oldX, oldY, source ("drag", "api", "configuration", ...);
      * - resized: width, height, oldWidth, oldHeight, source;
      * - ready / surfaceRestored: restored, mode, backend, width, height;
-     * - configurationChanged: width, height, oldWidth, oldHeight (the display), orientation;
+     * - configurationChanged: width, height, oldWidth, oldHeight (the display), orientation, density, oldDensity,
+     *   fontScale, oldFontScale (the system font scale). After a density change the window keeps its size and position
+     *   in dp, and fonts and style sizes follow; a change of the system font scale scales the fonts only. A window of
+     *   imgui.launch closes with reason "configuration-changed" instead, because Android recreates its Activity;
+     * - fontScaleChanged: scale, oldScale, source ("pinch" or "api");
      * - collapsed: button, fps; expanded: x, y, width, height;
      * - closed: reason; touchableChanged: mode, touchable, interactiveRegionCount;
      * - moreTouchChanged: enabled; alphaChanged: alpha; secureChanged: secure;
@@ -909,10 +951,18 @@ declare namespace ImGui {
         /** The floaty or Activity window that holds the surface. */
         readonly window: unknown;
         readonly surfaceView: unknown;
-        /** The hidden text field that receives IME input, or null when ime is false. */
+        /**
+         * The hidden text field that receives IME input, or null when ime is false. In a privileged window, the EditText
+         * of the temporary text box while it is open, otherwise null.
+         */
         readonly imeView: unknown;
-        /** Display density, px per dp. */
+        /** Display density, px per dp; changes with the display (configurationChanged). */
         readonly density: number;
+        /**
+         * Font scale of the session, 0.5..3, default 1, from setFontScale or a pinch (WindowOptions.pinchZoom). It
+         * multiplies the size of every font and leaves the style sizes alone; ui.getFontSize() returns the result.
+         */
+        readonly fontScale: number;
         /** Display width in dp. */
         readonly displayWidth: number;
         /** Display height in dp. */
@@ -990,6 +1040,15 @@ declare namespace ImGui {
         setIdleFps(idleFps: number, idleDelay?: number): this;
         /** Current target frame rate: 0 while paused, collapsedFps while collapsed, the idle or the full rate. */
         getFps(): number;
+        /** Sets fontScale, 0.5..3; it takes effect in the next frame. */
+        setFontScale(scale: number): this;
+        /**
+         * Returns the last presented frame of the window as an Image of the images module, in px (window size x density,
+         * or the region), and transparent where nothing is drawn. Overlay and Activity windows read it with PixelCopy,
+         * also from a render callback. A privileged window reads it with glReadPixels and only between two frames, so
+         * call it from an event or a timer there. Throws Error while the window is collapsed, closed or has no frame yet.
+         */
+        capture(options?: CaptureOptions): CapturedImage;
         addButtonEx(label: unknown, callback: () => void, options?: FloatingButtonOptions): FloatingButton;
         logWindow(id?: string, options?: LogWindowOptions): LogWindow;
         toast(text: unknown, duration?: number, options?: ToastOptions): Toast;

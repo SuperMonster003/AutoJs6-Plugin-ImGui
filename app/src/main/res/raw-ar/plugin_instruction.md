@@ -42,6 +42,8 @@ var overlay = imgui.createWindow(function (ui, window) {
 
 يفعّل `setMoreTouch(true)` ميزة Android split-touch للنافذة الرئيسية والأزرار المستقلة. يختار `launchPrivileged(callback, {backend: "auto"})` وضع SurfaceFlinger الإنتاجي صراحةً ويعيد استخدام تفويض Shizuku/root الموجود في AutoJs6 من دون إذن التراكب؛ يراقب `/dev/input` فقط ولا يحتكر شاشة اللمس. يبلّغ `getBackendCapabilities()` عن حالة المضيف من دون رفع الصلاحيات.
 
+يعيد `session.capture({region})` النافذة ككائن `Image` لاستخدامه مع `images.save`; وحدة region هي dp, ولا يمكن التقاط نافذة وضع الامتياز إلا بين إطارين. يتيح `createWindow({systemCjkFont: true})` للنظام رسم أحرف CJK غير الموجودة في الخط المضمن, ويتيح `pinchZoom: true` تغيير مقياس الخط بإصبعين (`session.fontScale`, `session.setFontScale`). في وضع الامتياز يفتح حقل النص مربع إدخال مؤقتا من AutoJs6 يتطلب إذن التراكب.
+
 تتوفر الجداول والنوافذ المنبثقة السياقية والقوائم والتلميحات ومكدسات الأنماط وأكثر من 60 عنصر تحكم؛ تقرن `withTable` و `withPopupModal` و `withContextItem` و `withMenuBar` استدعاءات begin/end بأمان. راجع ملف README الخاص بالمشروع وخارطة الطريق للاطلاع على النظرة العامة الكاملة على API.
 
 تقبل عناصر التحكم ذات الحالة أيضاً مراجع خفيفة من `imgui.ref(value)` أو كائنات `{ value: ... }` العادية؛ وتظل مساعدات `bool` و`float` و`int` و`string` ومصفوفات الألوان القديمة متوافقة. تُعرض مكونات `logWindow` و`toast` وحوارات Promise و`statsOverlay` و`dataTable` المدارة بواسطة الجلسة بعد رد نداء المستخدم وتُغلق تلقائياً مع جلستها.

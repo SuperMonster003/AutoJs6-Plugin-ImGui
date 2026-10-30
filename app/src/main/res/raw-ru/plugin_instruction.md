@@ -42,6 +42,8 @@ var overlay = imgui.createWindow(function (ui, window) {
 
 `setMoreTouch(true)` включает Android split-touch для главного окна и отдельных кнопок. `launchPrivileged(callback, {backend: "auto"})` явно выбирает production-режим SurfaceFlinger, повторно использует авторизацию Shizuku/root из AutoJs6 и не требует разрешения оверлея; `/dev/input` только наблюдает и не захватывает сенсорный экран. `getBackendCapabilities()` сообщает состояние хоста без повышения привилегий.
 
+`session.capture({region})` возвращает окно как `Image` для `images.save`; region задается в dp, а привилегированное окно можно снять только между двумя кадрами. `createWindow({systemCjkFont: true})` поручает системе рисовать символы CJK, которых нет во встроенном шрифте, а `pinchZoom: true` позволяет менять масштаб шрифта двумя пальцами (`session.fontScale`, `session.setFontScale`). В привилегированном режиме текстовое поле открывает временное поле ввода AutoJs6, для которого нужно разрешение оверлея.
+
 Доступны таблицы, контекстные окна, меню, всплывающие подсказки, стеки стилей и более 60 элементов управления; `withTable`, `withPopupModal`, `withContextItem` и `withMenuBar` безопасно связывают парные вызовы begin/end. Полный обзор API см. в README и Roadmap проекта.
 
 Элементы управления с состоянием также принимают лёгкие ссылки из `imgui.ref(value)` и обычные объекты `{ value: ... }`; прежние помощники `bool`, `float`, `int`, `string` и массивов цветов остаются совместимыми. Управляемые сессией компоненты `logWindow`, `toast`, диалоги Promise, `statsOverlay` и `dataTable` отрисовываются после пользовательского callback и автоматически закрываются вместе с сессией.

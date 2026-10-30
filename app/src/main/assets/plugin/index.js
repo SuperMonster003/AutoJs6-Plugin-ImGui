@@ -1735,7 +1735,13 @@ module.exports = function (bridge) {
     // Debug mode (R3.5, Q7): a render callback slower than this gets a console.warn, at most one per interval.
     var SLOW_RENDER_CALLBACK_MS = 250;
     var SLOW_RENDER_WARNING_INTERVAL_MS = 10000;
+    var PINCH_THRESHOLD_DP = 24;
     var STYLE_VAR_MAX_INDEX = api.StyleVar.SeparatorTextPadding;
+
+    // The host has no script API for this. The image belongs to the runtime of the script, which recycles it at the end.
+    function wrapCapturedBitmap(bitmap) {
+        return org.autojs.autojs.core.image.ImageWrapper.ofBitmap(runtime, bitmap);
+    }
 
     function mouseButton(fn, value) {
         return argInt(fn, "button", value, 0, 0, MOUSE_BUTTON_MAX);
@@ -5500,6 +5506,11 @@ module.exports = function (bridge) {
             }
         }
 
+        function readSystemFontScale() {
+            var scale = Number(context.getResources().getConfiguration().fontScale);
+            return scale > 0 && isFinite(scale) ? scale : 1;
+        }
+
         var metrics = context.getResources().getDisplayMetrics();
         var density = Number(metrics.density);
         if (!(density > 0) || !isFinite(density)) {
@@ -5507,6 +5518,10 @@ module.exports = function (bridge) {
         }
         api._density = clamp(density, 0.5, 4);
         api._displayDensity = density;
+        // fontSize is dp, so the system font scale at the start has no effect; a later change scales the fonts by the
+        // ratio to it (R5.2).
+        var initialSystemFontScale = readSystemFontScale();
+        var systemFontScale = initialSystemFontScale;
         var displayWidth = hostPixels(metrics.widthPixels, 1);
         var displayHeight = hostPixels(metrics.heightPixels, 1);
         var mode = resolveWindowMode(options.mode, "createWindow", "options.mode");
@@ -5579,6 +5594,7 @@ module.exports = function (bridge) {
         var movable = !activityLikeMode && options.movable !== false;
         var fontPath = options.fontPath == null ? null : String(options.fontPath);
         var fontSize = windowOption("fontSize", 16, 8, 64);
+        var systemCjkFont = options.systemCjkFont === true;
         var configuredFonts = options.fonts == null ? [] : options.fonts;
         if (isStringLike(configuredFonts) || typeof configuredFonts.length !== "number") {
             throw new TypeError(
@@ -5652,6 +5668,8 @@ module.exports = function (bridge) {
         api._fontAliases = fontAliases;
         var dragThreshold = Math.max(4, windowOption("dragThreshold", 10, 0) * density);
         var imeEnabled = !privilegedMode && options.ime !== false;
+        var inputBoxEnabled = privilegedMode && options.ime !== false;
+        var pinchZoom = options.pinchZoom === true;
         var flingEnabled = options.fling !== false;
         var flingFriction = windowOption("flingFriction", 5.5, 0.5, 30);
         var flingMinVelocity = windowOption("flingMinVelocity", 80, 0) * density;
@@ -5834,6 +5852,7 @@ module.exports = function (bridge) {
             _expandedBounds: null,
             _collapseButton: null,
             _lastConfigurationCheck: 0,
+            _lastDisplayScaleCheck: 0,
 
             createTexture: function (source, textureOptions) {
                 return api.createTexture(source, textureOptions);
@@ -6043,6 +6062,67 @@ module.exports = function (bridge) {
                 return state.idle ? Math.min(idleFps, fps) : fps;
             },
 
+            setFontScale: function (scale) {
+                var resolvedScale = argNumber("Session.setFontScale", "scale", scale, undefined, 0.5, 3);
+                if (!state.closed) {
+                    requestFontScale(resolvedScale, "api");
+                }
+                return session;
+            },
+
+            capture: function (captureOptions) {
+                var fn = "Session.capture";
+                if (captureOptions != null && typeof captureOptions !== "object") {
+                    throw new TypeError(argumentLabel(fn, "options") + " must be an object");
+                }
+                var region = captureOptions == null ? null : captureOptions.region;
+                if (region != null && typeof region !== "object") {
+                    throw new TypeError(argumentLabel(fn, "options.region") + " must be an object");
+                }
+                var left = 0;
+                var top = 0;
+                var right = state.width;
+                var bottom = state.height;
+                if (region != null) {
+                    left = Math.round(argNumber(fn, "options.region.x", region.x, 0, 0) * density);
+                    top = Math.round(argNumber(fn, "options.region.y", region.y, 0, 0) * density);
+                    if (region.width != null) {
+                        right = Math.min(
+                            right,
+                            left + Math.round(argNumber(fn, "options.region.width", region.width, undefined, 1) * density)
+                        );
+                    }
+                    if (region.height != null) {
+                        bottom = Math.min(
+                            bottom,
+                            top + Math.round(argNumber(fn, "options.region.height", region.height, undefined, 1) * density)
+                        );
+                    }
+                    if (left >= right || top >= bottom) {
+                        throw new RangeError(argumentLabel(fn, "options.region") + " is outside the window");
+                    }
+                }
+                if (state.closed || state.collapsed || !state.ready || session._frameSerial === 0) {
+                    throw new Error(
+                        "imgui.Session.capture: the window is " + (state.closed
+                            ? "closed"
+                            : (state.collapsed ? "collapsed" : "not showing a frame yet"))
+                    );
+                }
+                if (!privilegedMode) {
+                    return wrapCapturedBitmap(
+                        bridge.captureSurface(surfaceView, left, top, right - left, bottom - top)
+                    );
+                }
+                if (session._inFrame) {
+                    throw new Error(
+                        "imgui.Session.capture: a privileged window can only be captured between two frames, " +
+                        "for example from setTimeout(fn, 0)"
+                    );
+                }
+                return wrapCapturedBitmap(bridge.captureFrame(left, top, right - left, bottom - top));
+            },
+
             addButtonEx: function (label, callback, buttonOptions) {
                 return createFloatingButton(label, callback, buttonOptions);
             },
@@ -6116,6 +6196,7 @@ module.exports = function (bridge) {
             mode: function () { return mode; },
             privilegedBackend: function () { return privilegedMode ? privilegedBackend : null; },
             density: function () { return density; },
+            fontScale: function () { return fontScale; },
             displayWidth: function () { return toDp(state.displayWidth); },
             displayHeight: function () { return toDp(state.displayHeight); },
             width: function () { return toDp(state.width); },
@@ -6167,7 +6248,8 @@ module.exports = function (bridge) {
             secureChanged: "onSecureChanged",
             idle: "onIdle",
             active: "onActive",
-            back: "onBack"
+            back: "onBack",
+            fontScaleChanged: "onFontScaleChanged"
         };
         for (var eventOption in eventOptionNames) {
             if (eventOptionNames.hasOwnProperty(eventOption) &&
@@ -6551,7 +6633,8 @@ module.exports = function (bridge) {
             return true;
         }
 
-        function updateConfiguration(force) {
+        // scaleChange: the density and system font scale before a change, from updateDisplayScale.
+        function updateConfiguration(force, scaleChange) {
             var now = Date.now();
             if (!force && now - session._lastConfigurationCheck < 250) {
                 return;
@@ -6583,7 +6666,7 @@ module.exports = function (bridge) {
                 if (changed) {
                     session.close("configuration-changed");
                 }
-            } else if (responsive) {
+            } else if (responsive || scaleChange != null) {
                 applySessionSize(
                     Math.min(session._preferredWidth, nextDisplayWidth),
                     Math.min(session._preferredHeight, nextDisplayHeight),
@@ -6600,13 +6683,69 @@ module.exports = function (bridge) {
             for (var buttonIndex = 0; buttonIndex < session._buttons.length; buttonIndex += 1) {
                 session._buttons[buttonIndex]._relayout();
             }
+            var oldDensity = scaleChange != null ? scaleChange.density : density;
             emitSessionEvent("configurationChanged", {
                 width: toDp(nextDisplayWidth),
                 height: toDp(nextDisplayHeight),
-                oldWidth: toDp(oldDisplayWidth),
-                oldHeight: toDp(oldDisplayHeight),
-                orientation: nextDisplayWidth >= nextDisplayHeight ? "landscape" : "portrait"
+                oldWidth: oldDisplayWidth / oldDensity,
+                oldHeight: oldDisplayHeight / oldDensity,
+                orientation: nextDisplayWidth >= nextDisplayHeight ? "landscape" : "portrait",
+                density: density,
+                oldDensity: oldDensity,
+                fontScale: systemFontScale,
+                oldFontScale: scaleChange != null ? scaleChange.fontScale : systemFontScale
             });
+        }
+
+        // Density and system font scale (R5.2). Runs on the script thread between two frames, because it changes the
+        // native style; the surface callbacks on the UI thread only report display sizes. Windows and buttons keep
+        // their size and position in dp.
+        function updateDisplayScale() {
+            var now = Date.now();
+            if (now - session._lastDisplayScaleCheck < 250 || !state.ready || !bridge.isReady()) {
+                return;
+            }
+            session._lastDisplayScaleCheck = now;
+            var nextDensity = Number(context.getResources().getDisplayMetrics().density);
+            if (!(nextDensity > 0) || !isFinite(nextDensity)) {
+                nextDensity = density;
+            }
+            var nextSystemFontScale = readSystemFontScale();
+            if (nextDensity === density && nextSystemFontScale === systemFontScale) {
+                return;
+            }
+            var scaleChange = {density: density, fontScale: systemFontScale};
+            var ratio = nextDensity / density;
+            density = nextDensity;
+            systemFontScale = nextSystemFontScale;
+            api._density = clamp(density, 0.5, 4);
+            api._displayDensity = density;
+            bridge.setDisplayScale(density, systemFontScale / initialSystemFontScale);
+            if (ratio !== 1) {
+                session._preferredWidth = Math.round(session._preferredWidth * ratio);
+                session._preferredHeight = Math.round(session._preferredHeight * ratio);
+                session._preferredX = Math.round(session._preferredX * ratio);
+                session._preferredY = Math.round(session._preferredY * ratio);
+                dragThreshold = Math.max(4, dragThreshold * ratio);
+                longPressSlop = Math.max(4, longPressSlop * ratio);
+                flingMinVelocity *= ratio;
+                flingMaxVelocity *= ratio;
+                contentPadding *= ratio;
+                contentMinWidth *= ratio;
+                contentMinHeight *= ratio;
+                if (options.contentMaxWidth != null) {
+                    contentMaxWidth *= ratio;
+                }
+                if (options.contentMaxHeight != null) {
+                    contentMaxHeight *= ratio;
+                }
+                wheelUnit = Math.max(8, fontSize * density * 3);
+                pinchThreshold = PINCH_THRESHOLD_DP * density;
+                for (var buttonIndex = 0; buttonIndex < session._buttons.length; buttonIndex += 1) {
+                    session._buttons[buttonIndex]._rescale(ratio);
+                }
+            }
+            updateConfiguration(true, scaleChange);
         }
 
         function updateContentAutoSize() {
@@ -6874,6 +7013,32 @@ module.exports = function (bridge) {
                 // Keeps the button on screen after a display change.
                 _relayout: function () {
                     moveButton(button.x, button.y, "configuration");
+                },
+
+                // Keeps the geometry of the button in dp after a density change.
+                _rescale: function (ratio) {
+                    if (button.closed) {
+                        return;
+                    }
+                    button.width = Math.max(1, Math.round(button.width * ratio));
+                    button.height = Math.max(1, Math.round(button.height * ratio));
+                    cornerRadius *= ratio;
+                    strokeWidth = Math.round(strokeWidth * ratio);
+                    elevation *= ratio;
+                    buttonView.post(new Runnable({
+                        run: function () {
+                            background.setCornerRadius(cornerRadius);
+                            if (strokeWidth > 0) {
+                                background.setStroke(strokeWidth, borderColor);
+                            }
+                            buttonView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, textSize);
+                            buttonView.setElevation(elevation);
+                        }
+                    }));
+                    if (button.visible) {
+                        buttonWindow.setSize(button.width, button.height);
+                    }
+                    moveButton(button.x * ratio, button.y * ratio, "configuration");
                 }
             };
             defineReadOnlyFields(floatingButton, {
@@ -7073,6 +7238,7 @@ module.exports = function (bridge) {
             cancelLongPress();
             cancelPressedButton();
             stopFling();
+            closeInputBox();
             if (imeView != null) {
                 try {
                     bridge.hideIme(imeView);
@@ -7142,7 +7308,7 @@ module.exports = function (bridge) {
                 } else {
                     state.ready = Boolean(bridge.init(
                         nativeSurface, density, fontPath, fontSize, iniPath,
-                        stringArray(additionalFontPaths), floatArray(additionalFontSizes)
+                        stringArray(additionalFontPaths), floatArray(additionalFontSizes), systemCjkFont
                     ));
                 }
                 if (!state.ready) {
@@ -7226,6 +7392,12 @@ module.exports = function (bridge) {
                             console.warn("[imgui] Surface detachment failed: " + error);
                         }
                     }
+                    // A change of density or font size recreates the host Activity, and the surface does not come back.
+                    if (activityMode && bridge.isActivityChangingConfigurations(surfaceView)) {
+                        runOnScriptThread(function () {
+                            session.close("configuration-changed");
+                        });
+                    }
                 }
             });
             holder.addCallback(surfaceCallback);
@@ -7291,6 +7463,183 @@ module.exports = function (bridge) {
         var wheelUnit = Math.max(8, fontSize * density * 3);
         var flingVelocity = 0;
         var flingLastTime = 0;
+        // With options.pinchZoom a change of the distance between two fingers by pinchThreshold turns their scroll
+        // gesture into a pinch, until they lift. A pinch applies the ratio of the distances to the font scale.
+        var pinchThreshold = PINCH_THRESHOLD_DP * density;
+        var pinching = false;
+        var pinchStartDistance = 0;
+        var pinchStartScale = 1;
+        var fontScale = 1;
+        var requestedFontScale = 1;
+        var requestedFontScaleSource = "api";
+        // The privileged text box, see openInputBox. inputBoxDone: the box handed over its text or could not open, and
+        // the text field has yet to lose the keyboard focus.
+        var inputBox = null;
+        var inputBoxDone = false;
+
+        function requestFontScale(scale, source) {
+            requestedFontScale = scale;
+            requestedFontScaleSource = source;
+            noteSessionActivity();
+        }
+
+        // Before a new frame: the native style only changes between two frames.
+        function applyFontScale() {
+            if (requestedFontScale === fontScale) {
+                return;
+            }
+            var oldScale = fontScale;
+            fontScale = requestedFontScale;
+            bridge.setFontScale(fontScale);
+            emitSessionEvent("fontScaleChanged", {
+                scale: fontScale,
+                oldScale: oldScale,
+                source: requestedFontScaleSource
+            });
+        }
+
+        function pointerDistance(event) {
+            var deltaX = event.getX(0) - event.getX(1);
+            var deltaY = event.getY(0) - event.getY(1);
+            return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        }
+
+        // Privileged windows have no view for the system IME to attach to (R5.4). While a text field is active, a host
+        // floaty takes the text. The privileged layer is above every window, so it is presented empty meanwhile: the
+        // floaty and the keyboard would be hidden behind any ImGui window. Its direct input is off as well, because a
+        // touch on the floaty would also reach ImGui and end the edit.
+        function updateInputBox() {
+            if (!bridge.wantTextInput()) {
+                inputBoxDone = false;
+                closeInputBox();
+            } else if (inputBox == null && !inputBoxDone && !bridge.isPrivilegedPointerDown()) {
+                openInputBox(Number(bridge.getTextInputFlags()));
+            }
+        }
+
+        function openInputBox(flags) {
+            var multiline = (flags & 1) !== 0;
+            var boxWindow;
+            try {
+                boxWindow = floaty.rawWindow(
+                    '<horizontal bg="#f0202124" padding="8" gravity="center_vertical">' +
+                    '<input id="imgui_input" w="0" layout_weight="1" h="*" gravity="top" textColor="#ffffff" />' +
+                    '<button id="imgui_input_done" w="auto" text="OK" />' +
+                    '</horizontal>'
+                );
+            } catch (error) {
+                inputBoxDone = true;
+                console.warn("[imgui] The privileged text box needs the overlay permission of AutoJs6: " + error);
+                return;
+            }
+            var box = {
+                window: boxWindow,
+                field: boxWindow.imgui_input,
+                multiline: multiline,
+                enterEndsEdit: !multiline || (flags & 4) !== 0
+            };
+            var boxMargin = Math.round(12 * density);
+            boxWindow.setSize(state.displayWidth - 2 * boxMargin, Math.round((multiline ? 160 : 72) * density));
+            boxWindow.setPosition(boxMargin, Math.round(48 * density));
+            boxWindow.requestFocus();
+            inputBox = box;
+            state.imeView = box.field;
+            bridge.setFrameHidden(true);
+            setHostTouchable(false);
+            box.field.post(new Runnable({
+                run: function () {
+                    if (inputBox === box) {
+                        prepareInputBox(box, (flags & 2) !== 0);
+                    }
+                }
+            }));
+        }
+
+        // Runs on the UI thread. The done button, the done key of the keyboard, a touch outside the box and the loss of
+        // the window focus all hand over the text.
+        function prepareInputBox(box, password) {
+            var InputType = android.text.InputType;
+            var EditorInfo = android.view.inputmethod.EditorInfo;
+            var field = box.field;
+
+            function submit() {
+                var text = String(field.getText());
+                runOnScriptThread(function () {
+                    finishInputBox(box, text);
+                });
+            }
+
+            field.setInputType(
+                InputType.TYPE_CLASS_TEXT |
+                (box.multiline ? InputType.TYPE_TEXT_FLAG_MULTI_LINE : 0) |
+                (password ? InputType.TYPE_TEXT_VARIATION_PASSWORD : 0)
+            );
+            field.setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
+            field.setOnEditorActionListener(new android.widget.TextView.OnEditorActionListener({
+                onEditorAction: function () {
+                    submit();
+                    return true;
+                }
+            }));
+            box.window.imgui_input_done.setOnClickListener(new android.view.View.OnClickListener({
+                onClick: submit
+            }));
+            bridge.setWindowOutsideTouchListener(field, new Runnable({run: submit}));
+            var hadWindowFocus = false;
+            field.getViewTreeObserver().addOnWindowFocusChangeListener(
+                new android.view.ViewTreeObserver.OnWindowFocusChangeListener({
+                    onWindowFocusChanged: function (hasFocus) {
+                        if (hadWindowFocus && !hasFocus) {
+                            submit();
+                        }
+                        hadWindowFocus = hasFocus;
+                    }
+                })
+            );
+            bridge.showSoftKeyboard(field);
+        }
+
+        // The characters are followed by the Enter of the field, so an inputText with EnterReturnsTrue reports the
+        // edit as usual; a multi-line field adds a line for a plain Enter and ends the edit with Ctrl+Enter.
+        function finishInputBox(box, text) {
+            if (box !== inputBox) {
+                return;
+            }
+            closeInputBox();
+            inputBoxDone = true;
+            if (text.length > 0) {
+                bridge.addInputCharacters(text);
+            }
+            if (!box.enterEndsEdit) {
+                bridge.addKeyEvent(api.Mod.Ctrl, true);
+            }
+            bridge.addKeyEvent(api.Key.Enter, true);
+            bridge.addKeyEvent(api.Key.Enter, false);
+            if (!box.enterEndsEdit) {
+                bridge.addKeyEvent(api.Mod.Ctrl, false);
+            }
+        }
+
+        function closeInputBox() {
+            var box = inputBox;
+            if (box == null) {
+                return;
+            }
+            inputBox = null;
+            state.imeView = null;
+            try {
+                bridge.hideSoftKeyboard(box.field);
+                box.window.close();
+            } catch (ignored) {
+                // The host may have already disposed the window.
+            }
+            try {
+                bridge.setFrameHidden(false);
+                setHostTouchable(state.touchable);
+            } catch (ignored) {
+                // While the session closes, the native layer may already belong to no one.
+            }
+        }
 
         function postToUi(action) {
             surfaceView.post(new Runnable({run: action}));
@@ -7442,10 +7791,20 @@ module.exports = function (bridge) {
                     cancelPressedButton();
                     longPressTriggered = false;
                     wheeling = true;
+                    pinching = false;
+                    pinchStartDistance = pointerDistance(event);
                     wheelLastY = (event.getY(0) + event.getY(1)) / 2;
                     wheelLastTime = Number(event.getEventTime());
                     wheelVelocity = 0;
+                } else if (pinching) {
+                    pinchStartDistance = 0;
                 }
+                return true;
+            }
+
+            if (action === MotionEvent.ACTION_POINTER_UP) {
+                // The next move measures from the fingers that remain.
+                pinchStartDistance = 0;
                 return true;
             }
 
@@ -7458,6 +7817,21 @@ module.exports = function (bridge) {
                 }
                 if (wheeling) {
                     if (event.getPointerCount() >= 2) {
+                        if (pinchZoom) {
+                            var distance = pointerDistance(event);
+                            if (pinchStartDistance <= 0) {
+                                pinchStartDistance = distance;
+                                pinchStartScale = requestedFontScale;
+                            } else if (!pinching && Math.abs(distance - pinchStartDistance) > pinchThreshold) {
+                                pinching = true;
+                                pinchStartDistance = distance;
+                                pinchStartScale = requestedFontScale;
+                            }
+                            if (pinching) {
+                                requestFontScale(clamp(pinchStartScale * distance / pinchStartDistance, 0.5, 3), "pinch");
+                                return true;
+                            }
+                        }
                         var wheelY = (event.getY(0) + event.getY(1)) / 2;
                         var wheelDelta = wheelY - wheelLastY;
                         var wheelTime = Number(event.getEventTime());
@@ -7503,7 +7877,7 @@ module.exports = function (bridge) {
 
             if (action === MotionEvent.ACTION_UP || action === MotionEvent.ACTION_CANCEL) {
                 cancelLongPress();
-                var completedWheelGesture = wheeling && action === MotionEvent.ACTION_UP;
+                var completedWheelGesture = wheeling && !pinching && action === MotionEvent.ACTION_UP;
                 if (pressedMouseButton >= 0) {
                     bridge.touchEvent(
                         action === MotionEvent.ACTION_UP ? 1 : 3,
@@ -7516,6 +7890,7 @@ module.exports = function (bridge) {
                 pointerDown = false;
                 dragging = false;
                 wheeling = false;
+                pinching = false;
                 longPressTriggered = false;
                 if (completedWheelGesture) {
                     startFling(Number(event.getEventTime()));
@@ -7690,6 +8065,7 @@ module.exports = function (bridge) {
                 session.close(state.closeReason || "replaced");
                 return;
             }
+            updateDisplayScale();
             updateConfiguration(false);
             if (state.ready && !bridge.isOwner()) {
                 session.close("native-context-replaced");
@@ -7722,6 +8098,7 @@ module.exports = function (bridge) {
             var frameStarted = false;
             var frameRendered = false;
             var frameFailed = false;
+            applyFontScale();
             var workStartedAt = java.lang.System.nanoTime();
             session._inFrame = true;
             try {
@@ -7783,7 +8160,11 @@ module.exports = function (bridge) {
                 try {
                     updateTouchableRegion();
                     updateContentAutoSize();
-                    setImeTargetVisible(Boolean(bridge.wantTextInput()));
+                    if (inputBoxEnabled) {
+                        updateInputBox();
+                    } else {
+                        setImeTargetVisible(Boolean(bridge.wantTextInput()));
+                    }
                 } catch (error) {
                     setImeTargetVisible(false);
                     console.warn("[imgui] Unable to update post-frame session state: " + error);

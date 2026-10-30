@@ -5,6 +5,18 @@
   "changelog_label_improvement": "Amélioration",
   "changelog_label_dependency": "Dépendance",
   "$data": {
+    "v1.16.0": {
+      "released_date": "2026/10/31",
+      "feature": [
+        "session.capture(options) prend une image de la fenêtre et renvoie une image pour le module images, par exemple images.save(session.capture(), path). options.region choisit une partie de la fenêtre, en dp. Une fenêtre en mode privilégié ne peut être capturée qu'entre deux images, par exemple depuis setTimeout(fn, 0)",
+        "createWindow({systemCjkFont: true}) affiche tous les caractères CJK de l'appareil, y compris les caractères rares comme 龘 absents de la police intégrée. Android dessine chaque caractère à sa première utilisation, ce qui ne demande presque pas de mémoire en plus; docs/LIMITS.md indique ce que couvre la police intégrée",
+        "createWindow({pinchZoom: true}) permet de changer la taille du texte de 0.5 à 3 fois avec deux doigts; déplacer les deux doigts ensemble fait toujours défiler. Lisez l'échelle dans session.fontScale, réglez-la avec session.setFontScale(scale) et écoutez le nouvel événement fontScaleChanged. L'exemple widget-overview montre tout cela",
+        "Saisie de texte en mode privilégié: toucher un inputText ouvre maintenant une petite zone de saisie d'AutoJs6 avec le clavier (cela demande l'autorisation de superposition pour AutoJs6). Le bouton OK, la touche de validation ou un toucher ailleurs insère le texte au curseur du champ; le texte déjà présent ne peut pas être modifié dans cette zone"
+      ],
+      "improvement": [
+        "Les fenêtres suivent maintenant les changements de taille d'affichage (densité) et de taille de police du système pendant l'exécution: le texte et les contrôles prennent la nouvelle taille, et la fenêtre garde sa taille en dp. configurationChanged a les nouveaux champs density, oldDensity, fontScale et oldFontScale. Une fenêtre plein écran de imgui.launch se ferme à la place (session.closeReason vaut \"configuration-changed\"), car Android recrée son Activity"
+      ]
+    },
     "v1.15.0": {
       "released_date": "2026/10/30",
       "feature": [

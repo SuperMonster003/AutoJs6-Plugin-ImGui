@@ -61,6 +61,7 @@ ImGui 外掛將 [Dear ImGui](https://github.com/ocornut/imgui) 立即模式圖�
 - 視窗/分頁/樹狀節點/表格/彈窗/選單/工具提示與 60 餘個立即模式控制項, 含行動裝置風格 `toggle` 開關.
 - 視覺與字型系統: 11 套 `Themes` 主題、批次樣式、圓角/邊框/陰影外觀、多字型堆疊、CJK 備援與 Material Icons 子集.
 - 代管紋理支援檔案路徑、編碼位元組、Android `Bitmap` 與 AutoJs6 `Image`; `image` / `imageButton` 和三層 DrawList 可完成圖片顯示與浮動視窗自繪.
+- `session.capture()` 將視窗內容回傳為 AutoJs6 `Image`; `systemCjkFont: true` 讓系統繪製內建字型之外的 CJK 字元, `pinchZoom: true` 讓雙指捏合調整字型縮放, 視窗也會跟隨顯示密度與系統字型大小的變化.
 - 輕量 `imgui.ref(value)` / `{value: x}` 參照可用於所有具狀態控制項, 現有 Java 陣列參照輔助方法保持完全相容.
 - 工作階段託管的 `logWindow`、堆疊 `toast`、Promise 對話框、閾值變色 `statsOverlay` 與可選取 CRUD `dataTable` 可直接組成偵錯介面.
 - 常用 API 與常數列舉提供 PascalCase 別名 (如 `ui.Button`), 參數沿用外掛風格; 別名清單及與上游 C++ 簽章的差異見 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
@@ -165,13 +166,23 @@ imgui.runExample("widget-overview");
 
 - 同一指令碼引擎同一時刻僅支援一個原生渲染工作階段; 多面板情境應在該工作階段內建立多個 ImGui 根視窗. 新建懸浮窗或 Activity 工作階段會關閉舊工作階段.
 - `imgui.launch` 需要目前存在處於 resumed 狀態的 AutoJs6 Activity; 指令碼需要脫離前景 Activity 持續渲染時請使用 `launchFloaty`.
-- v1.9 特權模式固定全螢幕且只支援指標: 暫無 IME/按鍵、宿主層透明度/防擷取、收合、獨立 Android 按鈕或動態旋轉重建. Direct input 不使用 `EVIOCGRAB`, OEM SurfaceControl/SELinux 原則仍可能拒絕啟動; 能力探測不會執行 `su` 或要求 Shizuku 授權.
+- 特權模式固定全螢幕且只支援指標: 文字欄位使用 AutoJs6 的臨時輸入框 (需要懸浮視窗權限, 只能在游標處追加文字), 暫無按鍵、宿主層透明度/防擷取、收合、獨立 Android 按鈕或動態旋轉重建. Direct input 不使用 `EVIOCGRAB`, OEM SurfaceControl/SELinux 原則仍可能拒絕啟動; 能力探測不會執行 `su` 或要求 Shizuku 授權.
 
 ******
 
 ### 發行歷史
 
 ******
+
+#### v1.16.0
+
+###### 2026/10/31
+
+* `新增` session.capture(options) 擷取視窗畫面, 回傳 images 模組可用的影像, 例如 images.save(session.capture(), path). options.region 指定視窗的一部分, 單位 dp. 特權模式的視窗只能在兩個影格之間擷取, 例如放進 setTimeout(fn, 0)
+* `新增` createWindow({systemCjkFont: true}) 可以顯示裝置上所有的中日韓字元, 包括內建字型缺少的罕用字 (例如 龘). 每個字元在首次使用時由 Android 繪製, 幾乎不占額外記憶體; docs/LIMITS.md 列出了內建字型的涵蓋範圍
+* `新增` createWindow({pinchZoom: true}) 可以用雙指捏合把文字縮放到 0.5 到 3 倍, 雙指同向移動仍然是捲動. 用 session.fontScale 讀取縮放值, session.setFontScale(scale) 設定, 新事件 fontScaleChanged 通知變化. widget-overview 範例示範了這些功能
+* `新增` 特權模式支援文字輸入: 點選 inputText 會開啟 AutoJs6 的小輸入框和鍵盤 (需要 AutoJs6 的懸浮視窗權限). 點 OK, 鍵盤的完成鍵或其他位置後, 文字寫入控制項的游標處; 控制項裡已有的文字不能在小輸入框裡修改
+* `優化` 視窗執行時會跟隨顯示大小 (密度) 和系統字型大小的變化: 文字和控制項換成新尺寸, 視窗的 dp 尺寸不變. configurationChanged 事件新增 density, oldDensity, fontScale, oldFontScale 欄位. imgui.launch 開啟的全螢幕視窗則會關閉 (session.closeReason 為 "configuration-changed"), 因為 Android 會重建它所在的 Activity
 
 #### v1.15.0
 
@@ -192,18 +203,6 @@ imgui.runExample("widget-overview");
 * `新增` 表格排序: 表格帶有 Sortable 旗標時輕觸欄標題即可切換排序; tableGetSortSpecs() 傳回排序欄與方向 (imgui.SortDirection), specsDirty 只在排序變化的那一幀為 true. tableSetupColumn 的第四個參數是欄的使用者 id. dataTable 設定 sortable: true 即可依欄排序, 欄的 compare 函式可自訂順序; 請參閱範例 data-table-demo
 * `新增` 多值控制項: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 以及編輯最小值與最大值的 dragFloatRange2 / dragIntRange2 和編輯角度的 sliderAngle (以弧度儲存, 以度顯示). 數值以 {value: [x, y, z]}, imgui.floats(...) 或新增的 imgui.ints(...) 傳入; 請參閱範例 widget-overview 的新區段
 * `優化` createWindow({debug: true}) 時, 渲染回呼耗時超過 250 毫秒會以 console.warn 提示耗時, 並建議把 sleep, 網路, 檔案等慢速操作移到 threads.start, 每 10 秒最多提示一次; docs/THREADING.md 說明做法
-
-#### v1.13.0
-
-###### 2026/10/30
-
-* `提示` 行為變更: 為了省電, 視窗在 3 秒內沒有觸控或按鍵輸入後每秒只繪製 10 個影格, 螢幕關閉或鎖定時停止繪製; 再次觸控後立即恢復正常影格率. 若視窗有動畫, 或顯示不靠輸入就會變化的資料 (計時器, 圖表, 進度列), 請在 createWindow 傳入 idleFps: 0 或呼叫 session.setIdleFps(0) 保持正常影格率
-* `新增` ui.listClipper(itemCount, options, callback) (別名 ListClipper) 只繪製可見的列, 10 萬列的清單也能流暢捲動; 請參閱新範例 large-list
-* `新增` 影格率控制: createWindow 選項 idleFps / idleDelay, session.setFps / setIdleFps / getFps, 工作階段事件 idle / active 以及欄位 idle / paused
-* `新增` texture.update(source) 取代紋理的影像並保持控制代碼不變, 顯示它的 image 呼叫無須修改; 尺寸變更時 texture.width / height 隨之更新. 請參閱新範例 texture-refresh, 每秒重新整理兩次預覽
-* `新增` createTexture 與 texture.update 也接受裝有 PNG 或 JPEG 資料的 ArrayBuffer 或型別陣列 (如 Uint8Array)
-* `新增` statsOverlay 顯示每個影格的工作耗時 (繪製所用時間, 不含等待螢幕更新), snapshot() 以 workTime 傳回該值
-* `優化` docs/FRAME-LOOP.md 說明影格率與省電機制, docs/LIMITS.md 補充 listClipper 的限制
 
 ##### 更多發行歷史可參閱
 

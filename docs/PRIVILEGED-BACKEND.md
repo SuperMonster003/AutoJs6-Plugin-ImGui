@@ -16,7 +16,8 @@ the user-facing transport.
 | Privileged SurfaceControl layer | Available, with a per-device runtime probe | Yes |
 | Complete existing JS/JNI ImGui facade | Reused in the host process without an RPC copy | Yes |
 | Direct `/dev/input/event*` pointer reader | Available, non-grabbing observation policy | Yes |
-| IME/key input in privileged mode | Not implemented | No |
+| Text input in privileged mode | Temporary AutoJs6 input box, see [Text input](#text-input) | Yes |
+| Key input in privileged mode | Not implemented | No |
 | Docking / Multi-Viewport | Deferred; see `DOCKING-MULTI-VIEWPORT.md` | No |
 
 `imgui.getBackendCapabilities()` exposes schema version 2. A configured device reports
@@ -192,8 +193,8 @@ gesture also reaches Android and the underlying application. For privileged sess
   the privileged child reports an available event node;
 - OEM SELinux policy may allow a root child but deny a shell/Shizuku child.
 
-IME, text composition, hardware-key routing, Android InputDispatcher hit regions, and exclusive input are
-not provided in this mode.
+Text composition, hardware-key routing, Android InputDispatcher hit regions, and exclusive input are not
+provided in this mode. Text fields use the temporary input box described under [Text input](#text-input).
 
 ## Capability schema v2
 
@@ -253,10 +254,31 @@ buttons/collapse are unavailable. Host-layer alpha and marking the privileged la
 capture are not implemented; `alpha !== 1` and `secure: true` are rejected. The ability to draw above an
 application that uses `FLAG_SECURE` is separate from protecting the ImGui layer from capture.
 
-The mode also disables the Android IME proxy. It supports pointer interaction through direct evdev only.
+The mode has no Android IME proxy. It supports pointer interaction through direct evdev, plus the temporary
+input box for text fields.
 SurfaceControl is a non-SDK framework interface, so startup can still fail on an OEM/API combination even
 when Root/Shizuku authorization is valid. Such failure is explicit and leaves the established overlay and
 Activity modes unchanged.
+
+## Text input
+
+The privileged layer has no view for the system IME, so while a text field wants input (`wantTextInput`) the session
+opens a host floaty with an input field and an OK button at the top of the display, and shows the keyboard.
+`session.imeView` returns the field meanwhile; `createWindow({ime: false})` turns the box off.
+
+- The box needs the AutoJs6 overlay permission, unlike the rest of the mode. Without it the session prints one warning
+  and the text field stays empty.
+- The layer is above every window, so it would hide the box and the keyboard: while the box is open the layer presents
+  empty frames. The frame loop and the render callback go on. Direct input is off meanwhile, because a touch on the box
+  would also reach ImGui and end the edit.
+- The box opens once the finger that activated the field has lifted, so ImGui does not keep a pressed mouse button.
+- A multi-line field gets a box of 160 dp, a field with `InputTextFlags.Password` a password field.
+- The OK button, the done key of the keyboard, a touch outside the box and the loss of the window focus all hand the
+  text over: `addInputCharacters`, then Enter (Ctrl+Enter for a multi-line field, plain Enter with
+  `CtrlEnterForNewLine`), so that `EnterReturnsTrue` reports the edit as usual. If the field loses the keyboard focus
+  first, the text is dropped.
+- The box only adds text at the cursor of the field. It does not show the text the field already has, which cannot be
+  edited.
 
 ## Legacy socket diagnostic
 

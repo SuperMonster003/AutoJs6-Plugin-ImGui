@@ -20,6 +20,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "imgui.h"
@@ -41,6 +42,27 @@ constexpr int kTextureFlagMipmaps = 1 << 2;
 constexpr char kBundledCjkFontAsset[] = "fonts/AutoJs6CjkFallback-Regular.otf";
 constexpr char kBundledIconFontAsset[] = "fonts/AutoJs6MaterialIcons-Subset.ttf";
 constexpr size_t kMaxDebugMessages = 64;
+constexpr float kMinFontScale = 0.5F;
+constexpr float kMaxFontScale = 3.0F;
+constexpr int kTextInputMultiline = 1 << 0;
+constexpr int kTextInputPassword = 1 << 1;
+constexpr int kTextInputCtrlEnterForNewLine = 1 << 2;
+// Dear ImGui sizes a font by its line height; 1.448 is the line height of Noto Sans CJK in em, as for the bundled font.
+constexpr float kSystemGlyphEmPerLine = 1.0F / 1.448F;
+// The first and last code point of the ranges the Android text stack draws, sorted.
+constexpr std::array<std::pair<ImWchar, ImWchar>, 11> kSystemGlyphRanges = {{
+    {0x1100, 0x11FF},  // Hangul Jamo.
+    {0x2E80, 0x2FDF},  // CJK and Kangxi radicals.
+    {0x2FF0, 0x4DBF},  // Description characters, symbols, kana, Bopomofo, compatibility, extension A.
+    {0x4E00, 0x9FFF},  // CJK unified ideographs.
+    {0xA960, 0xA97F},  // Hangul Jamo extended A.
+    {0xAC00, 0xD7A3},  // Hangul syllables.
+    {0xD7B0, 0xD7FF},  // Hangul Jamo extended B.
+    {0xF900, 0xFAFF},  // CJK compatibility ideographs.
+    {0xFE10, 0xFE1F},  // Vertical forms.
+    {0xFE30, 0xFE4F},  // CJK compatibility forms.
+    {0xFF00, 0xFFEF},  // Halfwidth and fullwidth forms.
+}};
 
 #define LOG_ERROR(...) __android_log_print(ANDROID_LOG_ERROR, kLogTag, __VA_ARGS__)
 #define LOG_INFO(...) __android_log_print(ANDROID_LOG_INFO, kLogTag, __VA_ARGS__)
@@ -65,6 +87,10 @@ struct RendererState {
     bool suspended = false;
     bool frameActive = false;
     float density = 1.0F;
+    // The density the fonts were added with. style.FontScaleDpi carries a later change of the density.
+    float fontDensity = 1.0F;
+    // Presents empty frames while the frame loop goes on, so that windows below the surface can be seen.
+    bool frameHidden = false;
     std::string iniPath;
     std::vector<ImFont*> fonts;
     std::vector<float> fontSizes;
@@ -94,6 +120,10 @@ JavaVM* gJavaVm = nullptr;
 jclass gNativeClass = nullptr;
 jmethodID gReadClipboardMethod = nullptr;
 jmethodID gWriteClipboardMethod = nullptr;
+jclass gSystemGlyphsClass = nullptr;
+jmethodID gHasSystemGlyphMethod = nullptr;
+jmethodID gMeasureSystemGlyphMethod = nullptr;
+jmethodID gDrawSystemGlyphMethod = nullptr;
 
 void ThrowJavaException(JNIEnv* env, const char* className, const char* message) {
     jclass exceptionClass = env->FindClass(className);
@@ -373,6 +403,7 @@ void ShutdownRenderer() {
         }
         ImGui::DestroyContext();
     }
+    gState.frameHidden = false;
     gImGuiAssertReporting = false;
     gState.rendererBackendInitialized = false;
     gState.platformBackendInitialized = false;
@@ -687,6 +718,170 @@ ImFont* AddFirstReadableSystemFont(float sizePixels, bool cjkOnly) {
         }
     }
     return nullptr;
+}
+
+// createWindow({systemCjkFont: true}): a font source without font data, for which Android draws one glyph at a time
+// (ImGuiSystemGlyphs). The CJK font of current Android versions is a variable CFF2 font, which stb_truetype cannot read; the
+// Android text stack reads it, as well as the fonts vendors put in its place, and no font file stays in memory.
+// Dear ImGui calls the loader inside native calls of the script thread, so the thread is attached.
+bool BindSystemGlyphs(JNIEnv* env) {
+    if (gSystemGlyphsClass != nullptr) {
+        return true;
+    }
+    jclass glyphsClass = env->FindClass("io/github/supermonster003/autojs6/plugin/imgui/ImGuiSystemGlyphs");
+    if (glyphsClass == nullptr) {
+        env->ExceptionClear();
+        return false;
+    }
+    gHasSystemGlyphMethod = env->GetStaticMethodID(glyphsClass, "has", "(I)Z");
+    gMeasureSystemGlyphMethod = env->GetStaticMethodID(glyphsClass, "measure", "(IF)F");
+    gDrawSystemGlyphMethod = env->GetStaticMethodID(glyphsClass, "draw", "(IF[I)[B");
+    if (gHasSystemGlyphMethod != nullptr && gMeasureSystemGlyphMethod != nullptr && gDrawSystemGlyphMethod != nullptr) {
+        env->GetJavaVM(&gJavaVm);
+        gSystemGlyphsClass = static_cast<jclass>(env->NewGlobalRef(glyphsClass));
+    }
+    env->ExceptionClear();
+    env->DeleteLocalRef(glyphsClass);
+    return gSystemGlyphsClass != nullptr;
+}
+
+bool IsSystemGlyphCodepoint(ImWchar codepoint) {
+    return std::any_of(kSystemGlyphRanges.begin(), kSystemGlyphRanges.end(), [codepoint](const auto& range) {
+        return codepoint >= range.first && codepoint <= range.second;
+    });
+}
+
+JNIEnv* SystemGlyphEnv(ImWchar codepoint) {
+    JNIEnv* env = nullptr;
+    if (!IsSystemGlyphCodepoint(codepoint) || gJavaVm == nullptr ||
+        gJavaVm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        return nullptr;
+    }
+    const jboolean found = env->CallStaticBooleanMethod(
+        gSystemGlyphsClass,
+        gHasSystemGlyphMethod,
+        static_cast<jint>(codepoint)
+    );
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return nullptr;
+    }
+    return found == JNI_TRUE ? env : nullptr;
+}
+
+bool SystemGlyphSourceContains(ImFontAtlas*, ImFontConfig*, ImWchar codepoint) {
+    return SystemGlyphEnv(codepoint) != nullptr;
+}
+
+void DrawSystemGlyph(
+    JNIEnv* env,
+    ImFontAtlas* atlas,
+    ImFontConfig* src,
+    ImFontBaked* baked,
+    ImWchar codepoint,
+    jfloat textSize,
+    float density,
+    ImFontGlyph* glyph
+) {
+    jintArray box = env->NewIntArray(5);
+    if (box == nullptr) {
+        env->ExceptionClear();
+        return;
+    }
+    auto pixels = static_cast<jbyteArray>(env->CallStaticObjectMethod(
+        gSystemGlyphsClass,
+        gDrawSystemGlyphMethod,
+        static_cast<jint>(codepoint),
+        textSize,
+        box
+    ));
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+    } else if (pixels != nullptr) {
+        std::array<jint, 5> values{};
+        env->GetIntArrayRegion(box, 0, static_cast<jsize>(values.size()), values.data());
+        const auto [left, top, width, height, pitch] = values;
+        const ImFontAtlasRectId packId = ImFontAtlasPackAddRect(atlas, width, height);
+        jbyte* data = packId == ImFontAtlasRectId_Invalid ? nullptr : env->GetByteArrayElements(pixels, nullptr);
+        if (data != nullptr) {
+            ImTextureRect* rect = ImFontAtlasPackGetRect(atlas, packId);
+            const float offsetY = IM_ROUND(baked->Ascent);
+            glyph->X0 = static_cast<float>(left) / density;
+            glyph->Y0 = static_cast<float>(top) / density + offsetY;
+            glyph->X1 = static_cast<float>(left + static_cast<int>(rect->w)) / density;
+            glyph->Y1 = static_cast<float>(top + static_cast<int>(rect->h)) / density + offsetY;
+            glyph->Visible = true;
+            glyph->PackId = packId;
+            ImFontAtlasBakedSetFontGlyphBitmap(
+                atlas,
+                baked,
+                src,
+                glyph,
+                rect,
+                reinterpret_cast<const unsigned char*>(data),
+                ImTextureFormat_Alpha8,
+                pitch
+            );
+            env->ReleaseByteArrayElements(pixels, data, JNI_ABORT);
+        }
+    }
+    if (pixels != nullptr) {
+        env->DeleteLocalRef(pixels);
+    }
+    env->DeleteLocalRef(box);
+}
+
+bool LoadSystemGlyph(
+    ImFontAtlas* atlas,
+    ImFontConfig* src,
+    ImFontBaked* baked,
+    void*,
+    ImWchar codepoint,
+    ImFontGlyph* glyph,
+    float* advanceOnly
+) {
+    JNIEnv* env = SystemGlyphEnv(codepoint);
+    if (env == nullptr) {
+        return false;
+    }
+    const float density = src->RasterizerDensity * baked->RasterizerDensity;
+    const jfloat textSize = baked->Size * density * kSystemGlyphEmPerLine;
+    const jfloat advance = env->CallStaticFloatMethod(
+        gSystemGlyphsClass,
+        gMeasureSystemGlyphMethod,
+        static_cast<jint>(codepoint),
+        textSize
+    );
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return false;
+    }
+    if (advanceOnly != nullptr) {
+        *advanceOnly = advance / density;
+        return true;
+    }
+    glyph->Codepoint = codepoint;
+    glyph->AdvanceX = advance / density;
+    DrawSystemGlyph(env, atlas, src, baked, codepoint, textSize, density, glyph);
+    return true;
+}
+
+const ImFontLoader* SystemGlyphLoader() {
+    static ImFontLoader loader;
+    loader.Name = "android-system-glyphs";
+    loader.FontSrcContainsGlyph = SystemGlyphSourceContains;
+    loader.FontBakedLoadGlyph = LoadSystemGlyph;
+    return &loader;
+}
+
+// Goes after the sources of destination: they keep their glyphs, and the private use area of the icon font stays theirs.
+void AddSystemGlyphs(ImFont* destination) {
+    ImFontConfig config;
+    config.MergeMode = true;
+    config.DstFont = destination;
+    config.FontLoader = SystemGlyphLoader();
+    ImFormatString(config.Name, IM_COUNTOF(config.Name), "system-glyphs");
+    ImGui::GetIO().Fonts->AddFont(&config);
 }
 
 bool MergeAssetFont(AAssetManager* assetManager, const char* assetPath, ImFont* destination) {
@@ -1158,7 +1353,8 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeInit(
     jfloat fontSize,
     jstring iniPath,
     jobjectArray additionalFontPaths,
-    jfloatArray additionalFontSizes
+    jfloatArray additionalFontSizes,
+    jboolean systemCjkFont
 ) {
     ShutdownRenderer();
     if (surface == nullptr) {
@@ -1193,6 +1389,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeInit(
 
     const float safeDensity = std::clamp(static_cast<float>(density), 0.5F, 4.0F);
     gState.density = safeDensity;
+    gState.fontDensity = safeDensity;
     const float safeFontSize = std::clamp(
         fontSize > 0.0F ? static_cast<float>(fontSize) : 16.0F,
         8.0F,
@@ -1236,6 +1433,9 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeInit(
     }
     const float primarySizePixels = safeFontSize * safeDensity;
     const std::string requestedFont = JStringToUtf8(env, fontPath);
+    // The bundled font stays the fallback of a device without CJK glyphs, or if the Java side cannot be reached.
+    const bool useSystemGlyphs = systemCjkFont == JNI_TRUE && BindSystemGlyphs(env) &&
+        env->CallStaticBooleanMethod(gSystemGlyphsClass, gHasSystemGlyphMethod, static_cast<jint>(0x4E00)) == JNI_TRUE;
     ImFont* primaryFont = nullptr;
     bool primaryHasCjkFallback = false;
     if (!requestedFont.empty()) {
@@ -1266,7 +1466,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeInit(
         primaryFont = io.Fonts->AddFontDefault();
         LOG_INFO("Loaded built-in Dear ImGui default font");
     }
-    if (!primaryHasCjkFallback && nativeAssetManager != nullptr) {
+    if (!primaryHasCjkFallback && !useSystemGlyphs && nativeAssetManager != nullptr) {
         primaryHasCjkFallback = MergeAssetFont(
             nativeAssetManager,
             kBundledCjkFontAsset,
@@ -1274,6 +1474,9 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeInit(
         );
     }
     MergeAssetFont(nativeAssetManager, kBundledIconFontAsset, primaryFont);
+    if (useSystemGlyphs) {
+        AddSystemGlyphs(primaryFont);
+    }
 
     const float resolvedPrimarySize = primaryFont != nullptr && primaryFont->LegacySize > 0.0F
         ? primaryFont->LegacySize
@@ -1304,10 +1507,13 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeInit(
             LOG_ERROR("Additional font %d failed to load; using the default font", index);
             font = primaryFont;
         } else if (font != primaryFont) {
-            if (AssetPathFromSpec(fontSpec) != kBundledCjkFontAsset) {
+            if (!useSystemGlyphs && AssetPathFromSpec(fontSpec) != kBundledCjkFontAsset) {
                 MergeAssetFont(nativeAssetManager, kBundledCjkFontAsset, font);
             }
             MergeAssetFont(nativeAssetManager, kBundledIconFontAsset, font);
+            if (useSystemGlyphs) {
+                AddSystemGlyphs(font);
+            }
         }
         gState.fonts.push_back(font);
         gState.fontSizes.push_back(sizePixels);
@@ -1439,6 +1645,10 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeRender(
     glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    if (gState.frameHidden) {
+        // After the draw data, whose texture updates must still reach the GL textures.
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
     DestroyPendingTextures();
 
     const bool swapped = eglSwapBuffers(gState.display, gState.surface) == EGL_TRUE;
@@ -1447,6 +1657,169 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeRender(
     }
     ReleaseCurrent();
     return swapped ? JNI_TRUE : JNI_FALSE;
+}
+
+// Privileged windows have no Surface to copy from (R5.1): draws the last frame again without presenting it and reads
+// the rectangle of the bitmap's size at (x, y), y from the top. Returns false before the first frame.
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeCaptureFrame(
+    JNIEnv* env,
+    jclass,
+    jobject bitmap,
+    jint x,
+    jint y
+) {
+    if (!RequireContext(env)) return JNI_FALSE;
+    if (gState.frameActive) {
+        ThrowIllegalState(env, "A frame cannot be read back inside the render callback");
+        return JNI_FALSE;
+    }
+    ImDrawData* drawData = ImGui::GetDrawData();
+    if (drawData == nullptr) {
+        return JNI_FALSE;
+    }
+    AndroidBitmapInfo info;
+    if (AndroidBitmap_getInfo(env, bitmap, &info) != ANDROID_BITMAP_RESULT_SUCCESS ||
+        info.format != ANDROID_BITMAP_FORMAT_RGBA_8888
+    ) {
+        ThrowIllegalArgument(env, "The capture bitmap must be ARGB_8888");
+        return JNI_FALSE;
+    }
+    if (!EnsureCurrent()) {
+        ThrowIllegalState(env, "Unable to make the ImGui OpenGL context current");
+        return JNI_FALSE;
+    }
+    EGLint surfaceWidth = 0;
+    EGLint surfaceHeight = 0;
+    eglQuerySurface(gState.display, gState.surface, EGL_WIDTH, &surfaceWidth);
+    eglQuerySurface(gState.display, gState.surface, EGL_HEIGHT, &surfaceHeight);
+    const int width = static_cast<int>(info.width);
+    const int height = static_cast<int>(info.height);
+    if (x < 0 || y < 0 || width <= 0 || height <= 0 || width > surfaceWidth - x || height > surfaceHeight - y) {
+        ReleaseCurrent();
+        ThrowIllegalArgument(env, "The capture rectangle is outside the surface");
+        return JNI_FALSE;
+    }
+
+    void* pixels = nullptr;
+    if (AndroidBitmap_lockPixels(env, bitmap, &pixels) != ANDROID_BITMAP_RESULT_SUCCESS || pixels == nullptr) {
+        ReleaseCurrent();
+        ThrowIllegalState(env, "Unable to lock the capture bitmap");
+        return JNI_FALSE;
+    }
+    while (glGetError() != GL_NO_ERROR) {
+        // Clear unrelated errors so the readback failure reporting remains deterministic.
+    }
+    glViewport(0, 0, surfaceWidth, surfaceHeight);
+    glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ImGui_ImplOpenGL3_RenderDrawData(drawData);
+    GLint previousPackAlignment = 4;
+    GLint previousPackRowLength = 0;
+    glGetIntegerv(GL_PACK_ALIGNMENT, &previousPackAlignment);
+    glGetIntegerv(GL_PACK_ROW_LENGTH, &previousPackRowLength);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glPixelStorei(GL_PACK_ROW_LENGTH, static_cast<GLint>(info.stride / 4U));
+    glReadPixels(x, surfaceHeight - y - height, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glPixelStorei(GL_PACK_ROW_LENGTH, previousPackRowLength);
+    glPixelStorei(GL_PACK_ALIGNMENT, previousPackAlignment);
+    const GLenum readError = glGetError();
+
+    // OpenGL rows run from the bottom up.
+    std::vector<uint8_t> row(static_cast<size_t>(width) * 4U);
+    auto* rows = static_cast<uint8_t*>(pixels);
+    for (int top = 0, bottom = height - 1; top < bottom; ++top, --bottom) {
+        uint8_t* topRow = rows + static_cast<size_t>(top) * info.stride;
+        uint8_t* bottomRow = rows + static_cast<size_t>(bottom) * info.stride;
+        std::memcpy(row.data(), topRow, row.size());
+        std::memcpy(topRow, bottomRow, row.size());
+        std::memcpy(bottomRow, row.data(), row.size());
+    }
+    AndroidBitmap_unlockPixels(env, bitmap);
+    ReleaseCurrent();
+    if (readError != GL_NO_ERROR) {
+        LOG_ERROR("glReadPixels failed: 0x%x", readError);
+        ThrowIllegalState(env, "Reading the frame back failed");
+        return JNI_FALSE;
+    }
+    return JNI_TRUE;
+}
+
+// A density or system font scale change of the running session (R5.2): the sizes of the style follow the density, and
+// style.FontScaleDpi scales every font on top of the size it was added with. fontScale is relative to the session's
+// start. The atlas bakes glyphs at the new size on demand, and compacting it drops the ones of the old size.
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetDisplayScale(
+    JNIEnv* env,
+    jclass,
+    jfloat density,
+    jfloat fontScale
+) {
+    if (!RequireContext(env)) return;
+    if (gState.frameActive) {
+        ThrowIllegalState(env, "The display scale cannot change inside the render callback");
+        return;
+    }
+    if (!std::isfinite(density) || !std::isfinite(fontScale) || density <= 0.0F || fontScale <= 0.0F) {
+        ThrowIllegalArgument(env, "The display scale must be positive");
+        return;
+    }
+    const float safeDensity = std::clamp(static_cast<float>(density), 0.5F, 4.0F);
+    ImGuiStyle& style = ImGui::GetStyle();
+    if (safeDensity != gState.density) {
+        style.ScaleAllSizes(safeDensity / gState.density);
+        gState.density = safeDensity;
+    }
+    style.FontScaleDpi = safeDensity / gState.fontDensity * static_cast<float>(fontScale);
+    ImGui::GetIO().Fonts->CompactCache();
+}
+
+// The font scale of the session (session.setFontScale, pinch zoom), style.FontScaleMain since Dear ImGui 1.92 moved
+// io.FontGlobalScale there.
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetFontScale(
+    JNIEnv* env,
+    jclass,
+    jfloat scale
+) {
+    if (!RequireContext(env)) return;
+    if (gState.frameActive) {
+        ThrowIllegalState(env, "The font scale cannot change inside the render callback");
+        return;
+    }
+    if (!std::isfinite(scale)) {
+        ThrowIllegalArgument(env, "The font scale must be a finite number");
+        return;
+    }
+    ImGui::GetStyle().FontScaleMain = std::clamp(static_cast<float>(scale), kMinFontScale, kMaxFontScale);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetFrameHidden(
+    JNIEnv*,
+    jclass,
+    jboolean hidden
+) {
+    gState.frameHidden = hidden == JNI_TRUE;
+}
+
+// What the text field being edited needs from a text box outside Dear ImGui, 0 when no field is active.
+extern "C" JNIEXPORT jint JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeGetTextInputFlags(
+    JNIEnv*,
+    jclass
+) {
+    if (!gState.ready || ImGui::GetCurrentContext() == nullptr) {
+        return 0;
+    }
+    const ImGuiContext& context = *GImGui;
+    if (context.ActiveId == 0U || context.InputTextState.ID != context.ActiveId) {
+        return 0;
+    }
+    const ImGuiInputTextFlags flags = context.InputTextState.Flags;
+    return ((flags & ImGuiInputTextFlags_Multiline) != 0 ? kTextInputMultiline : 0) |
+        ((flags & ImGuiInputTextFlags_Password) != 0 ? kTextInputPassword : 0) |
+        ((flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0 ? kTextInputCtrlEnterForNewLine : 0);
 }
 
 extern "C" JNIEXPORT jfloatArray JNICALL
@@ -2006,7 +2379,8 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawText(
             return;
         }
         font = gState.fonts[static_cast<size_t>(fontIndex)];
-        resolvedSize = gState.fontSizes[static_cast<size_t>(fontIndex)];
+        const ImGuiStyle& style = ImGui::GetStyle();
+        resolvedSize = gState.fontSizes[static_cast<size_t>(fontIndex)] * style.FontScaleMain * style.FontScaleDpi;
     }
     if (fontSize > 0.0F) {
         resolvedSize = std::clamp(static_cast<float>(fontSize), 4.0F, 128.0F) * gState.density;
@@ -4973,7 +5347,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativePushFont(
         return;
     }
     const float resolvedSize = fontSize > 0.0F
-        ? std::clamp(static_cast<float>(fontSize), 4.0F, 128.0F) * gState.density
+        ? std::clamp(static_cast<float>(fontSize), 4.0F, 128.0F) * gState.fontDensity
         : gState.fontSizes[static_cast<size_t>(index)];
     ImGui::PushFont(font, resolvedSize);
 }

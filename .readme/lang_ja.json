@@ -17,6 +17,7 @@
     "ウィンドウ/タブ/ツリーノード/テーブル/ポップアップ/メニュー/ツールチップのほか, モバイルスタイルの `toggle` スイッチを含む 60 以上の即時モードコントロールを提供します.",
     "11 種類の `Themes`、一括スタイル、角丸/境界線/影の外観、複数フォントスタック、CJK フォールバック、Material Icons サブセットを備えます.",
     "管理対象テクスチャはファイルパス、エンコード済みバイト列、Android `Bitmap`、AutoJs6 `Image` に対応し、`image` / `imageButton` と 3 層の DrawList で画像表示とカスタム描画を行えます.",
+    "`session.capture()` はウィンドウの内容を AutoJs6 の `Image` として返します. `systemCjkFont: true` は同梱フォントにない CJK 文字をシステムに描画させ, `pinchZoom: true` は 2 本指のピンチでフォント倍率を変更します. ウィンドウは表示密度とシステムのフォントサイズの変更にも追従します.",
     "軽量な `imgui.ref(value)` / `{value: x}` 参照はすべての状態付きコントロールで使用でき、従来の Java 配列参照ヘルパーも完全互換です.",
     "セッション管理の `logWindow`、積み重ね可能な `toast`、Promise ダイアログ、しきい値色付き `statsOverlay`、選択/CRUD 対応 `dataTable` でデバッグ UI をすぐ構築できます.",
     "よく使う API と定数列挙には PascalCase エイリアス (例: `ui.Button`) があり, 引数はプラグインの形式に従います. エイリアス一覧と上流 C++ シグネチャとの違いは [ALIASES.md]({{ repo_url }}/blob/master/docs/ALIASES.md) を参照してください.",
@@ -60,7 +61,7 @@
   "limitations": [
     "各スクリプトエンジンが同時に持てるネイティブレンダーセッションは 1 つです。複数パネルはそのセッション内に複数の ImGui ルートウィンドウとして作成してください。新しいオーバーレイまたは Activity セッションは以前のセッションを閉じます。",
     "`imgui.launch` には現在 resumed の AutoJs6 Activity が必要です。フォアグラウンドのホスト Activity なしで描画を続ける場合は `launchFloaty` を使います。",
-    "v1.9 の特権モードは固定全画面かつポインター専用で、IME/キー入力、ホストレイヤーの透明度/セキュリティ、折りたたみ、補助 Android ボタン、回転時の動的再構築には未対応です。直接入力は `EVIOCGRAB` を使わず、OEM の SurfaceControl/SELinux 方針で起動できない場合があります。能力検査は `su` 実行や Shizuku 許可要求を行いません。"
+    "特権モードは固定全画面かつポインター専用です. テキスト欄は AutoJs6 の一時入力ボックスを使い (オーバーレイ権限が必要, カーソル位置への追加のみ), キー入力, ホストレイヤーの透明度/セキュリティ、折りたたみ、補助 Android ボタン、回転時の動的再構築には未対応です。直接入力は `EVIOCGRAB` を使わず、OEM の SurfaceControl/SELinux 方針で起動できない場合があります。能力検査は `su` 実行や Shizuku 許可要求を行いません。"
   ],
   "h3_release_history": "リリース履歴",
   "h5_for_more_release_history": "その他のリリース履歴",

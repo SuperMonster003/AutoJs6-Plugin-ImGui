@@ -7,10 +7,10 @@ These font assets are loaded through Android `AssetManager` by the native ImGui 
 - Source: Noto Sans SC Regular from Noto CJK 2.004 (`Sans2.004`, source commit `523d033d6cb47f4a80c58a35753646f5c3608a78`).
 - Upstream: <https://github.com/notofonts/noto-cjk>
 - License: SIL Open Font License 1.1; see `LICENSE-NOTO-OFL.txt`.
-- Subset: printable Latin, common punctuation/symbol blocks, kana, Bopomofo, Hangul compatibility jamo, full-width forms, and every character encodable by GB 2312. The subset contains about 9,800 Unicode characters.
+- Subset: printable Latin, common punctuation/symbol blocks, kana, Bopomofo, Hangul compatibility jamo, full-width forms, and every character encodable by GB 2312. The subset contains 8,284 Unicode characters, 6,763 of them ideographs; `docs/LIMITS.md` has the coverage per block.
 - SHA-256: `37D12BE5931E07B2615A25E31600F9E13465BE6DCE39C3F0DFBAC9AFD8953124`
 
-The subset is a last-resort CJK fallback for stripped Android systems. Native initialization still prefers a readable caller-supplied font or a system Noto/Droid CJK font.
+Native initialization prefers a readable caller-supplied font or a system Noto/Droid CJK font. The Noto CJK font of current Android versions is a variable CFF2 font that the font loader cannot read, so on those versions this subset is the default CJK font.
 
 ## AutoJs6MaterialIcons-Subset.ttf
 

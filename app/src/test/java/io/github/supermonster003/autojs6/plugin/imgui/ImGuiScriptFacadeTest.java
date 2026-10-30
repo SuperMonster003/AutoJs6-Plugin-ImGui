@@ -58,10 +58,20 @@ public class ImGuiScriptFacadeTest {
         "    }",
         "};",
         "var metrics = {density: 2.5, widthPixels: 1080, heightPixels: 2400};",
+        "var configuration = {fontScale: 1};",
         "var context = {",
-        "    getResources: function () { return {getDisplayMetrics: function () { return metrics; }}; },",
+        "    getResources: function () {",
+        "        return {",
+        "            getDisplayMetrics: function () { return metrics; },",
+        "            getConfiguration: function () { return configuration; }",
+        "        };",
+        "    },",
         "    getSystemService: function () { throw new Error('no window service'); }",
         "};",
+        "var runtime = {};",
+        "var org = {autojs: {autojs: {core: {image: {ImageWrapper: {",
+        "    ofBitmap: function (owner, bitmap) { return {owner: owner, bitmap: bitmap}; }",
+        "}}}}}};",
         "var holderCallbacks = [];",
         "var holder = {",
         "    setFormat: function () {},",
@@ -72,8 +82,9 @@ public class ImGuiScriptFacadeTest {
         "    setZOrderOnTop: function () {},",
         "    getHolder: function () { return holder; },",
         "    post: function () { return true; },",
-        "    setOnTouchListener: function () {}",
+        "    setOnTouchListener: function (listener) { touchListener = listener; }",
         "};",
+        "var touchListener = null;",
         "var windowCalls = [];",
         "var floaty = {",
         "    rawWindow: function () {",
@@ -88,6 +99,46 @@ public class ImGuiScriptFacadeTest {
         "};",
         "function openWindow() {",
         "    return api.createWindow(function () {}, {x: 100, y: 100, width: 200, height: 100, ime: false});",
+        "}",
+        // A window that has a surface and has rendered one frame; frame() renders the next one.
+        "function frame() { timers.splice(0).forEach(function (timer) { timer(); }); }",
+        "function openReadyWindow(extra) {",
+        "    timers.length = 0;",
+        "    ['init', 'isOwner', 'isReady', 'newFrame', 'render'].forEach(function (name) {",
+        "        var recorded = record(name);",
+        "        bridge[name] = function () { recorded.apply(null, arguments); return true; };",
+        "    });",
+        "    ['getInteractiveWindowRects', 'getAutoResizeBounds'].forEach(function (name) {",
+        "        bridge[name] = function () { return null; };",
+        "    });",
+        "    bridge.wantTextInput = function () { return false; };",
+        "    bridge.touchEvent = record('touchEvent');",
+        "    bridge.addMouseWheelEvent = record('addMouseWheelEvent');",
+        "    bridge.setDisplayScale = record('setDisplayScale');",
+        "    bridge.setFontScale = record('setFontScale');",
+        "    bridge.shutdown = record('shutdown');",
+        "    var windowOptions = {x: 100, y: 100, width: 200, height: 100, ime: false};",
+        "    for (var name in extra) { windowOptions[name] = extra[name]; }",
+        "    var session = api.createWindow(function () {}, windowOptions);",
+        "    holderCallbacks[holderCallbacks.length - 1].surfaceCreated({getSurface: function () { return null; }});",
+        "    frame();",
+        "    return session;",
+        "}",
+        // Pointers as [x, y] pairs; the first one is also the raw position.
+        "function touch(action, pointers) {",
+        "    return touchListener(surfaceView, {",
+        "        getActionMasked: function () { return action; },",
+        "        getX: function (index) { return pointers[index || 0][0]; },",
+        "        getY: function (index) { return pointers[index || 0][1]; },",
+        "        getRawX: function () { return pointers[0][0]; },",
+        "        getRawY: function () { return pointers[0][1]; },",
+        "        getPointerCount: function () { return pointers.length; },",
+        "        getEventTime: function () { return 1000; }",
+        "    });",
+        "}",
+        "var MotionEvent = android.view.MotionEvent;",
+        "function namedCalls(name) {",
+        "    return calls.filter(function (c) { return c.name === name; }).map(function (c) { return c.args.join(' '); });",
         "}"
     );
 
@@ -788,6 +839,190 @@ public class ImGuiScriptFacadeTest {
             String actual = failure(c[0]);
             assertTrue(c[0] + " -> " + actual, actual.startsWith(expected));
         }
+    }
+
+    @Test
+    public void captureTakesTheRegionInDpAndCutsItAtTheWindow() {
+        eval(
+            "var s = openReadyWindow({});"
+                + "bridge.captureSurface = function (view, x, y, width, height) {"
+                + "    calls.push({name: 'captureSurface', args: [view === surfaceView, x, y, width, height]});"
+                + "    return 'bitmap';"
+                + "};"
+                + "function capture(options) {"
+                + "    var image = s.capture(options);"
+                + "    return image.bitmap + ':' + calls[calls.length - 1].args.join(',');"
+                + "}"
+        );
+        String[][] cases = {
+            {"undefined", "bitmap:true,0,0,500,250"},
+            {"{}", "bitmap:true,0,0,500,250"},
+            {"{region: {x: 10, y: 20, width: 40, height: 30}}", "bitmap:true,25,50,100,75"},
+            {"{region: {x: 180, y: 90}}", "bitmap:true,450,225,50,25"},
+            {"{region: {x: 180, width: 100}}", "bitmap:true,450,0,50,250"},
+        };
+        for (String[] c : cases) {
+            assertEquals(c[0], c[1], String.valueOf(eval("capture(" + c[0] + ")")));
+        }
+        assertFailures(new String[][] {
+            {"s.capture(1)", "TypeError", "Session.capture", "options"},
+            {"s.capture({region: 1})", "TypeError", "Session.capture", "options.region"},
+            {"s.capture({region: {x: 'a'}})", "TypeError", "Session.capture", "options.region.x"},
+            {"s.capture({region: {y: -1}})", "RangeError", "Session.capture", "options.region.y"},
+            {"s.capture({region: {width: 0}})", "RangeError", "Session.capture", "options.region.width"},
+            {"s.capture({region: {x: 200}})", "RangeError", "Session.capture", "options.region"},
+        });
+        eval("s.close('done');");
+        assertEquals("Error:imgui.Session.capture: the window is closed", failure("s.capture()"));
+    }
+
+    @Test
+    public void captureNeedsAPresentedFrame() {
+        assertEquals(
+            "Error:imgui.Session.capture: the window is not showing a frame yet",
+            failure("openWindow().capture()")
+        );
+    }
+
+    @Test
+    public void systemCjkFontReachesTheNativeInit() {
+        eval("openReadyWindow({}); var plain = calls.filter(function (c) { return c.name === 'init'; })[0];");
+        assertEquals(false, eval("plain.args[7]"));
+        eval("openReadyWindow({systemCjkFont: true});");
+        assertEquals(true, eval("calls.filter(function (c) { return c.name === 'init'; }).pop().args[7]"));
+    }
+
+    @Test
+    public void aDensityChangeKeepsTheWindowInDp() {
+        Object result = eval(
+            "var s = openReadyWindow({}); var seen = [];"
+                + "s.on('configurationChanged', function (e) {"
+                + "    seen.push([e.density, e.oldDensity, e.fontScale, e.oldFontScale, e.oldWidth].join(' '));"
+                + "});"
+                + "calls.length = 0; windowCalls.length = 0;"
+                + "metrics.density = 3; s._lastDisplayScaleCheck = 0; frame();"
+                + "[namedCalls('setDisplayScale').join(','), windowCalls.join(','), s.density, s.x, s.y, s.width, s.height,"
+                + "    api.dp(1), seen[0]].join('|')"
+        );
+        assertEquals(
+            "3 1|size:600x300,position:300,300|3|100|100|200|100|3|3 2.5 1 1 432",
+            String.valueOf(result)
+        );
+    }
+
+    @Test
+    public void aDensityChangeIgnoresResponsiveFalse() {
+        assertEquals(
+            "size:600x300,position:300,300",
+            String.valueOf(eval(
+                "var s = openReadyWindow({responsive: false}); windowCalls.length = 0;"
+                    + "metrics.density = 3; s._lastDisplayScaleCheck = 0; frame(); windowCalls.join(',')"
+            ))
+        );
+    }
+
+    @Test
+    public void aSystemFontScaleChangeScalesTheFontsOnly() {
+        Object result = eval(
+            "configuration.fontScale = 1.5; var s = openReadyWindow({}); var seen = [];"
+                + "s.on('configurationChanged', function (e) { seen.push(e.fontScale + ' ' + e.oldFontScale); });"
+                + "calls.length = 0; windowCalls.length = 0;"
+                + "configuration.fontScale = 1.8; s._lastDisplayScaleCheck = 0; frame();"
+                + "[namedCalls('setDisplayScale').join(','), windowCalls.length, seen[0]].join('|')"
+        );
+        assertEquals("2.5 " + (float) (1.8 / 1.5) + "|0|1.8 1.5", normalizeFloats(String.valueOf(result)));
+    }
+
+    @Test
+    public void setFontScaleAppliesBetweenFrames() {
+        assertFailures(new String[][] {
+            {"openWindow().setFontScale(0.4)", "RangeError", "Session.setFontScale", "scale"},
+            {"openWindow().setFontScale(3.5)", "RangeError", "Session.setFontScale", "scale"},
+            {"openWindow().setFontScale('a')", "TypeError", "Session.setFontScale", "scale"},
+        });
+        assertEquals(
+            "1|0|2|1|2 1 api",
+            String.valueOf(eval(
+                "var s = openReadyWindow({}); var seen = [];"
+                    + "s.on('fontScaleChanged', function (e) { seen.push([e.scale, e.oldScale, e.source].join(' ')); });"
+                    + "calls.length = 0; s.setFontScale(2);"
+                    + "var before = s.fontScale; var applied = namedCalls('setFontScale').length; frame();"
+                    + "[before, applied, s.fontScale, namedCalls('setFontScale').length, seen[0]].join('|')"
+            ))
+        );
+    }
+
+    @Test
+    public void pinchZoomScalesTheFontsOnceTheFingersSpreadPastTheThreshold() {
+        eval(
+            "var s = openReadyWindow({pinchZoom: true}); var seen = [];"
+                + "s.on('fontScaleChanged', function (e) { seen.push(e.scale + ' ' + e.source); });"
+                + "calls.length = 0;"
+                + "touch(MotionEvent.ACTION_DOWN, [[100, 100]]);"
+                + "touch(MotionEvent.ACTION_POINTER_DOWN, [[100, 100], [200, 100]]);"
+                // Moving together keeps the distance, so this is the two-finger scroll.
+                + "touch(MotionEvent.ACTION_MOVE, [[100, 150], [200, 150]]);"
+                + "var scrolled = namedCalls('addMouseWheelEvent').length;"
+                // The threshold is 24 dp, 60 px: these stay below it, then pass it and set the start of the pinch.
+                + "touch(MotionEvent.ACTION_MOVE, [[100, 150], [250, 150]]);"
+                + "var belowThreshold = requestedScaleAfterFrame();"
+                + "touch(MotionEvent.ACTION_MOVE, [[100, 150], [300, 150]]);"
+                + "touch(MotionEvent.ACTION_MOVE, [[100, 150], [500, 150]]);"
+                + "var doubled = requestedScaleAfterFrame();"
+                + "touch(MotionEvent.ACTION_MOVE, [[100, 150], [4000, 150]]);"
+                + "var clampedHigh = requestedScaleAfterFrame();"
+                + "touch(MotionEvent.ACTION_MOVE, [[100, 150], [101, 150]]);"
+                + "var clampedLow = requestedScaleAfterFrame();"
+                + "var wheelEvents = namedCalls('addMouseWheelEvent').length;"
+                + "touch(MotionEvent.ACTION_UP, [[100, 150]]);"
+                + "function requestedScaleAfterFrame() { frame(); return s.fontScale; }"
+        );
+        assertEquals("1", String.valueOf(eval("'' + scrolled")));
+        assertEquals("1", String.valueOf(eval("'' + belowThreshold")));
+        assertEquals("2", String.valueOf(eval("'' + doubled")));
+        assertEquals("3", String.valueOf(eval("'' + clampedHigh")));
+        assertEquals("0.5", String.valueOf(eval("'' + clampedLow")));
+        assertEquals("1", String.valueOf(eval("'' + wheelEvents")));
+        assertEquals("2 pinch,3 pinch,0.5 pinch", String.valueOf(eval("seen.join(',')")));
+    }
+
+    @Test
+    public void withoutPinchZoomTwoFingersOnlyScroll() {
+        assertEquals(
+            "1|2|0",
+            String.valueOf(eval(
+                "var s = openReadyWindow({}); calls.length = 0;"
+                    + "touch(MotionEvent.ACTION_DOWN, [[100, 100]]);"
+                    + "touch(MotionEvent.ACTION_POINTER_DOWN, [[100, 100], [200, 100]]);"
+                    + "touch(MotionEvent.ACTION_MOVE, [[100, 150], [500, 150]]);"
+                    + "touch(MotionEvent.ACTION_MOVE, [[100, 170], [900, 170]]);"
+                    + "frame();"
+                    + "[s.fontScale, namedCalls('addMouseWheelEvent').length, namedCalls('setFontScale').length].join('|')"
+            ))
+        );
+    }
+
+    @Test
+    public void aLiftedFingerRestartsThePinchMeasurement() {
+        assertEquals(
+            "2",
+            String.valueOf(eval(
+                "var s = openReadyWindow({pinchZoom: true});"
+                    + "touch(MotionEvent.ACTION_DOWN, [[100, 100]]);"
+                    + "touch(MotionEvent.ACTION_POINTER_DOWN, [[100, 100], [200, 100]]);"
+                    + "touch(MotionEvent.ACTION_MOVE, [[100, 100], [300, 100]]);"
+                    + "touch(MotionEvent.ACTION_MOVE, [[100, 100], [500, 100]]);"
+                    + "touch(MotionEvent.ACTION_POINTER_UP, [[100, 100], [500, 100]]);"
+                    + "touch(MotionEvent.ACTION_POINTER_DOWN, [[100, 100], [150, 100]]);"
+                    + "touch(MotionEvent.ACTION_MOVE, [[100, 100], [160, 100]]);"
+                    + "touch(MotionEvent.ACTION_UP, [[100, 100]]);"
+                    + "frame(); '' + s.fontScale"
+            ))
+        );
+    }
+
+    private static String normalizeFloats(String text) {
+        return text.replace("1.2000000000000002", "1.2").replace("1.2000000476837158", "1.2");
     }
 
     @Test

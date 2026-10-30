@@ -61,6 +61,7 @@ Une fois le plugin activé dans le Centre des plugins, les scripts utilisent dir
 - Fenêtres, onglets, nœuds d'arbre, tableaux, popups, menus, infobulles et plus de 60 contrôles en mode immédiat, dont un interrupteur `toggle` de style mobile.
 - Système visuel et typographique avec 11 `Themes`, styles groupés, apparences arrondies/bordées/ombrées, pile multi-police, secours CJK et sous-ensemble Material Icons.
 - Les textures gérées acceptent chemins de fichiers, octets encodés, `Bitmap` Android et objets `Image` AutoJs6 ; `image` / `imageButton` et trois couches DrawList couvrent l’affichage d’images et le dessin personnalisé.
+- `session.capture()` renvoie la fenêtre sous forme d'`Image` AutoJs6; avec `systemCjkFont: true` le système dessine les caractères CJK absents de la police intégrée, avec `pinchZoom: true` deux doigts changent l'échelle de la police, et les fenêtres suivent les changements de densité d'affichage et de taille de police du système.
 - Les références légères `imgui.ref(value)` / `{value: x}` fonctionnent avec tous les contrôles avec état, tandis que les assistants historiques à tableaux Java restent entièrement compatibles.
 - Les composants de session `logWindow`, `toast` empilés, dialogues Promise, `statsOverlay` à seuils colorés et `dataTable` CRUD sélectionnable fournissent une interface de débogage prête à l'emploi.
 - Les API courantes et les énumérations de constantes disposent d'alias PascalCase (p. ex. `ui.Button`) qui conservent le style d'arguments du plugin; la liste des alias et les différences avec les signatures C++ amont figurent dans [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
@@ -165,13 +166,23 @@ Les API courantes ont aussi des alias PascalCase (p. ex. `ui.Button` équivaut �
 
 - Chaque moteur de script prend en charge une seule session de rendu native à la fois ; créez plusieurs fenêtres racines ImGui dans cette session pour plusieurs panneaux. Une nouvelle session superposée ou Activity ferme la précédente.
 - `imgui.launch` nécessite une Activity AutoJs6 actuellement à l’état resumed ; utilisez `launchFloaty` lorsque le script doit continuer sans Activity hôte au premier plan.
-- En v1.9, le mode privilégié est fixe en plein écran et limité au pointeur: pas d'IME/clavier, d'alpha/sécurité du calque hôte, de réduction, de boutons Android annexes ni de reconstruction dynamique après rotation. L'entrée directe n'utilise pas `EVIOCGRAB` et les politiques OEM SurfaceControl/SELinux peuvent encore refuser le démarrage; la sonde n'exécute pas `su` et ne demande pas Shizuku.
+- Le mode privilégié est fixe en plein écran et limité au pointeur: les champs de texte utilisent une zone de saisie temporaire d'AutoJs6, qui demande l'autorisation de superposition et ajoute le texte au curseur seulement; pas de clavier, d'alpha/sécurité du calque hôte, de réduction, de boutons Android annexes ni de reconstruction dynamique après rotation. L'entrée directe n'utilise pas `EVIOCGRAB` et les politiques OEM SurfaceControl/SELinux peuvent encore refuser le démarrage; la sonde n'exécute pas `su` et ne demande pas Shizuku.
 
 ******
 
 ### Historique des versions
 
 ******
+
+#### v1.16.0
+
+###### 2026/10/31
+
+* `Fonctionnalité` session.capture(options) prend une image de la fenêtre et renvoie une image pour le module images, par exemple images.save(session.capture(), path). options.region choisit une partie de la fenêtre, en dp. Une fenêtre en mode privilégié ne peut être capturée qu'entre deux images, par exemple depuis setTimeout(fn, 0)
+* `Fonctionnalité` createWindow({systemCjkFont: true}) affiche tous les caractères CJK de l'appareil, y compris les caractères rares comme 龘 absents de la police intégrée. Android dessine chaque caractère à sa première utilisation, ce qui ne demande presque pas de mémoire en plus; docs/LIMITS.md indique ce que couvre la police intégrée
+* `Fonctionnalité` createWindow({pinchZoom: true}) permet de changer la taille du texte de 0.5 à 3 fois avec deux doigts; déplacer les deux doigts ensemble fait toujours défiler. Lisez l'échelle dans session.fontScale, réglez-la avec session.setFontScale(scale) et écoutez le nouvel événement fontScaleChanged. L'exemple widget-overview montre tout cela
+* `Fonctionnalité` Saisie de texte en mode privilégié: toucher un inputText ouvre maintenant une petite zone de saisie d'AutoJs6 avec le clavier (cela demande l'autorisation de superposition pour AutoJs6). Le bouton OK, la touche de validation ou un toucher ailleurs insère le texte au curseur du champ; le texte déjà présent ne peut pas être modifié dans cette zone
+* `Amélioration` Les fenêtres suivent maintenant les changements de taille d'affichage (densité) et de taille de police du système pendant l'exécution: le texte et les contrôles prennent la nouvelle taille, et la fenêtre garde sa taille en dp. configurationChanged a les nouveaux champs density, oldDensity, fontScale et oldFontScale. Une fenêtre plein écran de imgui.launch se ferme à la place (session.closeReason vaut "configuration-changed"), car Android recrée son Activity
 
 #### v1.15.0
 
@@ -192,18 +203,6 @@ Les API courantes ont aussi des alias PascalCase (p. ex. `ui.Button` équivaut �
 * `Fonctionnalité` Tri des tableaux: dans un tableau avec l'indicateur Sortable, toucher l'en-tête d'une colonne change le tri; tableGetSortSpecs() renvoie les colonnes et sens de tri (imgui.SortDirection), et specsDirty vaut true seulement dans l'image où ils changent. Le quatrième argument de tableSetupColumn est l'id utilisateur de la colonne. dataTable trie ses lignes avec sortable: true, et la fonction compare d'une colonne définit un ordre propre; voir l'exemple data-table-demo
 * `Fonctionnalité` Contrôles de 2 à 4 valeurs: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, ainsi que dragFloatRange2 / dragIntRange2 pour une plage minimum-maximum et sliderAngle pour un angle (stocké en radians, affiché en degrés). Les valeurs se passent sous forme de {value: [x, y, z]}, imgui.floats(...) ou du nouveau imgui.ints(...); voir la nouvelle section de l'exemple widget-overview
 * `Amélioration` Avec createWindow({debug: true}), un rappel de rendu qui dure plus de 250 ms affiche un console.warn avec la durée et conseille de déplacer le travail lent (sleep, réseau, fichiers) vers threads.start, au plus une fois toutes les 10 secondes; docs/THREADING.md explique comment
-
-#### v1.13.0
-
-###### 2026/10/30
-
-* `Note` Changement de comportement: pour économiser la batterie, une fenêtre ne dessine plus que 10 images par seconde après 3 secondes sans toucher ni touche, et cesse de dessiner quand l'écran est éteint ou verrouillé; le toucher suivant rétablit aussitôt la fréquence complète. Si la fenêtre affiche une animation ou des données qui changent sans saisie (minuteur, graphique, barre de progression), passez idleFps: 0 à createWindow ou appelez session.setIdleFps(0) pour garder la fréquence complète
-* `Fonctionnalité` ui.listClipper(itemCount, options, callback) (alias ListClipper) ne dessine que les lignes visibles, si bien qu'une liste de 100000 lignes défile de façon fluide; voir le nouvel exemple large-list
-* `Fonctionnalité` Contrôle de la fréquence d'image: options idleFps / idleDelay de createWindow, session.setFps / setIdleFps / getFps, événements de session idle / active et champs idle / paused
-* `Fonctionnalité` texture.update(source) remplace l'image d'une texture et conserve son identifiant, donc les appels à image qui l'affichent restent inchangés; texture.width / height suivent la nouvelle taille. Voir le nouvel exemple texture-refresh, qui rafraîchit un aperçu deux fois par seconde
-* `Fonctionnalité` createTexture et texture.update acceptent aussi un ArrayBuffer ou un tableau typé (comme Uint8Array) contenant des données PNG ou JPEG
-* `Fonctionnalité` statsOverlay affiche le temps de travail de chaque image (le temps de dessin, sans l'attente de l'écran) et snapshot() le renvoie sous le nom workTime
-* `Amélioration` docs/FRAME-LOOP.md explique les fréquences d'image et l'économie d'énergie, et docs/LIMITS.md les limites de listClipper
 
 ##### Pour consulter davantage de versions
 

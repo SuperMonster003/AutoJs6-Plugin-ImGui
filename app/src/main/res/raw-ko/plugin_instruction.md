@@ -42,6 +42,8 @@ var overlay = imgui.createWindow(function (ui, window) {
 
 `setMoreTouch(true)`는 기본 창과 독립 버튼에서 Android split-touch를 활성화합니다. `launchPrivileged(callback, {backend: "auto"})`는 운영 SurfaceFlinger 모드를 명시적으로 선택하고 AutoJs6의 기존 Shizuku/root 승인을 재사용하므로 오버레이 권한이 필요 없습니다. `/dev/input`은 관찰만 하며 터치스크린을 독점하지 않습니다. `getBackendCapabilities()`는 권한 상승 없이 호스트 상태를 보고합니다.
 
+`session.capture({region})`는 창을 `Image`로 반환하며 `images.save`에 넘길 수 있습니다. region 단위는 dp이고, 권한 모드 창은 두 프레임 사이에서만 캡처할 수 있습니다. `createWindow({systemCjkFont: true})`는 내장 글꼴에 없는 CJK 문자를 시스템이 그리게 하고, `pinchZoom: true`는 두 손가락으로 글꼴 배율을 바꿉니다 (`session.fontScale`, `session.setFontScale`). 권한 모드의 텍스트 입력란은 AutoJs6 임시 입력 상자를 열며 오버레이 권한이 필요합니다.
+
 테이블, 컨텍스트 팝업, 메뉴, 툴팁, 스타일 스택과 60개 이상의 컨트롤을 사용할 수 있습니다. `withTable`, `withPopupModal`, `withContextItem`, `withMenuBar`는 begin/end 호출을 안전하게 짝지어 줍니다. 전체 API 개요는 프로젝트 README와 로드맵을 참고하세요.
 
 상태형 컨트롤은 `imgui.ref(value)`로 만든 가벼운 참조나 일반 `{ value: ... }` 객체도 허용하며, 기존 `bool`, `float`, `int`, `string`, 색상 배열 헬퍼와도 호환됩니다. 세션 관리형 `logWindow`, `toast`, Promise 대화상자, `statsOverlay`, `dataTable` 컴포넌트는 사용자 콜백 뒤에 렌더링되고 세션과 함께 자동으로 닫힙니다.

@@ -17,6 +17,7 @@
     "Ventanas, pestañas, nodos de árbol, tablas, ventanas emergentes, menús, tooltips y más de 60 controles de modo inmediato, incluido un interruptor `toggle` de estilo móvil.",
     "Sistema visual y tipográfico con 11 `Themes`, estilos por lotes, apariencias redondeadas/con borde/sombra, pila multifuente, respaldo CJK y subconjunto Material Icons.",
     "Las texturas administradas aceptan rutas de archivo, bytes codificados, `Bitmap` de Android y objetos `Image` de AutoJs6; `image` / `imageButton` y tres capas DrawList cubren la visualización de imágenes y el dibujo personalizado.",
+    "`session.capture()` devuelve la ventana como `Image` de AutoJs6; con `systemCjkFont: true` el sistema dibuja los caracteres CJK que faltan en la fuente integrada, con `pinchZoom: true` dos dedos cambian la escala de la fuente, y las ventanas siguen los cambios de densidad de pantalla y de tamaño de fuente del sistema.",
     "Las referencias ligeras `imgui.ref(value)` / `{value: x}` funcionan con todos los controles con estado y los helpers de arrays Java existentes siguen siendo totalmente compatibles.",
     "Los componentes de sesión `logWindow`, `toast` apilados, diálogos Promise, `statsOverlay` con umbrales y `dataTable` CRUD seleccionable ofrecen interfaces de depuración listas para usar.",
     "Las API comunes y las enumeraciones de constantes tienen alias en PascalCase (p. ej., `ui.Button`) que conservan el estilo de argumentos del plugin; la lista de alias y las diferencias con las firmas C++ originales están en [ALIASES.md]({{ repo_url }}/blob/master/docs/ALIASES.md).",
@@ -60,7 +61,7 @@
   "limitations": [
     "Cada motor de scripts admite una sola sesión de renderizado nativa; cree varias ventanas raíz ImGui en esa sesión si necesita varios paneles. Una nueva sesión superpuesta o Activity cierra la anterior.",
     "`imgui.launch` requiere una Activity AutoJs6 actualmente en estado resumed; use `launchFloaty` si el script debe seguir renderizando sin una Activity anfitriona en primer plano.",
-    "En v1.9 el modo privilegiado es fijo a pantalla completa y solo admite puntero: no incluye IME/teclas, alfa/seguridad de capa, reducción, botones Android auxiliares ni reconstrucción dinámica al rotar. La entrada directa no usa `EVIOCGRAB` y las políticas OEM SurfaceControl/SELinux aún pueden impedir el inicio; el sondeo no ejecuta `su` ni solicita Shizuku."
+    "El modo privilegiado es fijo a pantalla completa y solo admite puntero: los campos de texto usan un cuadro de entrada temporal de AutoJs6 que requiere el permiso de superposición y solo añade texto en el cursor, y no incluye teclas, alfa/seguridad de capa, reducción, botones Android auxiliares ni reconstrucción dinámica al rotar. La entrada directa no usa `EVIOCGRAB` y las políticas OEM SurfaceControl/SELinux aún pueden impedir el inicio; el sondeo no ejecuta `su` ni solicita Shizuku."
   ],
   "h3_release_history": "Historial de versiones",
   "h5_for_more_release_history": "Para consultar más versiones",

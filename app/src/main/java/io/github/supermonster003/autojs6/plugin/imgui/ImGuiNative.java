@@ -76,7 +76,8 @@ final class ImGuiNative {
         float fontSize,
         String iniPath,
         String[] additionalFontPaths,
-        float[] additionalFontSizes
+        float[] additionalFontSizes,
+        boolean systemCjkFont
     );
 
     static native void nativeShutdown();
@@ -1023,4 +1024,14 @@ final class ImGuiNative {
     static native String[] nativeGetDragDropPayload();
 
     static native boolean nativeWantTextInput();
+
+    static native boolean nativeCaptureFrame(Bitmap bitmap, int x, int y);
+
+    static native void nativeSetDisplayScale(float density, float fontScale);
+
+    static native void nativeSetFontScale(float scale);
+
+    static native void nativeSetFrameHidden(boolean hidden);
+
+    static native int nativeGetTextInputFlags();
 }
