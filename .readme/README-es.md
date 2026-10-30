@@ -56,7 +56,7 @@ Una vez habilitado el plugin en el Centro de plugins, los scripts usan directame
 - Sesiones adaptables superpuestas y Activity de pantalla completa con paso táctil automático, contraer/expandir, botones flotantes independientes, opacidad/seguridad, diseño persistente y eventos de ciclo de vida.
 - `launchPrivileged` ofrece un modo SurfaceFlinger de producción explícito mediante Shizuku/root gestionado por AutoJs6; Binder autenticado entrega la Surface privilegiada al renderizador completo existente y `/dev/input` aporta entrada de puntero observada.
 - AutoJs6 registra el plugin directamente como objeto global `imgui`, por lo que no hace falta ningún paso de carga tras habilitarlo, igual que en los plugins oficiales pinyin / mediainfo.
-- Ventanas flotantes transparentes con tamaño, posición, frecuencia de fotogramas y fuente configurables; arrastre un área vacía para mover la ventana, use desplazamiento inercial con dos dedos y mantenga pulsado con uno para hacer clic derecho.
+- Ventanas flotantes transparentes con tamaño, posición, frecuencia de fotogramas y fuente configurables; arrastre un área vacía para mover la ventana, use desplazamiento inercial con dos dedos y mantenga pulsado con uno para hacer clic derecho. Tras unos segundos sin entrada la frecuencia de fotogramas baja para ahorrar batería, y el dibujo se pausa con la pantalla apagada.
 - La familia `inputText` está completamente conectada al IME del sistema, incluido el texto en composición, la visibilidad automática del teclado virtual y las teclas de edición habituales.
 - Ventanas, pestañas, nodos de árbol, tablas, ventanas emergentes, menús, tooltips y más de 60 controles de modo inmediato, incluido un interruptor `toggle` de estilo móvil.
 - Sistema visual y tipográfico con 11 `Themes`, estilos por lotes, apariencias redondeadas/con borde/sombra, pila multifuente, respaldo CJK y subconjunto Material Icons.
@@ -64,7 +64,7 @@ Una vez habilitado el plugin en el Centro de plugins, los scripts usan directame
 - Las referencias ligeras `imgui.ref(value)` / `{value: x}` funcionan con todos los controles con estado y los helpers de arrays Java existentes siguen siendo totalmente compatibles.
 - Los componentes de sesión `logWindow`, `toast` apilados, diálogos Promise, `statsOverlay` con umbrales y `dataTable` CRUD seleccionable ofrecen interfaces de depuración listas para usar.
 - Las API comunes y las enumeraciones de constantes tienen alias en PascalCase (p. ej., `ui.Button`) que conservan el estilo de argumentos del plugin; la lista de alias y las diferencias con las firmas C++ originales están en [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
-- El soporte de ingeniería incluye declaraciones TypeScript completas, siete ejemplos ejecutables, pruebas Android de renderizado, cola de entrada sin bloqueo, actualización upstream verificable y automatización CI de versiones.
+- El soporte de ingeniería incluye declaraciones TypeScript completas, nueve ejemplos ejecutables, pruebas Android de renderizado, cola de entrada sin bloqueo, actualización upstream verificable y automatización CI de versiones.
 - Metadatos del plugin, instrucciones de uso, README y CHANGELOG localizados en diez idiomas.
 
 ******
@@ -124,11 +124,11 @@ Los controles mutables aceptan referencias ligeras creadas con `imgui.ref(value)
 
 Temas y fuentes: `setTheme` acepta los 11 valores de `Themes` y `setStyleProperties` actualiza varios `StyleVar`; `createWindow` también admite `theme`, `appearance`, `style` y `shadow`. El arreglo `fonts` precarga fuentes de assets (`asset://...`) o archivos para `pushFont` / `withFont`. El respaldo CJK y los iconos se fusionan automáticamente; use `Icons` / `icon(name)` para obtener glifos de iconos.
 
-Texturas y dibujo personalizado: llame a `createTexture` solo cuando la sesión de ventana esté lista (normalmente la primera vez dentro de su callback de renderizado). El objeto devuelto expone `width`, `height` y `dispose()` / `close()` idempotentes; las texturas restantes se liberan automáticamente al cerrar la sesión. `image` / `imageButton` muestran texturas, mientras que `getWindowDrawList`, `getForegroundDrawList` y `getBackgroundDrawList` ofrecen primitivas habituales. Las coordenadas DrawList son píxeles del Surface. Se pueden pasar directamente valores `Image` de AutoJs6 obtenidos mediante `images.read(...)` o capturas de pantalla.
+Texturas y dibujo personalizado: llame a `createTexture` solo cuando la sesión de ventana esté lista (normalmente la primera vez dentro de su callback de renderizado). El objeto devuelto expone `width`, `height`, `update(source)` (reemplaza los píxeles y conserva el identificador; `width` / `height` siguen el nuevo tamaño) y `dispose()` / `close()` idempotentes; las texturas restantes se liberan automáticamente al cerrar la sesión. `image` / `imageButton` muestran texturas, mientras que `getWindowDrawList`, `getForegroundDrawList` y `getBackgroundDrawList` ofrecen primitivas habituales. Las coordenadas DrawList son píxeles del Surface. Se pueden pasar directamente valores `Image` de AutoJs6 obtenidos mediante `images.read(...)` o capturas de pantalla, así como un `ArrayBuffer` o un arreglo tipado con datos PNG o JPEG.
 
 Sesiones de ventana: las superposiciones usan `TouchMode.Auto` por defecto, manteniendo interactivas las raíces ImGui y pasando las zonas vacías del Surface a la aplicación inferior; elija `Touchable` o `Passthrough` para una política fija. Una sesión puede cambiar opacidad/seguridad/modo táctil, reducirse a una miniburbuja de pocos FPS, crear `addButtonEx` arrastrables, seguir contenido `AlwaysAutoResize`, guardar el diseño con `iniPath` y emitir eventos mediante `on` / `once` / `off` o callbacks de opciones. `imgui.launch(...)` crea un Surface de pantalla completa en la Activity AutoJs6 actualmente reanudada y `launchFloaty(...)` selecciona explícitamente una superposición. Cada motor de scripts tiene una sesión de renderizado nativa, pero su callback puede crear todas las raíces ImGui `begin` / `withWindow` necesarias; una sesión nueva cierra la anterior. Una excepción del callback de renderizado o de un callback de evento se imprime con su pila mediante `console.error` (una sola vez para una racha del mismo error) y se emite como evento `error` (`error` / `phase` / `frame`); sin un listener de `error`, un error de renderizado cierra la sesión (`closeReason` es `render-error`), y con uno se omite el resto del fotograma y el renderizado continúa. La opción `debug: true` informa con `console.warn` y logcat de errores de uso como un `begin` sin `end`, y muestra las ventanas Metrics y Debug Log. Los métodos globales como `setTouchable` / `setGlobalAlpha` / `getComponent` actúan sobre la sesión actual y lanzan `imgui.<name>: no active session` si no hay ninguna activa.
 
-Los componentes de alto nivel se adjuntan a la sesión activa y se dibujan después del callback del usuario: `logWindow` ofrece niveles con color, limpieza, exportación y desplazamiento automático; `toast` muestra avisos temporizados; `alert` / `confirm` / `singleChoice` / `multiChoice` resuelven Promises; `statsOverlay` grafica el tiempo de cuadro; y `dataTable` ofrece selección y CRUD. Los siete ejemplos (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling` y `background-task`) se descubren con `listExamples` / `getExampleSource` y se ejecutan con `runExample`. AutoJs6 6.8 aún no consume los metadatos genéricos de ejemplos en su centro de plugins; hasta que el host lo admita, ejecute directamente la llamada siguiente:
+Los componentes de alto nivel se adjuntan a la sesión activa y se dibujan después del callback del usuario: `logWindow` ofrece niveles con color, limpieza, exportación y desplazamiento automático; `toast` muestra avisos temporizados; `alert` / `confirm` / `singleChoice` / `multiChoice` resuelven Promises; `statsOverlay` grafica el tiempo de cuadro y muestra el tiempo de trabajo de cada cuadro; y `dataTable` ofrece selección y CRUD. Los nueve ejemplos (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling`, `background-task`, `large-list` y `texture-refresh`) se descubren con `listExamples` / `getExampleSource` y se ejecutan con `runExample`. AutoJs6 6.8 aún no consume los metadatos genéricos de ejemplos en su centro de plugins; hasta que el host lo admita, ejecute directamente la llamada siguiente:
 
 ```js
 imgui.runExample("widget-overview");
@@ -142,14 +142,14 @@ imgui.runExample("widget-overview");
 
 Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equivale a `ui.button`). Los alias mantienen el estilo de argumentos del plugin (valores mutables con `imgui.ref`, etc.) y no corresponden uno a uno con las firmas C++ originales; la lista y las diferencias están en [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). Los métodos en lower camel case reflejan las operaciones de Dear ImGui del mismo nombre y se agrupan así:
 
-- Ejecución de sesión: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, conversión de unidades `density` / `dp` / `px`, `on` / `once` / `off` junto con sus formas por sesión, el evento de sesión `error` que informa de los errores de los callbacks y la opción `debug` que activa el modo de depuración.
+- Ejecución de sesión: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, conversión de unidades `density` / `dp` / `px`, `on` / `once` / `off` junto con sus formas por sesión, el evento de sesión `error` que informa de los errores de los callbacks, la opción `debug` que activa el modo de depuración y el ahorro de energía con `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` y los eventos `idle` / `active`.
 - Detección del backend: `getBackendCapabilities` / `BackendStatus` informa de la disponibilidad y preparación para producción de las ventanas, el toque dividido, el proceso privilegiado, la entrada directa, Docking y Multi-Viewport, sin elevar privilegios.
 - Sesión y ventanas: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, además de consultas de estado de ventana como `isWindowHovered`.
 - Texto y controles: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram`, entre otros.
-- Contenedores y navegación: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / la familia de tablas `withTable` / `withListBox` / `withCombo` / `selectable`.
+- Contenedores y navegación: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / la familia de tablas `withTable` / `withListBox` / `withCombo` / `selectable`, además de `listClipper` para listas largas.
 - Ventanas emergentes y menús: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
 - Estilo y diseño: `styleColorsDark` / `styleColorsLight` / `styleColorsClassic` / `pushStyleColor` / `pushStyleVar` / `setWindowFontScale` / `withGroup` / `withDisabled` / `withId` / `indent` / `sameLine` / `separator` / `spacing`, además de las familias de cursor y desplazamiento.
-- Texturas y dibujo: `createTexture` / `destroyTexture` / `image` / `imageButton` / `colorU32`, además de `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` con primitivas de línea, rectángulo, círculo, triángulo, texto, polilínea, Bézier e imagen.
+- Texturas y dibujo: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, además de `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` con primitivas de línea, rectángulo, círculo, triángulo, texto, polilínea, Bézier e imagen.
 - Consultas y entrada: consultas de estado como `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate`, enfoque activo con `setKeyboardFocusHere` y primitivas `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput`. Todos los valores de `InputTextFlags` expuestos se pasan a Dear ImGui; se omiten los que dependen de callbacks y `WordWrap` solo se aplica a la entrada multilínea.
 - Componentes de alto nivel y ejemplos: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, además de `listExamples` / `getExampleSource` / `runExample`; cada sesión ofrece las mismas fábricas.
 - Referencias mutables: `imgui.ref` ligero (o un objeto `{value: x}`), además de los helpers compatibles de arrays Java `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.strings`.
@@ -170,6 +170,18 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 ### Historial de versiones
 
 ******
+
+#### v1.13.0
+
+###### 2026/10/30
+
+* `Aviso` Cambio de comportamiento: para ahorrar batería, una ventana dibuja ahora solo 10 fotogramas por segundo tras 3 segundos sin toques ni teclas, y deja de dibujar con la pantalla apagada o bloqueada; el siguiente toque recupera de inmediato la frecuencia completa. Si la ventana muestra una animación o datos que cambian sin entrada (un temporizador, un gráfico, una barra de progreso), pase idleFps: 0 a createWindow o llame a session.setIdleFps(0) para mantener la frecuencia completa
+* `Función` ui.listClipper(itemCount, options, callback) (alias ListClipper) dibuja solo las filas visibles, de modo que una lista de 100000 filas se desplaza con fluidez; vea el nuevo ejemplo large-list
+* `Función` Control de la frecuencia de fotogramas: opciones idleFps / idleDelay de createWindow, session.setFps / setIdleFps / getFps, los eventos de sesión idle / active y los campos idle / paused
+* `Función` texture.update(source) reemplaza la imagen de una textura y conserva su identificador, así que las llamadas a image que la muestran no cambian; texture.width / height siguen el nuevo tamaño. Vea el nuevo ejemplo texture-refresh, que actualiza una vista previa dos veces por segundo
+* `Función` createTexture y texture.update también aceptan un ArrayBuffer o un arreglo tipado (como Uint8Array) con datos PNG o JPEG
+* `Función` statsOverlay muestra el tiempo de trabajo de cada fotograma (el tiempo de dibujo, sin esperar a la pantalla) y snapshot() lo devuelve como workTime
+* `Mejora` docs/FRAME-LOOP.md explica las frecuencias de fotogramas y el ahorro de energía, y docs/LIMITS.md los límites de listClipper
 
 #### v1.12.0
 
@@ -203,15 +215,6 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 * `Corrección` Las opciones valuesOffset y stride de plotLines / plotHistogram no tenían efecto
 * `Mejora` Los errores de la función de renderizado o de una devolución de llamada de evento se muestran en la consola con su pila de llamadas, y un mismo error repetido se muestra una sola vez
 * `Mejora` El README describe los alias como "alias de las API comunes", explica el modelo de sesión única (una sesión nueva cierra la anterior) y el uso de los miembros nuevos, e indica el SDK de destino 37
-
-#### v1.10.0
-
-###### 2026/10/29
-
-* `Aviso` Requiere AutoJs6 6.8.0 o posterior (versionCode 5935 o superior)
-* `Corrección` Los parámetros del callback de renderizado de createWindow / launchFloaty / launch / launchPrivileged se declaraban como (session) en las declaraciones TypeScript; ahora coinciden con la llamada real (ui, session) y se añade el tipo RenderCallback
-* `Mejora` Una vez habilitado, el plugin se usa directamente como objeto global imgui, que AutoJs6 registra y que carga el plugin en la primera llamada a un miembro, por lo que ya no se necesita plugins.load; la forma anterior plugins.load("io.github.supermonster003.autojs6.plugin.imgui") devuelve el mismo objeto
-* `Mejora` Scripts de ejemplo, instrucciones de uso, README y declaraciones TypeScript actualizados al uso del objeto global; el archivo de declaraciones ya no amplía plugins.load con sobrecargas
 
 ##### Para consultar más versiones
 

@@ -206,6 +206,108 @@ public class ImGuiScriptFacadeTest {
     }
 
     @Test
+    public void listClipperPassesIncludeItemsAndEndsEveryScope() {
+        eval(
+            "var clipperRanges = [];"
+                + "bridge.listClipperBegin = function (count, height, include) {"
+                + "    var kept = [];"
+                + "    for (var i = 0; include != null && i < include.length; i += 1) kept.push(include[i]);"
+                + "    calls.push({name: 'begin', args: [count, height, include == null ? 'null' : kept.join(' ')]});"
+                + "};"
+                + "bridge.listClipperStep = function () { return clipperRanges.length ? clipperRanges.shift() : null; };"
+                + "bridge.listClipperEnd = record('end');"
+        );
+        assertEquals(
+            "begin:100,20,5 99 7|end:|0-10;50-51",
+            String.valueOf(eval(
+                "calls.length = 0; clipperRanges = [[0, 10], [50, 51]]; var seen = [];"
+                    + "api.listClipper(100, {itemHeight: 20, includeItems: [5, -1, 100, 99, 7.4]},"
+                    + "    function (start, end) { seen.push(start + '-' + end); });"
+                    + "calls.map(function (c) { return c.name + ':' + c.args.join(','); }).join('|') + '|'"
+                    + " + seen.join(';')"
+            ))
+        );
+        assertEquals(
+            "begin:3,-1,null|end:|0-3",
+            String.valueOf(eval(
+                "calls.length = 0; clipperRanges = [[0, 3]]; seen = [];"
+                    + "api.ListClipper(3, function (start, end) { seen.push(start + '-' + end); });"
+                    + "calls.map(function (c) { return c.name + ':' + c.args.join(','); }).join('|') + '|'"
+                    + " + seen.join(';')"
+            ))
+        );
+        assertEquals(
+            "boom|begin,end",
+            String.valueOf(eval(
+                "calls.length = 0; clipperRanges = [[0, 3]];"
+                    + "var thrown = (function () { try { api.listClipper(3, function () { throw new Error('boom'); }); }"
+                    + " catch (e) { return e.message; } })();"
+                    + "thrown + '|' + calls.map(function (c) { return c.name; }).join(',')"
+            ))
+        );
+        String[][] cases = {
+            {"api.listClipper(-1, function () {})", "RangeError", "itemCount"},
+            {"api.listClipper('10', function () {})", "TypeError", "itemCount"},
+            {"api.listClipper(10, {})", "TypeError", "callback"},
+            {"api.listClipper(10, 5, function () {})", "TypeError", "options"},
+            {"api.listClipper(10, {itemHeight: 0}, function () {})", "RangeError", "options.itemHeight"},
+            {"api.listClipper(10, {includeItems: 'abc'}, function () {})", "TypeError", "options.includeItems"},
+            {"api.listClipper(10, {includeItems: [1, 'x']}, function () {})", "TypeError", "options.includeItems[1]"},
+        };
+        for (String[] c : cases) {
+            String expected = c[1] + ":imgui.listClipper: argument " + '"' + c[2] + '"' + " ";
+            String actual = failure("calls.length = 0; " + c[0]);
+            assertTrue(c[0] + " -> " + actual, actual.startsWith(expected));
+            assertEquals(c[0], Boolean.TRUE, eval("calls.length === 0"));
+        }
+    }
+
+    @Test
+    public void textureUpdateKeepsTheHandleAndTracksTheSize() {
+        eval(
+            "var owner = {closed: false, ready: true, _textures: []}; api._activeSession = owner;"
+                + "bridge.isOwner = function () { return true; };"
+                + "var sources = [];"
+                + "function describe(source) {"
+                + "    if (typeof source !== 'string' && source != null && typeof source.length === 'number') {"
+                + "        var values = []; for (var i = 0; i < source.length; i += 1) values.push(source[i]);"
+                + "        return 'bytes:' + values.join(' ');"
+                + "    }"
+                + "    return String(source);"
+                + "}"
+                + "bridge.createTexture = function (source) { sources.push(describe(source)); return [5, 2, 3]; };"
+                + "var nextSize = [2, 3];"
+                + "bridge.updateTexture = function (handle, source) {"
+                + "    sources.push(handle + ':' + describe(source)); return [handle, nextSize[0], nextSize[1]];"
+                + "};"
+        );
+        assertEquals(
+            "5,2x3|5,2x3|5,40x30,true|bytes:-1 1|5:/sdcard/a.png|5:bytes:1 -128",
+            String.valueOf(eval(
+                "var t = api.createTexture(new Uint8Array([255, 1]));"
+                    + "var before = [t.handle, t.width + 'x' + t.height].join(',');"
+                    + "var same = t.update('/sdcard/a.png');"
+                    + "var kept = [t.handle, t.width + 'x' + t.height].join(',');"
+                    + "nextSize = [40, 30]; t.update(new Uint8Array([7, 1, 128, 9]).subarray(1, 3));"
+                    + "[before, kept, [t.handle, t.width + 'x' + t.height, same === t].join(','), sources.join('|')]"
+                    + ".join('|')"
+            ))
+        );
+        assertTrue(failure("t.update(null)").startsWith(
+            "TypeError:imgui.Texture.update: argument " + '"' + "source" + '"' + " "
+        ));
+        assertEquals(
+            "TypeError",
+            String.valueOf(eval("(function () { 'use strict'; try { t.width = 1; return 'returned'; }"
+                + " catch (e) { return e.name; } })()"))
+        );
+        assertEquals(
+            "Error:imgui.Texture.update: the texture has already been disposed",
+            failure("bridge.destroyTexture = function () { return true; }; t.dispose(); t.update('/sdcard/a.png')")
+        );
+    }
+
+    @Test
     public void colorArgumentsAcceptEveryColorForm() {
         String[] forms = {
             "0xFFCC6633", "'#3366ccff'", "'#36c'", "[0.2, 0.4, 0.8, 1]", "[0.2, 0.4, 0.8]",
@@ -268,7 +370,8 @@ public class ImGuiScriptFacadeTest {
             ))
         );
         String[] fields = {"x", "y", "width", "height", "ready", "closed", "closeReason", "mode", "collapsed",
-            "touchable", "touchMode", "alpha", "secure", "density", "displayWidth", "theme"};
+            "touchable", "touchMode", "alpha", "secure", "density", "displayWidth", "theme", "fps", "idle", "paused",
+            "idleFps", "idleDelay"};
         for (String field : fields) {
             assertEquals(field, "TypeError", String.valueOf(eval(
                 "(function () { 'use strict'; try { s." + field + " = 1; return 'returned'; }"
@@ -278,6 +381,78 @@ public class ImGuiScriptFacadeTest {
         assertEquals("TypeError", String.valueOf(eval(
             "(function () { 'use strict'; try { api.density = 1; return 'returned'; } catch (e) { return e.name; } })()"
         )));
+    }
+
+    @Test
+    public void screenStatePausesAndResumesTheFrameLoop() {
+        eval(
+            "var wake = null; var screenOn = true;"
+                + "bridge.startActivityMonitor = function (listener) { wake = listener; return 7; };"
+                + "bridge.isScreenActive = function () { return screenOn; };"
+                + "bridge.getInputIdleMillis = function () { return 0; };"
+                + "bridge.armInputWake = record('armInputWake');"
+                + "bridge.noteActivity = record('noteActivity');"
+                + "bridge.stopActivityMonitor = record('stopActivityMonitor');"
+        );
+        assertEquals(
+            "60,10,3000,false,false,60",
+            String.valueOf(eval(
+                "var s = openWindow(); [s.fps, s.idleFps, s.idleDelay, s.idle, s.paused, s.getFps()].join(',')"
+            ))
+        );
+        assertEquals(
+            "true,0|false,60,1",
+            String.valueOf(eval(
+                "screenOn = false; wake.run(); var off = [s.paused, s.getFps()].join(',');"
+                    + "var queued = timers.length; screenOn = true; wake.run();"
+                    + "off + '|' + [s.paused, s.getFps(), timers.length - queued].join(',')"
+            ))
+        );
+        assertEquals(
+            "30,30,0,500",
+            String.valueOf(eval(
+                "s.setFps(30); s.setIdleFps(0, 500); [s.fps, s.getFps(), s.idleFps, s.idleDelay].join(',')"
+            ))
+        );
+        String[][] cases = {
+            {"s.setFps(10)", "RangeError", "Session.setFps", "fps"},
+            {"s.setFps('a')", "TypeError", "Session.setFps", "fps"},
+            {"s.setIdleFps(-1)", "RangeError", "Session.setIdleFps", "idleFps"},
+            {"s.setIdleFps(5, 50)", "RangeError", "Session.setIdleFps", "idleDelay"},
+        };
+        assertFailures(cases);
+        assertEquals(
+            "stopActivityMonitor:7",
+            String.valueOf(eval(
+                "calls.length = 0; s.close();"
+                    + "calls.filter(function (c) { return c.name === 'stopActivityMonitor'; })"
+                    + ".map(function (c) { return c.name + ':' + c.args.join(','); }).join('|')"
+            ))
+        );
+        // createWindow replaces the active session before it reads the frame rate options, so these run last.
+        assertFailures(new String[][] {
+            {"api.createWindow(function () {}, {idleFps: 200})", "RangeError", "createWindow", "options.idleFps"},
+            {"api.createWindow(function () {}, {idleDelay: 'a'})", "TypeError", "createWindow", "options.idleDelay"},
+        });
+    }
+
+    private void assertFailures(String[][] cases) {
+        for (String[] c : cases) {
+            String expected = c[1] + ":imgui." + c[2] + ": argument " + '"' + c[3] + '"' + " ";
+            String actual = failure(c[0]);
+            assertTrue(c[0] + " -> " + actual, actual.startsWith(expected));
+        }
+    }
+
+    @Test
+    public void sessionWithoutActivityMonitorRunsAtTheFullRate() {
+        assertEquals(
+            "false,false,60|true",
+            String.valueOf(eval(
+                "var s = openWindow(); [s.idle, s.paused, s.getFps()].join(',') + '|'"
+                    + " + printed.some(function (m) { return m.indexOf('Power saving is unavailable') >= 0; })"
+            ))
+        );
     }
 
     @Test

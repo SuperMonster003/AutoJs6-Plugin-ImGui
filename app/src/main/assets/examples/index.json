@@ -43,6 +43,18 @@
       "title": "Background Task",
       "asset": "examples/background-task.js",
       "runner": "imgui.runExample"
+    },
+    {
+      "id": "large-list",
+      "title": "Large List",
+      "asset": "examples/large-list.js",
+      "runner": "imgui.runExample"
+    },
+    {
+      "id": "texture-refresh",
+      "title": "Texture Refresh",
+      "asset": "examples/texture-refresh.js",
+      "runner": "imgui.runExample"
     }
   ]
 }

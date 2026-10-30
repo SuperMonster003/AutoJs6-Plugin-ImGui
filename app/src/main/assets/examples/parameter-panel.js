@@ -124,6 +124,8 @@
         x: numberOption(options.x, 8),
         y: numberOption(options.y, 28),
         fps: numberOption(options.fps, 60),
+        // The wave advances every frame: keep the full rate without input instead of the idle rate (idleFps).
+        idleFps: 0,
         theme: options.theme || imgui.Themes.CyanDusk,
         touchMode: imgui.TouchMode.Auto,
         contentAutoResize: false,

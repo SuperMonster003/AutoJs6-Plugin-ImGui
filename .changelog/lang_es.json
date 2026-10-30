@@ -5,6 +5,22 @@
   "changelog_label_improvement": "Mejora",
   "changelog_label_dependency": "Dependencia",
   "$data": {
+    "v1.13.0": {
+      "released_date": "2026/10/30",
+      "hint": [
+        "Cambio de comportamiento: para ahorrar batería, una ventana dibuja ahora solo 10 fotogramas por segundo tras 3 segundos sin toques ni teclas, y deja de dibujar con la pantalla apagada o bloqueada; el siguiente toque recupera de inmediato la frecuencia completa. Si la ventana muestra una animación o datos que cambian sin entrada (un temporizador, un gráfico, una barra de progreso), pase idleFps: 0 a createWindow o llame a session.setIdleFps(0) para mantener la frecuencia completa"
+      ],
+      "feature": [
+        "ui.listClipper(itemCount, options, callback) (alias ListClipper) dibuja solo las filas visibles, de modo que una lista de 100000 filas se desplaza con fluidez; vea el nuevo ejemplo large-list",
+        "Control de la frecuencia de fotogramas: opciones idleFps / idleDelay de createWindow, session.setFps / setIdleFps / getFps, los eventos de sesión idle / active y los campos idle / paused",
+        "texture.update(source) reemplaza la imagen de una textura y conserva su identificador, así que las llamadas a image que la muestran no cambian; texture.width / height siguen el nuevo tamaño. Vea el nuevo ejemplo texture-refresh, que actualiza una vista previa dos veces por segundo",
+        "createTexture y texture.update también aceptan un ArrayBuffer o un arreglo tipado (como Uint8Array) con datos PNG o JPEG",
+        "statsOverlay muestra el tiempo de trabajo de cada fotograma (el tiempo de dibujo, sin esperar a la pantalla) y snapshot() lo devuelve como workTime"
+      ],
+      "improvement": [
+        "docs/FRAME-LOOP.md explica las frecuencias de fotogramas y el ahorro de energía, y docs/LIMITS.md los límites de listClipper"
+      ]
+    },
     "v1.12.0": {
       "released_date": "2026/10/29",
       "hint": [

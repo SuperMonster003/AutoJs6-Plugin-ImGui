@@ -5,6 +5,22 @@
   "changelog_label_improvement": "개선",
   "changelog_label_dependency": "의존성",
   "$data": {
+    "v1.13.0": {
+      "released_date": "2026/10/30",
+      "hint": [
+        "동작 변경: 배터리를 아끼기 위해 3초 동안 터치나 키 입력이 없으면 창은 초당 10프레임만 그리고, 화면이 꺼지거나 잠겨 있는 동안에는 그리기를 멈춥니다. 다시 터치하면 즉시 정상 프레임 속도로 돌아옵니다. 애니메이션이 있거나 입력 없이 바뀌는 데이터(타이머, 차트, 진행 막대)를 보여 주는 창은 createWindow에 idleFps: 0을 넘기거나 session.setIdleFps(0)을 호출해 정상 프레임 속도를 유지하세요"
+      ],
+      "feature": [
+        "ui.listClipper(itemCount, options, callback)(별칭 ListClipper)는 보이는 행만 그리므로 10만 행 목록도 부드럽게 스크롤됩니다. 새 예제 large-list를 참고하세요",
+        "프레임 속도 제어: createWindow 옵션 idleFps / idleDelay, session.setFps / setIdleFps / getFps, 세션 이벤트 idle / active, 필드 idle / paused",
+        "texture.update(source)는 텍스처의 이미지를 바꾸고 핸들은 그대로 두므로 이를 표시하는 image 호출은 고칠 필요가 없습니다. 크기가 바뀌면 texture.width / height도 따라 바뀝니다. 1초에 두 번 미리보기를 새로 고치는 새 예제 texture-refresh를 참고하세요",
+        "createTexture와 texture.update는 PNG 또는 JPEG 데이터를 담은 ArrayBuffer나 형식화 배열(Uint8Array 등)도 받습니다",
+        "statsOverlay는 각 프레임의 작업 시간(화면 갱신 대기를 뺀 그리기 시간)을 표시하고, snapshot()은 이를 workTime으로 반환합니다"
+      ],
+      "improvement": [
+        "docs/FRAME-LOOP.md에서 프레임 속도와 절전 방식을, docs/LIMITS.md에서 listClipper의 제한을 설명합니다"
+      ]
+    },
     "v1.12.0": {
       "released_date": "2026/10/29",
       "hint": [

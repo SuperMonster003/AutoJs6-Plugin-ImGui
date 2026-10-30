@@ -49,6 +49,27 @@ const debugSession: ImGui.Session = plugin.createWindow(ui => {
 });
 const debugMode: boolean = debugSession.debug;
 plugin.text(`${debugMode}`);
+let pixels: ImGui.Texture | null = null;
+const idleSession: ImGui.Session = plugin.createWindow(ui => {
+    pixels = pixels ?? ui.createTexture("images/red.png", {nearest: true});
+    pixels.update("images/green.png");
+    ui.listClipper(100_000, (start, end) => {
+        for (let row = start; row < end; row++) ui.text(`Row ${row}`);
+    });
+    ui.ListClipper(100, {itemHeight: 24, includeItems: [42]}, (start, end) => ui.text(`${start}..${end}`));
+}, {
+    fps: 60,
+    idleFps: 10,
+    idleDelay: 3000,
+    onIdle: event => plugin.text(`${event.fps}`),
+    onActive: event => plugin.text(`${event.reason}`),
+});
+const stats: ImGui.StatsOverlay = idleSession.statsOverlay();
+const workTime: number = stats.snapshot().workTime + stats.workTime;
+idleSession.setFps(30).setIdleFps(0, 1000);
+const idleState: string = `${idleSession.idle}:${idleSession.paused}:${idleSession.idleFps}:${idleSession.idleDelay}`;
+plugin.text(`${idleState}:${idleSession.getFps()}:${workTime}`);
+idleSession.close("type-smoke-complete");
 plugin.SetMoreTouch(false);
 session.close("type-smoke-complete");
 

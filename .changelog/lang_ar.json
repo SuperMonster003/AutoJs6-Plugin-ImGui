@@ -5,6 +5,22 @@
   "changelog_label_improvement": "تحسين",
   "changelog_label_dependency": "تبعية",
   "$data": {
+    "v1.13.0": {
+      "released_date": "2026/10/30",
+      "hint": [
+        "تغيير في السلوك: لتوفير البطارية, ترسم النافذة الآن 10 إطارات فقط في الثانية بعد 3 ثوانٍ دون لمس أو ضغط مفاتيح, وتتوقف عن الرسم عند إطفاء الشاشة أو قفلها; وتعيد اللمسة التالية معدل الإطارات الكامل فورًا. إذا كانت النافذة تعرض حركة أو بيانات تتغير دون إدخال (مؤقت أو رسم بياني أو شريط تقدم), فمرّر idleFps: 0 إلى createWindow أو استدعِ session.setIdleFps(0) للإبقاء على المعدل الكامل"
+      ],
+      "feature": [
+        "ترسم ui.listClipper(itemCount, options, callback) (الاسم البديل ListClipper) الصفوف المرئية فقط, لذا تُمرَّر قائمة من 100000 صف بسلاسة; راجع المثال الجديد large-list",
+        "التحكم في معدل الإطارات: الخياران idleFps / idleDelay في createWindow, و session.setFps / setIdleFps / getFps, وحدثا الجلسة idle / active, والحقلان idle / paused",
+        "تستبدل texture.update(source) صورة النسيج وتحافظ على مقبضه, فلا تحتاج استدعاءات image التي تعرضه إلى تغيير; ويتبع texture.width / height الحجم الجديد. راجع المثال الجديد texture-refresh الذي يحدّث معاينة مرتين في الثانية",
+        "تقبل createTexture و texture.update أيضًا ArrayBuffer أو مصفوفة typed (مثل Uint8Array) تحتوي بيانات PNG أو JPEG",
+        "يعرض statsOverlay زمن عمل كل إطار (وقت الرسم دون انتظار تحديث الشاشة), وتعيده snapshot() باسم workTime"
+      ],
+      "improvement": [
+        "يشرح docs/FRAME-LOOP.md معدلات الإطارات وتوفير الطاقة, ويوضح docs/LIMITS.md حدود listClipper"
+      ]
+    },
     "v1.12.0": {
       "released_date": "2026/10/29",
       "hint": [

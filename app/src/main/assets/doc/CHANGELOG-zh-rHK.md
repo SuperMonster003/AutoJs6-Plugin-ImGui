@@ -4,6 +4,18 @@
 
 ******
 
+# v1.13.0
+
+###### 2026/10/30
+
+* `提示` 行為變更: 為了省電, 視窗在 3 秒內沒有觸控或按鍵輸入後每秒只繪製 10 個影格, 螢幕關閉或鎖屏時停止繪製; 再次觸控後立即恢復正常影格率. 如果視窗有動畫, 或顯示不靠輸入就會變化的資料 (計時器, 圖表, 進度條), 請向 createWindow 傳入 idleFps: 0 或呼叫 session.setIdleFps(0) 保持正常影格率
+* `新增` ui.listClipper(itemCount, options, callback) (別名 ListClipper) 只繪製可見的列, 10 萬列的清單也能流暢捲動; 見新範例 large-list
+* `新增` 影格率控制: createWindow 選項 idleFps / idleDelay, session.setFps / setIdleFps / getFps, 工作階段事件 idle / active 以及欄位 idle / paused
+* `新增` texture.update(source) 替換紋理的圖像並保持句柄不變, 顯示它的 image 呼叫無須修改; 尺寸變化時 texture.width / height 隨之更新. 見新範例 texture-refresh, 每秒更新兩次預覽
+* `新增` createTexture 與 texture.update 亦接受載有 PNG 或 JPEG 資料的 ArrayBuffer 或類型化陣列 (如 Uint8Array)
+* `新增` statsOverlay 顯示每個影格的工作耗時 (繪製所用時間, 不含等待螢幕更新), snapshot() 以 workTime 返回該值
+* `優化` docs/FRAME-LOOP.md 說明影格率與省電機制, docs/LIMITS.md 補充 listClipper 的限制
+
 # v1.12.0
 
 ###### 2026/10/29

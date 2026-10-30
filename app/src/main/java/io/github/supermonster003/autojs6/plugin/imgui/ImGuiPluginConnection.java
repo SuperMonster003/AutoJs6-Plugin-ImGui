@@ -88,6 +88,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
     private final Context pluginContext;
     private final Object runtime;
     private volatile ImGuiInputQueue inputQueue = new ImGuiInputQueue();
+    private final ImGuiActivityMonitor activityMonitor = new ImGuiActivityMonitor();
     private final Map<View, ActivitySurfaceHost> activitySurfaceHosts =
         Collections.synchronizedMap(new WeakHashMap<>());
     private final Map<View, TouchableRegionController> touchableRegionControllers =
@@ -244,6 +245,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
             lastWantTextInput = false;
         } finally {
             NATIVE_LOCK.unlock();
+            activityMonitor.stopAll();
             closeAllPrivilegedSurfaces();
         }
     }
@@ -368,6 +370,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         ImGuiInputQueue queue = inputQueue;
         if (isOwner()) {
             queue.offerTouch(action, x, y, mouseButton);
+            activityMonitor.noteActivity();
         }
     }
 
@@ -380,6 +383,26 @@ public final class ImGuiPluginConnection implements ServiceConnection {
                 long[] result = ImGuiNative.nativeCreateTexture(resolved.bitmap, flags);
                 if (result == null || result.length < 3 || result[0] <= 0L) {
                     throw new IllegalStateException("Native texture creation returned no handle");
+                }
+                return result;
+            } finally {
+                NATIVE_LOCK.unlock();
+            }
+        } finally {
+            resolved.recycleOwnedBitmap();
+        }
+    }
+
+    /** Replaces the pixels of a texture; returns {handle, width, height} with the new size. */
+    public long[] updateTexture(long handle, Object source) {
+        ResolvedBitmap resolved = resolveTextureBitmap(source, 0);
+        try {
+            NATIVE_LOCK.lock();
+            try {
+                requireOwner();
+                long[] result = ImGuiNative.nativeUpdateTexture(handle, resolved.bitmap);
+                if (result == null || result.length < 3 || result[0] != handle) {
+                    throw new IllegalStateException("Native texture update returned no size");
                 }
                 return result;
             } finally {
@@ -798,6 +821,21 @@ public final class ImGuiPluginConnection implements ServiceConnection {
     public boolean selectable(String label, boolean selected, int flags, float width, float height) {
         requireOwner();
         return ImGuiNative.nativeSelectable(label, selected, flags, width, height);
+    }
+
+    public void listClipperBegin(int itemsCount, float itemsHeight, int[] includeItems) {
+        requireOwner();
+        ImGuiNative.nativeListClipperBegin(itemsCount, itemsHeight, includeItems);
+    }
+
+    public int[] listClipperStep() {
+        requireOwner();
+        return ImGuiNative.nativeListClipperStep();
+    }
+
+    public void listClipperEnd() {
+        requireOwner();
+        ImGuiNative.nativeListClipperEnd();
     }
 
     public boolean collapsingHeader(String label, int flags) {
@@ -1575,6 +1613,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         ImGuiInputQueue queue = inputQueue;
         if (isOwner()) {
             queue.offerCharacters(text);
+            activityMonitor.noteActivity();
         }
     }
 
@@ -1582,6 +1621,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         ImGuiInputQueue queue = inputQueue;
         if (isOwner()) {
             queue.offerKey(key, down);
+            activityMonitor.noteActivity();
         }
     }
 
@@ -1589,7 +1629,35 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         ImGuiInputQueue queue = inputQueue;
         if (isOwner()) {
             queue.offerWheel(wheelX, wheelY);
+            activityMonitor.noteActivity();
         }
+    }
+
+    // Power-saving frame loop (R2.2). The script starts the monitor per session with a wake listener, reads the
+    // input idle time each frame, arms the one-shot wake while it renders at the idle rate and pauses while the
+    // screen is off or locked. The listener runs on the thread that delivered the input or the screen broadcast.
+    public long startActivityMonitor(Runnable wakeListener) {
+        return activityMonitor.start(hostContext, wakeListener);
+    }
+
+    public boolean stopActivityMonitor(long token) {
+        return activityMonitor.stop(token);
+    }
+
+    public long getInputIdleMillis() {
+        return activityMonitor.idleMillis();
+    }
+
+    public void armInputWake(boolean armed) {
+        activityMonitor.armWake(armed);
+    }
+
+    public void noteActivity() {
+        activityMonitor.noteActivity();
+    }
+
+    public boolean isScreenActive() {
+        return activityMonitor.refreshScreenActive();
     }
 
     public boolean wantTextInput() {

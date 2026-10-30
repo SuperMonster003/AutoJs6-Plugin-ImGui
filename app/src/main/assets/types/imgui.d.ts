@@ -65,7 +65,12 @@ declare namespace ImGui {
     type StringConstants<K extends string> = Readonly<Record<K, string>>;
     type FrameBody = () => void;
     type RenderCallback = (ui: Api, session: Session) => void;
-    type TextureSource = string | readonly number[] | object;
+    /**
+     * A file path (relative paths resolve with files.path), encoded image bytes (number[], Java byte[], ArrayBuffer or
+     * a typed array, ByteBuffer, InputStream), an android.graphics.Bitmap or an AutoJs6 Image (images.read,
+     * images.captureScreen, ...).
+     */
+    type TextureSource = string | readonly number[] | ArrayBuffer | ArrayBufferView | object;
 
     interface ValueRef<T> {
         value: T;
@@ -160,6 +165,13 @@ declare namespace ImGui {
         stride?: number;
     }
 
+    interface ListClipperOptions {
+        /** Row height in px (frame coordinates). Omitted: measured from the first row. Must be > 0 when given. */
+        itemHeight?: number;
+        /** Row indices that are always submitted (for example a selected or focused row); indices outside 0..itemCount - 1 are ignored. */
+        includeItems?: readonly number[];
+    }
+
     interface TextureOptions {
         flags?: number;
         nearest?: boolean;
@@ -197,8 +209,15 @@ declare namespace ImGui {
 
     interface Texture {
         readonly handle: number;
+        /** Width in px; changes when update() loads an image of another size. */
         readonly width: number;
+        /** Height in px; changes when update() loads an image of another size. */
         readonly height: number;
+        /**
+         * Replaces the pixels with a new image from the same kinds of source as createTexture. The same size reuses
+         * the GL storage (glTexSubImage2D); another size reallocates it. The handle stays the same either way.
+         */
+        update(source: TextureSource): this;
         isDisposed(): boolean;
         dispose(): boolean;
         close(): boolean;
@@ -391,6 +410,13 @@ declare namespace ImGui {
         fps?: number;
         /** Frame rate while collapsed, 1..15, default 5. */
         collapsedFps?: number;
+        /**
+         * Frame rate after idleDelay ms without touch, IME or wheel input, 0..120, default 10; 0 keeps the full rate.
+         * Any input returns to fps at once. Frame-driven animations need 0 (or Session.setIdleFps(0) while they run).
+         */
+        idleFps?: number;
+        /** Milliseconds without input before the idle frame rate applies, 100..3600000, default 3000. */
+        idleDelay?: number;
         movable?: boolean;
         fontPath?: string;
         /** Default font size in dp, 8..64, default 16. */
@@ -467,6 +493,8 @@ declare namespace ImGui {
         onMoreTouchChanged?: SessionEventListener;
         onAlphaChanged?: SessionEventListener;
         onSecureChanged?: SessionEventListener;
+        onIdle?: SessionEventListener;
+        onActive?: SessionEventListener;
         [name: string]: unknown;
     }
 
@@ -487,6 +515,8 @@ declare namespace ImGui {
         | "moreTouchChanged"
         | "alphaChanged"
         | "secureChanged"
+        | "idle"
+        | "active"
         | "error";
 
     /**
@@ -499,7 +529,8 @@ declare namespace ImGui {
      * - configurationChanged: width, height, oldWidth, oldHeight (the display), orientation;
      * - collapsed: button, fps; expanded: x, y, width, height;
      * - closed: reason; touchableChanged: mode, touchable, interactiveRegionCount;
-     * - moreTouchChanged: enabled; alphaChanged: alpha; secureChanged: secure.
+     * - moreTouchChanged: enabled; alphaChanged: alpha; secureChanged: secure;
+     * - idle: fps (the idle frame rate), idleDelay (ms); active: fps, reason ("input", "screen" or "api").
      */
     interface SessionEvent {
         readonly type: string;
@@ -621,10 +652,14 @@ declare namespace ImGui {
         readonly frameTimes: number[];
         readonly historySize: number;
         readonly fps: number;
+        /** Interval between the last two frames in ms. */
         readonly frameTime: number;
+        /** Time the previous frame spent in the render callback and components in ms, without presentation. */
+        readonly workTime: number;
         snapshot(): {
             readonly fps: number;
             readonly frameTime: number;
+            readonly workTime: number;
             readonly history: number[];
         };
     }
@@ -710,8 +745,17 @@ declare namespace ImGui {
         readonly touchable: boolean;
         readonly interactiveRegionCount: number;
         readonly collapsed: boolean;
+        /** Whether the session renders at idleFps because no input arrived for idleDelay ms. */
+        readonly idle: boolean;
+        /** Whether the frame loop is paused because the screen is off or locked. */
+        readonly paused: boolean;
+        /** Frame rate while expanded and active; see setFps. */
         readonly fps: number;
         readonly collapsedFps: number;
+        /** Idle frame rate, 0 when power saving is off; see setIdleFps. */
+        readonly idleFps: number;
+        /** Milliseconds without input before idleFps applies. */
+        readonly idleDelay: number;
         readonly frameScheduler: "deadline-timer";
         readonly iniPath: string | null;
         /** Whether the session runs in debug mode (WindowOptions.debug). */
@@ -748,6 +792,15 @@ declare namespace ImGui {
         collapse(): this;
         expand(): this;
         toggleCollapsed(): this;
+        /** Sets the frame rate while expanded and active, 15..120. */
+        setFps(fps: number): this;
+        /**
+         * Sets the idle frame rate, 0..120 (0 turns power saving off), and optionally the delay in ms before it
+         * applies, 100..3600000.
+         */
+        setIdleFps(idleFps: number, idleDelay?: number): this;
+        /** Current target frame rate: 0 while paused, collapsedFps while collapsed, the idle or the full rate. */
+        getFps(): number;
         addButtonEx(label: unknown, callback: () => void, options?: FloatingButtonOptions): FloatingButton;
         logWindow(id?: string, options?: LogWindowOptions): LogWindow;
         toast(text: unknown, duration?: number, options?: ToastOptions): Toast;
@@ -933,6 +986,13 @@ declare namespace ImGui {
         toggleSwitch(label: string, value: MutableValue<boolean>): boolean;
         beginCombo(label: string, preview?: unknown, flags?: number): boolean;
         endCombo(): void;
+        /**
+         * Submits only the visible rows of a long list (Dear ImGui ListClipper). The callback runs once per visible
+         * range and draws rows start <= i < end; the clipper ends even when the callback throws. Use it inside
+         * beginCombo / beginListBox / beginChild for lists longer than Limits.SelectionMaxItems.
+         */
+        listClipper(itemCount: number, callback: (start: number, end: number) => void): void;
+        listClipper(itemCount: number, options: ListClipperOptions | null | undefined, callback: (start: number, end: number) => void): void;
         openPopup(id: string, flags?: number): void;
         beginPopup(id: string, flags?: number): boolean;
         beginPopupModal(name: string, open?: MutableValue<boolean> | null, flags?: number): boolean;
@@ -1195,6 +1255,7 @@ declare namespace ImGui {
         readonly ToggleSwitch: ApiCore["toggle"];
         readonly BeginCombo: ApiCore["beginCombo"];
         readonly EndCombo: ApiCore["endCombo"];
+        readonly ListClipper: ApiCore["listClipper"];
         readonly OpenPopup: ApiCore["openPopup"];
         readonly BeginPopup: ApiCore["beginPopup"];
         readonly BeginPopupModal: ApiCore["beginPopupModal"];

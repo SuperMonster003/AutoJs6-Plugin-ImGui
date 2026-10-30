@@ -39,6 +39,8 @@ public final class ImGuiPluginContract {
         "theme-gallery",
         "error-handling",
         "background-task",
+        "large-list",
+        "texture-refresh",
     };
 
     private ImGuiPluginContract() {

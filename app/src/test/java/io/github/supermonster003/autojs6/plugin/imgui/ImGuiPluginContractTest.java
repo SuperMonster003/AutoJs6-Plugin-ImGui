@@ -61,6 +61,8 @@ public class ImGuiPluginContractTest {
                 "theme-gallery",
                 "error-handling",
                 "background-task",
+                "large-list",
+                "texture-refresh",
             },
             ImGuiPluginContract.exampleNames()
         );

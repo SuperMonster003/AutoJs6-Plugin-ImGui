@@ -56,7 +56,7 @@ ImGui 外掛將 [Dear ImGui](https://github.com/ocornut/imgui) 立即模式圖�
 - 自適應懸浮窗與 Activity 全螢幕工作階段, 支援自動點擊穿透、收合/展開、獨立懸浮按鈕、透明度/防擷取控制、版面持久化與生命週期事件.
 - `launchPrivileged` 透過 AutoJs6 已管理的 Shizuku/root 提供明確正式 SurfaceFlinger 模式; 已驗證 Binder 將特權 Surface 交給現有完整渲染器, `/dev/input` 則提供觀察式指標輸入.
 - 由 AutoJs6 直接註冊為全域 `imgui` 物件, 啟用外掛後無需載入步驟, 與 pinyin / mediainfo 等官方外掛一致.
-- 透明浮動視窗: 尺寸/位置/影格率/字型可設定, 拖曳空白區域移動視窗, 雙指滑動與慣性捲動內容, 單指長按模擬右鍵.
+- 透明浮動視窗: 尺寸/位置/影格率/字型可設定, 拖曳空白區域移動視窗, 雙指滑動與慣性捲動內容, 單指長按模擬右鍵. 數秒無輸入後自動降低影格率以省電, 螢幕關閉時暫停繪製.
 - `inputText` 系列完整整合系統輸入法, 支援中文拼音組合輸入、自動顯示/隱藏軟鍵盤與常用編輯鍵.
 - 視窗/分頁/樹狀節點/表格/彈窗/選單/工具提示與 60 餘個立即模式控制項, 含行動裝置風格 `toggle` 開關.
 - 視覺與字型系統: 11 套 `Themes` 主題、批次樣式、圓角/邊框/陰影外觀、多字型堆疊、CJK 備援與 Material Icons 子集.
@@ -64,7 +64,7 @@ ImGui 外掛將 [Dear ImGui](https://github.com/ocornut/imgui) 立即模式圖�
 - 輕量 `imgui.ref(value)` / `{value: x}` 參照可用於所有具狀態控制項, 現有 Java 陣列參照輔助方法保持完全相容.
 - 工作階段託管的 `logWindow`、堆疊 `toast`、Promise 對話框、閾值變色 `statsOverlay` 與可選取 CRUD `dataTable` 可直接組成偵錯介面.
 - 常用 API 與常數列舉提供 PascalCase 別名 (如 `ui.Button`), 參數沿用外掛風格; 別名清單及與上游 C++ 簽章的差異見 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
-- 工程支援包含完整 TypeScript 宣告, 七個可執行範例, Android 渲染儀器測試, 無鎖輸入佇列, 可驗證的上游更新工具與 CI 發布自動化.
+- 工程支援包含完整 TypeScript 宣告, 九個可執行範例, Android 渲染儀器測試, 無鎖輸入佇列, 可驗證的上游更新工具與 CI 發布自動化.
 - 外掛資訊/使用說明/README 和 CHANGELOG 的十種語言本地化.
 
 ******
@@ -124,11 +124,11 @@ imgui.createWindow(function (ui, overlay) {
 
 主題與字型: `setTheme` 接受 `Themes` 的 11 套預設, `setStyleProperties` 可批次設定 `StyleVar`; `createWindow` 也可傳入 `theme` / `appearance` / `style` / `shadow`. `fonts` 陣列可預載 assets (`asset://...`) 或檔案字型, 並以 `pushFont` / `withFont` 切換. 外掛會自動合併內建 CJK 備援與圖示子集, 可用 `Icons` / `icon(name)` 取得圖示字形.
 
-紋理與自繪: 請在視窗工作階段就緒後呼叫 `createTexture` (通常於渲染回呼首次執行時建立). 傳回物件包含 `width` / `height` 與冪等的 `dispose()` / `close()`; 工作階段關閉時會自動釋放其餘紋理. `image` / `imageButton` 用於顯示紋理, `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` 提供常用繪圖原語. DrawList 座標採用 Surface 像素座標. 可直接傳入 AutoJs6 `images.read(...)` 與螢幕擷取所得的 `Image`.
+紋理與自繪: 請在視窗工作階段就緒後呼叫 `createTexture` (通常於渲染回呼首次執行時建立). 傳回物件包含 `width` / `height`, `update(source)` (取代像素並保持控制代碼不變, 尺寸變更時 `width` / `height` 隨之更新) 與冪等的 `dispose()` / `close()`; 工作階段關閉時會自動釋放其餘紋理. `image` / `imageButton` 用於顯示紋理, `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` 提供常用繪圖原語. DrawList 座標採用 Surface 像素座標. 可直接傳入 AutoJs6 `images.read(...)` 與螢幕擷取所得的 `Image`, 也可傳入裝有 PNG 或 JPEG 資料的 `ArrayBuffer` 或型別陣列.
 
 視窗工作階段: 懸浮窗預設採用 `TouchMode.Auto`, ImGui 根視窗保持可互動, Surface 空白區域則直接觸達下層應用程式; 也可用 `Touchable` 或 `Passthrough` 固定策略. 工作階段支援動態透明度/防擷取/觸控模式、收合為低幀率迷你懸浮球、建立獨立可拖曳 `addButtonEx`、跟隨 `AlwaysAutoResize` 內容、透過 `iniPath` 持久化版面配置, 並以 `on` / `once` / `off` 或 options 回呼訂閱事件. `imgui.launch(...)` 會在目前前景 AutoJs6 Activity 中建立全螢幕 Surface, `launchFloaty(...)` 則明確選擇懸浮窗. 每個指令碼引擎只擁有一個原生渲染工作階段, 但可在同一渲染回呼中用 `begin` / `withWindow` 建立任意多個 ImGui 根視窗; 新建工作階段會關閉舊工作階段. 渲染回呼或事件回呼擲出錯誤時以 `console.error` 輸出錯誤與呼叫堆疊 (同一錯誤連續出現只輸出一次) 並觸發 `error` 事件 (含 `error` / `phase` / `frame`); 沒有 `error` 監聽器時渲染錯誤會關閉工作階段 (`closeReason` 為 `render-error`), 有監聽器時略過本幀剩餘部分並繼續渲染. 選項 `debug: true` 以 `console.warn` 與 logcat 回報 `begin` 未配對 `end` 等用法錯誤, 並顯示 Metrics 與 Debug Log 視窗. `setTouchable` / `setGlobalAlpha` / `getComponent` 等全域方法作用於目前工作階段, 沒有作用中的工作階段時擲出 `imgui.<name>: no active session`.
 
-高階元件會掛接到目前工作階段並在使用者渲染回呼後繪製: `logWindow` 提供等級著色, 清除, 匯出回呼與自動捲底; `toast` 提供定時定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 回傳 Promise; `statsOverlay` 繪製幀耗時; `dataTable` 提供資料列選取與 CRUD. 七個內建範例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling` / `background-task`) 可透過 `listExamples` / `getExampleSource` 發現並用 `runExample` 啟動. AutoJs6 6.8 外掛中心尚未使用通用範例中繼資料, 在宿主支援前可直接執行下方呼叫:
+高階元件會掛接到目前工作階段並在使用者渲染回呼後繪製: `logWindow` 提供等級著色, 清除, 匯出回呼與自動捲底; `toast` 提供定時定位提示; `alert` / `confirm` / `singleChoice` / `multiChoice` 回傳 Promise; `statsOverlay` 繪製幀耗時並顯示每個影格的工作耗時; `dataTable` 提供資料列選取與 CRUD. 九個內建範例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling` / `background-task` / `large-list` / `texture-refresh`) 可透過 `listExamples` / `getExampleSource` 發現並用 `runExample` 啟動. AutoJs6 6.8 外掛中心尚未使用通用範例中繼資料, 在宿主支援前可直接執行下方呼叫:
 
 ```js
 imgui.runExample("widget-overview");
@@ -142,14 +142,14 @@ imgui.runExample("widget-overview");
 
 常用 API 另有 PascalCase 別名 (如 `ui.Button` 等價於 `ui.button`), 別名沿用外掛的參數風格 (例如可變值使用 `imgui.ref`), 與上游 C++ 簽章並非一一對應, 清單與差異見 [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). 小駝峰方法對應同名 Dear ImGui 操作, 依功能分組如下:
 
-- 工作階段執行階段: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, `density` / `dp` / `px` 單位換算, 以及工作階段級 `on` / `once` / `off` 與對應執行個體方法; 工作階段 `error` 事件回報回呼錯誤, `debug` 選項開啟偵錯模式.
+- 工作階段執行階段: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, `density` / `dp` / `px` 單位換算, 以及工作階段級 `on` / `once` / `off` 與對應執行個體方法; 工作階段 `error` 事件回報回呼錯誤, `debug` 選項開啟偵錯模式; 省電相關的 `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` 與 `idle` / `active` 事件.
 - 後端探測: `getBackendCapabilities` / `BackendStatus` 回報視窗, split-touch, 特權處理程序, direct input, Docking 與 Multi-Viewport 的可用性與正式環境就緒狀態, 不執行權限提升操作.
 - 會話與視窗: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` 以及 `isWindowHovered` 等視窗狀態查詢.
 - 文字與控制項: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等.
-- 容器與導覽: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / `withTable` 表格族 / `withListBox` / `withCombo` / `selectable`.
+- 容器與導覽: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / `withTable` 表格族 / `withListBox` / `withCombo` / `selectable`, 以及用於長清單的 `listClipper`.
 - 彈窗與選單: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
 - 樣式與版面配置: `styleColorsDark` / `styleColorsLight` / `styleColorsClassic` / `pushStyleColor` / `pushStyleVar` / `setWindowFontScale` / `withGroup` / `withDisabled` / `withId` / `indent` / `sameLine` / `separator` / `spacing` / 游標與捲動控制族.
-- 紋理與自繪: `createTexture` / `destroyTexture` / `image` / `imageButton` / `colorU32`, 以及具備線段/矩形/圓形/三角形/文字/折線/貝茲曲線/影像原語的 `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`.
+- 紋理與自繪: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, 以及具備線段/矩形/圓形/三角形/文字/折線/貝茲曲線/影像原語的 `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`.
 - 查詢與輸入: `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate` 等狀態查詢, `setKeyboardFocusHere` 主動聚焦, 以及 `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput` 輸入原語. `InputTextFlags` 目前公開的所有旗標都會傳遞至 Dear ImGui; 依賴回呼的旗標未公開, `WordWrap` 僅用於多行輸入.
 - 高階元件與範例: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, 以及 `listExamples` / `getExampleSource` / `runExample`; 每個工作階段也提供同名工廠.
 - 可變參照: 輕量 `imgui.ref` (或普通 `{value: x}` 物件), 以及相容的 Java 陣列輔助方法 `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.strings`.
@@ -170,6 +170,18 @@ imgui.runExample("widget-overview");
 ### 發行歷史
 
 ******
+
+#### v1.13.0
+
+###### 2026/10/30
+
+* `提示` 行為變更: 為了省電, 視窗在 3 秒內沒有觸控或按鍵輸入後每秒只繪製 10 個影格, 螢幕關閉或鎖定時停止繪製; 再次觸控後立即恢復正常影格率. 若視窗有動畫, 或顯示不靠輸入就會變化的資料 (計時器, 圖表, 進度列), 請在 createWindow 傳入 idleFps: 0 或呼叫 session.setIdleFps(0) 保持正常影格率
+* `新增` ui.listClipper(itemCount, options, callback) (別名 ListClipper) 只繪製可見的列, 10 萬列的清單也能流暢捲動; 請參閱新範例 large-list
+* `新增` 影格率控制: createWindow 選項 idleFps / idleDelay, session.setFps / setIdleFps / getFps, 工作階段事件 idle / active 以及欄位 idle / paused
+* `新增` texture.update(source) 取代紋理的影像並保持控制代碼不變, 顯示它的 image 呼叫無須修改; 尺寸變更時 texture.width / height 隨之更新. 請參閱新範例 texture-refresh, 每秒重新整理兩次預覽
+* `新增` createTexture 與 texture.update 也接受裝有 PNG 或 JPEG 資料的 ArrayBuffer 或型別陣列 (如 Uint8Array)
+* `新增` statsOverlay 顯示每個影格的工作耗時 (繪製所用時間, 不含等待螢幕更新), snapshot() 以 workTime 傳回該值
+* `優化` docs/FRAME-LOOP.md 說明影格率與省電機制, docs/LIMITS.md 補充 listClipper 的限制
 
 #### v1.12.0
 
@@ -203,15 +215,6 @@ imgui.runExample("widget-overview");
 * `修復` plotLines / plotHistogram 的 valuesOffset 與 stride 選項無效的問題
 * `優化` 繪製回呼或事件回呼出錯時主控台輸出含呼叫堆疊的錯誤訊息, 同一錯誤連續出現時只輸出一次
 * `優化` README 的別名說明改為 "常用 API 別名", 補充單一工作階段模型 (建立新工作階段會關閉上一個) 與新增成員的使用說明, 目標 SDK 更正為 37
-
-#### v1.10.0
-
-###### 2026/10/29
-
-* `提示` 需要 AutoJs6 6.8.0 或以上版本 (版本號 versionCode 不低於 5935)
-* `修復` TypeScript 宣告中 createWindow / launchFloaty / launch / launchPrivileged 的渲染回呼參數被宣告為 (session) 的問題, 現與實際呼叫一致為 (ui, session), 並新增 RenderCallback 型別
-* `優化` 外掛啟用後直接以全域物件 imgui 使用, 由 AutoJs6 註冊並在首次呼叫成員時載入外掛, 不再需要 plugins.load; 原有 plugins.load("io.github.supermonster003.autojs6.plugin.imgui") 寫法回傳同一物件
-* `優化` 範例指令碼, 使用說明, README 及 TypeScript 宣告依全域物件用法更新, 宣告檔不再擴充 plugins.load 的多載
 
 ##### 更多發行歷史可參閱
 

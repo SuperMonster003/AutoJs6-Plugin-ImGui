@@ -4,6 +4,18 @@
 
 ******
 
+# v1.13.0
+
+###### 2026/10/30
+
+* `Note` Changement de comportement: pour économiser la batterie, une fenêtre ne dessine plus que 10 images par seconde après 3 secondes sans toucher ni touche, et cesse de dessiner quand l'écran est éteint ou verrouillé; le toucher suivant rétablit aussitôt la fréquence complète. Si la fenêtre affiche une animation ou des données qui changent sans saisie (minuteur, graphique, barre de progression), passez idleFps: 0 à createWindow ou appelez session.setIdleFps(0) pour garder la fréquence complète
+* `Fonctionnalité` ui.listClipper(itemCount, options, callback) (alias ListClipper) ne dessine que les lignes visibles, si bien qu'une liste de 100000 lignes défile de façon fluide; voir le nouvel exemple large-list
+* `Fonctionnalité` Contrôle de la fréquence d'image: options idleFps / idleDelay de createWindow, session.setFps / setIdleFps / getFps, événements de session idle / active et champs idle / paused
+* `Fonctionnalité` texture.update(source) remplace l'image d'une texture et conserve son identifiant, donc les appels à image qui l'affichent restent inchangés; texture.width / height suivent la nouvelle taille. Voir le nouvel exemple texture-refresh, qui rafraîchit un aperçu deux fois par seconde
+* `Fonctionnalité` createTexture et texture.update acceptent aussi un ArrayBuffer ou un tableau typé (comme Uint8Array) contenant des données PNG ou JPEG
+* `Fonctionnalité` statsOverlay affiche le temps de travail de chaque image (le temps de dessin, sans l'attente de l'écran) et snapshot() le renvoie sous le nom workTime
+* `Amélioration` docs/FRAME-LOOP.md explique les fréquences d'image et l'économie d'énergie, et docs/LIMITS.md les limites de listClipper
+
 # v1.12.0
 
 ###### 2026/10/29

@@ -2129,6 +2129,56 @@ module.exports = function (bridge) {
     };
     api.endCombo = function () { bridge.endCombo(); };
 
+    // listClipper(itemCount, [options], callback) (R2.1): submits only the visible rows of a long list.
+    // callback(start, end) runs once per range to draw rows start <= i < end; options.itemHeight (px) skips
+    // measuring the first row, options.includeItems keeps those rows submitted (indices outside the list are
+    // ignored). The clipper always ends, even when the callback throws.
+    api.listClipper = function (itemCount, options, callback) {
+        if (callback === undefined && typeof options === "function") {
+            callback = options;
+            options = null;
+        }
+        var count = argInt("listClipper", "itemCount", itemCount, undefined, 0);
+        argFunction("listClipper", "callback", callback);
+        if (options != null && typeof options !== "object") {
+            throw new TypeError(argumentLabel("listClipper", "options") + " must be an object");
+        }
+        options = options || {};
+        var itemHeight = -1;
+        if (options.itemHeight != null) {
+            itemHeight = argNumber("listClipper", "options.itemHeight", options.itemHeight);
+            if (!(itemHeight > 0)) {
+                throw new RangeError(
+                    argumentLabel("listClipper", "options.itemHeight") + " must be > 0, got " + itemHeight
+                );
+            }
+        }
+        var includeItems = null;
+        if (options.includeItems != null) {
+            var indices = options.includeItems;
+            if (isStringLike(indices) || typeof indices.length !== "number") {
+                throw new TypeError(argumentLabel("listClipper", "options.includeItems") + " must be an array");
+            }
+            var kept = [];
+            for (var i = 0; i < indices.length; i += 1) {
+                var index = argInt("listClipper", "options.includeItems[" + i + "]", indices[i]);
+                if (index >= 0 && index < count) {
+                    kept.push(index);
+                }
+            }
+            includeItems = javaArray(IntegerType, kept);
+        }
+        bridge.listClipperBegin(count, itemHeight, includeItems);
+        try {
+            var range;
+            while ((range = bridge.listClipperStep()) != null) {
+                callback(Number(range[0]), Number(range[1]));
+            }
+        } finally {
+            bridge.listClipperEnd();
+        }
+    };
+
     api.openPopup = function (id, flags) { bridge.openPopup(String(id), argFlags("openPopup", flags)); };
     api.beginPopup = function (id, flags) {
         return Boolean(bridge.beginPopup(String(id), argFlags("beginPopup", flags)));
@@ -2406,7 +2456,28 @@ module.exports = function (bridge) {
         if (Array.isArray && Array.isArray(source)) {
             return byteArray(source);
         }
-        return source;
+        var typedBytes = typedArrayBytes(source);
+        return typedBytes != null ? typedBytes : source;
+    }
+
+    // Encoded image bytes in an ArrayBuffer or a typed array view, as a Java byte[]; null for other values.
+    function typedArrayBytes(source) {
+        if (source == null || typeof source !== "object" || typeof ArrayBuffer === "undefined") {
+            return null;
+        }
+        var view;
+        if (source instanceof ArrayBuffer) {
+            view = new Uint8Array(source);
+        } else if (typeof ArrayBuffer.isView === "function" && ArrayBuffer.isView(source)) {
+            view = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
+        } else {
+            return null;
+        }
+        var bytes = java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, view.length);
+        for (var i = 0; i < view.length; i += 1) {
+            bytes[i] = view[i] > 127 ? view[i] - 256 : view[i];
+        }
+        return bytes;
     }
 
     api.createTexture = function (source, options) {
@@ -2420,16 +2491,36 @@ module.exports = function (bridge) {
         }
         var nativeHandle = result[0];
         var disposed = false;
+        var width = Number(result[1]);
+        var height = Number(result[2]);
         var texture = {
             _textureToken: TEXTURE_TOKEN,
             _nativeHandle: nativeHandle,
             _session: owner,
             handle: Number(nativeHandle),
-            width: Number(result[1]),
-            height: Number(result[2]),
 
             isDisposed: function () {
                 return disposed;
+            },
+
+            // Same sources as createTexture. The same size reuses the GL storage; another size reallocates it, and
+            // the handle stays the same either way, so code holding the texture keeps working.
+            update: function (source) {
+                resolveTexture("Texture.update", texture);
+                if (!owner.ready || !bridge.isOwner()) {
+                    throw new Error("imgui.Texture.update requires a ready createWindow session");
+                }
+                if (source == null) {
+                    throw new TypeError(argumentLabel("Texture.update", "source") +
+                        " must be a path, encoded bytes, a Bitmap or an AutoJs6 Image");
+                }
+                var updated = bridge.updateTexture(nativeHandle, resolveTextureSource(source));
+                if (updated == null || updated.length < 3) {
+                    throw new Error("Unable to update the ImGui texture");
+                }
+                width = Number(updated[1]);
+                height = Number(updated[2]);
+                return texture;
             },
 
             dispose: function () {
@@ -2459,6 +2550,8 @@ module.exports = function (bridge) {
                     (disposed ? ", disposed" : "") + ")";
             }
         };
+        Object.defineProperty(texture, "width", {get: function () { return width; }, enumerable: true});
+        Object.defineProperty(texture, "height", {get: function () { return height; }, enumerable: true});
         owner._textures.push(texture);
         return freeze(texture);
     };
@@ -3949,16 +4042,21 @@ module.exports = function (bridge) {
         component.historySize = historySize;
         component.fps = 0;
         component.frameTime = 0;
+        component.workTime = 0;
         component.snapshot = function () {
             return {
                 fps: component.fps,
                 frameTime: component.frameTime,
+                workTime: component.workTime,
                 history: component.frameTimes.slice()
             };
         };
         component._render = function () {
             component.fps = Math.max(0, api.framerate());
+            // frameTime is the interval between frames (1000 / fps); workTime is what the previous frame spent in
+            // the render callback and the components, the part a slow script makes longer.
             component.frameTime = component.fps > 0 ? 1000 / component.fps : 0;
+            component.workTime = session._workTime;
             component.frameTimes.push(component.frameTime);
             if (component.frameTimes.length > component.historySize) {
                 component.frameTimes.splice(0, component.frameTimes.length - component.historySize);
@@ -3991,6 +4089,7 @@ module.exports = function (bridge) {
                     color[0], color[1], color[2], color[3],
                     component.fps.toFixed(1) + " FPS  /  " + component.frameTime.toFixed(2) + " ms"
                 );
+                api.textDisabled("Work " + component.workTime.toFixed(2) + " ms");
                 if (options.showPlot !== false) {
                     api.plotLines(
                         "##imgui-frame-times-" + resolvedId,
@@ -4629,6 +4728,11 @@ module.exports = function (bridge) {
         var frameDelay = Math.max(1, Math.round(1000 / fps));
         var collapsedFps = argInt("createWindow", "options.collapsedFps", options.collapsedFps, 5, 1, 15);
         var collapsedFrameDelay = Math.max(1, Math.round(1000 / collapsedFps));
+        // Power saving (R2.2): idleDelay ms after the last input the loop renders at idleFps (0 keeps the full
+        // rate); while the screen is off or locked it only ticks once a second to notice the screen coming back.
+        var idleFps = argInt("createWindow", "options.idleFps", options.idleFps, 10, 0, 120);
+        var idleDelay = argInt("createWindow", "options.idleDelay", options.idleDelay, 3000, 100, 3600000);
+        var pausedTickDelay = 1000;
         var movable = !activityLikeMode && options.movable !== false;
         var fontPath = options.fontPath == null ? null : String(options.fontPath);
         var fontSize = windowOption("fontSize", 16, 8, 64);
@@ -4857,6 +4961,8 @@ module.exports = function (bridge) {
             touchable: touchMode !== api.TouchMode.Passthrough,
             interactiveRegionCount: 0,
             collapsed: false,
+            idle: false,
+            paused: false,
             ready: false,
             closed: false,
             closeReason: null,
@@ -4869,6 +4975,7 @@ module.exports = function (bridge) {
             _closeRequested: false,
             _inFrame: false,
             _frameSerial: 0,
+            _workTime: 0,
             _timer: null,
             _nextFrameAt: 0,
             _scheduledFrameDelay: 0,
@@ -5053,6 +5160,46 @@ module.exports = function (bridge) {
                 return state.collapsed ? session.expand() : session.collapse();
             },
 
+            setFps: function (nextFps) {
+                var resolvedFps = argInt("Session.setFps", "fps", nextFps, undefined, 15, 120);
+                if (state.closed) {
+                    return session;
+                }
+                fps = resolvedFps;
+                frameDelay = Math.max(1, Math.round(1000 / fps));
+                rescheduleFrame();
+                return session;
+            },
+
+            setIdleFps: function (nextIdleFps, nextIdleDelay) {
+                var resolvedIdleFps = argInt("Session.setIdleFps", "idleFps", nextIdleFps, undefined, 0, 120);
+                var resolvedIdleDelay = argInt(
+                    "Session.setIdleFps", "idleDelay", nextIdleDelay, idleDelay, 100, 3600000
+                );
+                if (state.closed) {
+                    return session;
+                }
+                idleFps = resolvedIdleFps;
+                idleDelay = resolvedIdleDelay;
+                if (state.idle) {
+                    if (idleFps === 0 || inputIdleMillis() < idleDelay) {
+                        leaveIdle("api");
+                    }
+                    rescheduleFrame();
+                }
+                return session;
+            },
+
+            getFps: function () {
+                if (state.paused) {
+                    return 0;
+                }
+                if (state.collapsed) {
+                    return collapsedFps;
+                }
+                return state.idle ? Math.min(idleFps, fps) : fps;
+            },
+
             addButtonEx: function (label, callback, buttonOptions) {
                 return createFloatingButton(label, callback, buttonOptions);
             },
@@ -5139,8 +5286,12 @@ module.exports = function (bridge) {
             touchable: function () { return state.touchable; },
             interactiveRegionCount: function () { return state.interactiveRegionCount; },
             collapsed: function () { return state.collapsed; },
+            idle: function () { return state.idle; },
+            paused: function () { return state.paused; },
             fps: function () { return fps; },
             collapsedFps: function () { return collapsedFps; },
+            idleFps: function () { return idleFps; },
+            idleDelay: function () { return idleDelay; },
             frameScheduler: function () { return "deadline-timer"; },
             iniPath: function () { return iniPath; },
             debug: function () { return debug; },
@@ -5170,7 +5321,9 @@ module.exports = function (bridge) {
             touchableChanged: "onTouchableChanged",
             moreTouchChanged: "onMoreTouchChanged",
             alphaChanged: "onAlphaChanged",
-            secureChanged: "onSecureChanged"
+            secureChanged: "onSecureChanged",
+            idle: "onIdle",
+            active: "onActive"
         };
         for (var eventOption in eventOptionNames) {
             if (eventOptionNames.hasOwnProperty(eventOption) &&
@@ -5874,6 +6027,9 @@ module.exports = function (bridge) {
                 if (action === MotionEvent.ACTION_UP || action === MotionEvent.ACTION_CANCEL) {
                     var clicked = action === MotionEvent.ACTION_UP && !buttonDragging;
                     buttonDragging = false;
+                    if (clicked) {
+                        noteSessionActivity();
+                    }
                     if (clicked && typeof callback === "function") {
                         runOnScriptThread(function () {
                             try {
@@ -5978,6 +6134,8 @@ module.exports = function (bridge) {
             state.collapsed = false;
             applyHostAlpha(state.alpha);
             applyTouchMode(false);
+            noteSessionActivity();
+            requestFrame();
             emitSessionEvent("expanded", {
                 x: toDp(state.x),
                 y: toDp(state.y),
@@ -6007,6 +6165,7 @@ module.exports = function (bridge) {
                 clearTimeout(session._timer);
                 session._timer = null;
             }
+            stopActivityMonitor();
             cancelLongPress();
             cancelPressedButton();
             stopFling();
@@ -6465,10 +6624,147 @@ module.exports = function (bridge) {
             return true;
         });
 
+        // Frame interval by priority: screen off or locked > collapsed > idle > normal.
+        function currentFrameDelay() {
+            if (state.paused) {
+                return pausedTickDelay;
+            }
+            if (state.collapsed) {
+                return collapsedFrameDelay;
+            }
+            if (state.idle) {
+                return Math.max(frameDelay, Math.round(1000 / idleFps));
+            }
+            return frameDelay;
+        }
+
+        // Replaces a pending frame timer with one at the current rate; a running frame schedules its successor itself.
+        function rescheduleFrame() {
+            if (state.closed || session._closeRequested || session._timer == null) {
+                return;
+            }
+            clearTimeout(session._timer);
+            session._timer = null;
+            session._nextFrameAt = 0;
+            scheduleNextFrame();
+        }
+
+        // Renders the next frame as soon as the script thread is free.
+        function requestFrame() {
+            if (state.closed || session._closeRequested || session._timer == null) {
+                return;
+            }
+            clearTimeout(session._timer);
+            session._nextFrameAt = 0;
+            session._timer = setTimeout(renderFrame, 0);
+        }
+
+        var activityMonitorToken = null;
+
+        function startActivityMonitor() {
+            try {
+                activityMonitorToken = bridge.startActivityMonitor(new java.lang.Runnable({
+                    run: function () {
+                        runOnScriptThread(onActivityWake);
+                    }
+                }));
+                state.paused = !Boolean(bridge.isScreenActive());
+            } catch (error) {
+                activityMonitorToken = null;
+                state.paused = false;
+                console.warn("[imgui] Power saving is unavailable: " + error);
+            }
+        }
+
+        function stopActivityMonitor() {
+            if (activityMonitorToken == null) {
+                return;
+            }
+            try {
+                bridge.stopActivityMonitor(activityMonitorToken);
+            } catch (ignored) {
+                // The connection is already gone.
+            }
+            activityMonitorToken = null;
+        }
+
+        function noteSessionActivity() {
+            if (activityMonitorToken == null) {
+                return;
+            }
+            try {
+                bridge.noteActivity();
+            } catch (ignored) {
+                // The idle rate then ends with the next input.
+            }
+        }
+
+        function inputIdleMillis() {
+            return activityMonitorToken == null ? 0 : Number(bridge.getInputIdleMillis());
+        }
+
+        function enterIdle() {
+            state.idle = true;
+            bridge.armInputWake(true);
+            if (inputIdleMillis() < idleDelay) {
+                // An input arrived before the wake was armed.
+                bridge.armInputWake(false);
+                state.idle = false;
+                return;
+            }
+            emitSessionEvent("idle", {fps: Math.min(idleFps, fps), idleDelay: idleDelay});
+        }
+
+        function leaveIdle(reason) {
+            if (!state.idle) {
+                return;
+            }
+            state.idle = false;
+            if (activityMonitorToken != null) {
+                bridge.armInputWake(false);
+            }
+            emitSessionEvent("active", {fps: fps, reason: reason});
+        }
+
+        // After a rendered frame: drops to idleFps once no input arrived for idleDelay ms, and returns to the full
+        // rate when an input slipped past the armed wake.
+        function updateIdleState() {
+            if (activityMonitorToken == null) {
+                return;
+            }
+            var idleMillis = inputIdleMillis();
+            if (state.idle) {
+                if (idleFps === 0 || idleMillis < idleDelay) {
+                    leaveIdle("input");
+                }
+            } else if (idleFps > 0 && !pointerDown && idleMillis >= idleDelay) {
+                enterIdle();
+            }
+        }
+
+        // Runs on the script thread after an input at the idle rate, and when the screen turns off, on or unlocks.
+        function onActivityWake() {
+            if (state.closed || session._closeRequested || activityMonitorToken == null) {
+                return;
+            }
+            if (!Boolean(bridge.isScreenActive())) {
+                state.paused = true;
+                return;
+            }
+            var resumed = state.paused;
+            state.paused = false;
+            if (state.idle && inputIdleMillis() < idleDelay) {
+                leaveIdle(resumed ? "screen" : "input");
+            }
+            if (resumed || !state.idle) {
+                requestFrame();
+            }
+        }
+
         function scheduleNextFrame() {
             if (!state.closed && !session._closeRequested) {
                 var now = Date.now();
-                var nextDelay = state.collapsed ? collapsedFrameDelay : frameDelay;
+                var nextDelay = currentFrameDelay();
                 if (session._scheduledFrameDelay !== nextDelay ||
                     session._nextFrameAt <= 0 || session._nextFrameAt < now - nextDelay
                 ) {
@@ -6495,6 +6791,21 @@ module.exports = function (bridge) {
                 session.close("native-context-replaced");
                 return;
             }
+            if (state.paused) {
+                // Polls once a second as well, for a screen broadcast that never arrived.
+                try {
+                    state.paused = !Boolean(bridge.isScreenActive());
+                } catch (ignored) {
+                    state.paused = false;
+                }
+                if (state.paused) {
+                    scheduleNextFrame();
+                    return;
+                }
+                if (state.idle && inputIdleMillis() < idleDelay) {
+                    leaveIdle("screen");
+                }
+            }
             if (state.collapsed) {
                 scheduleNextFrame();
                 return;
@@ -6507,6 +6818,7 @@ module.exports = function (bridge) {
             var frameStarted = false;
             var frameRendered = false;
             var frameFailed = false;
+            var workStartedAt = java.lang.System.nanoTime();
             session._inFrame = true;
             try {
                 dispatchFling();
@@ -6516,6 +6828,7 @@ module.exports = function (bridge) {
                     if (!session._closeRequested) {
                         renderHighLevelComponents(session);
                     }
+                    session._workTime = (java.lang.System.nanoTime() - workStartedAt) / 1e6;
                 }
             } catch (error) {
                 frameFailed = true;
@@ -6567,6 +6880,11 @@ module.exports = function (bridge) {
                     setImeTargetVisible(false);
                     console.warn("[imgui] Unable to update post-frame session state: " + error);
                 }
+                try {
+                    updateIdleState();
+                } catch (error) {
+                    console.warn("[imgui] Unable to update the idle state: " + error);
+                }
             }
             if (session._closeRequested) {
                 finalizeClose();
@@ -6580,6 +6898,7 @@ module.exports = function (bridge) {
         } catch (ignored) {
             // A short-lived host may not provide the events module.
         }
+        startActivityMonitor();
         scheduleNextFrame();
         return session;
     };
@@ -6766,6 +7085,7 @@ module.exports = function (bridge) {
         ToggleSwitch: "toggle",
         BeginCombo: "beginCombo",
         EndCombo: "endCombo",
+        ListClipper: "listClipper",
         OpenPopup: "openPopup",
         BeginPopup: "beginPopup",
         BeginPopupModal: "beginPopupModal",

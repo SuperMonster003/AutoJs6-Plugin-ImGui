@@ -56,7 +56,7 @@
 - Адаптивные сессии оверлея и полноэкранной Activity с автоматическим пропуском касаний, сворачиванием, отдельными плавающими кнопками, прозрачностью/защитой, сохранением расположения и событиями жизненного цикла.
 - `launchPrivileged` предоставляет явный production-режим SurfaceFlinger через управляемый AutoJs6 Shizuku/root; аутентифицированный Binder передаёт привилегированный Surface полному существующему рендереру, а `/dev/input` обеспечивает наблюдаемый ввод указателя.
 - AutoJs6 регистрирует плагин напрямую как глобальный объект `imgui`, поэтому после включения плагина отдельный шаг загрузки не нужен, как и у официальных плагинов pinyin / mediainfo.
-- Прозрачные плавающие окна с настраиваемыми размером, положением, частотой кадров и шрифтом; перетаскивайте пустую область, используйте инерционную прокрутку двумя пальцами и долгое нажатие одним пальцем для правого клика.
+- Прозрачные плавающие окна с настраиваемыми размером, положением, частотой кадров и шрифтом; перетаскивайте пустую область, используйте инерционную прокрутку двумя пальцами и долгое нажатие одним пальцем для правого клика. Через несколько секунд без ввода частота кадров снижается ради экономии батареи, а при выключенном экране отрисовка приостанавливается.
 - Семейство `inputText` полностью подключено к системному IME: поддерживаются составляемый текст, автоматическое отображение клавиатуры и основные клавиши редактирования.
 - Окна, вкладки, узлы дерева, таблицы, всплывающие окна, меню, всплывающие подсказки и более 60 элементов непосредственного режима, включая переключатель `toggle` в мобильном стиле.
 - Визуальная и шрифтовая система с 11 `Themes`, пакетными стилями, скруглёнными/обрамлёнными/затенёнными оформлениями, стеком нескольких шрифтов, CJK-резервом и подмножеством Material Icons.
@@ -64,7 +64,7 @@
 - Лёгкие ссылки `imgui.ref(value)` / `{value: x}` работают со всеми элементами с состоянием, а прежние помощники ссылок на Java-массивы остаются полностью совместимыми.
 - Управляемые сессией `logWindow`, стековые `toast`, диалоги Promise, цветной по порогам `statsOverlay` и выбираемая CRUD-таблица `dataTable` дают готовый интерфейс отладки.
 - Для часто используемых API и перечислений констант есть псевдонимы PascalCase (например, `ui.Button`), сохраняющие стиль аргументов плагина; список псевдонимов и отличия от исходных сигнатур C++ приведены в [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
-- Инженерная поддержка включает полные декларации TypeScript, семь запускаемых примеров, Android-тесты рендеринга, неблокирующую входную очередь, проверяемое обновление upstream и автоматизацию CI-релизов.
+- Инженерная поддержка включает полные декларации TypeScript, девять запускаемых примеров, Android-тесты рендеринга, неблокирующую входную очередь, проверяемое обновление upstream и автоматизацию CI-релизов.
 - Локализация сведений о плагине, инструкций, README и CHANGELOG на десять языков.
 
 ******
@@ -124,11 +124,11 @@ imgui.createWindow(function (ui, overlay) {
 
 Темы и шрифты: `setTheme` принимает все 11 значений `Themes`, а `setStyleProperties` пакетно обновляет `StyleVar`; `createWindow` также принимает `theme`, `appearance`, `style` и `shadow`. Массив `fonts` загружает шрифты из assets (`asset://...`) или файлов для `pushFont` / `withFont`. CJK-резерв и иконки объединяются автоматически; `Icons` / `icon(name)` возвращает глифы иконок.
 
-Текстуры и пользовательское рисование: вызывайте `createTexture` только после готовности оконной сессии (обычно один раз внутри callback отрисовки). Возвращаемый объект содержит `width`, `height` и идемпотентные `dispose()` / `close()`; оставшиеся текстуры автоматически освобождаются при закрытии сессии. `image` / `imageButton` отображают текстуры, а `getWindowDrawList`, `getForegroundDrawList` и `getBackgroundDrawList` предоставляют основные примитивы. Координаты DrawList задаются в пикселях Surface. Значения AutoJs6 `Image` из `images.read(...)` или снимков экрана можно передавать напрямую.
+Текстуры и пользовательское рисование: вызывайте `createTexture` только после готовности оконной сессии (обычно один раз внутри callback отрисовки). Возвращаемый объект содержит `width`, `height`, `update(source)` (заменяет пиксели и сохраняет дескриптор; `width` / `height` следуют за новым размером) и идемпотентные `dispose()` / `close()`; оставшиеся текстуры автоматически освобождаются при закрытии сессии. `image` / `imageButton` отображают текстуры, а `getWindowDrawList`, `getForegroundDrawList` и `getBackgroundDrawList` предоставляют основные примитивы. Координаты DrawList задаются в пикселях Surface. Значения AutoJs6 `Image` из `images.read(...)` или снимков экрана можно передавать напрямую, как и `ArrayBuffer` или типизированный массив с данными PNG или JPEG.
 
 Оконные сессии: оверлей по умолчанию использует `TouchMode.Auto`, оставляя корневые окна ImGui интерактивными и передавая касания пустых областей Surface приложению под ним; для фиксированной политики выберите `Touchable` или `Passthrough`. Сессия позволяет менять прозрачность/защиту/режим касаний, сворачиваться в мини-пузырь с низким FPS, создавать отдельные `addButtonEx`, следовать содержимому `AlwaysAutoResize`, сохранять расположение через `iniPath` и публиковать события через `on` / `once` / `off` или callbacks параметров. `imgui.launch(...)` создаёт полноэкранный Surface в текущей resumed Activity AutoJs6, а `launchFloaty(...)` явно выбирает оверлей. На движок сценариев приходится одна нативная сессия рендеринга, но её callback может создать любое число корней ImGui через `begin` / `withWindow`; новая сессия закрывает предыдущую. Исключение в колбэке рендеринга или в колбэке события выводится со стеком через `console.error` (серия одинаковых ошибок выводится один раз) и порождает событие `error` (`error` / `phase` / `frame`); без слушателя `error` ошибка рендеринга закрывает сессию (`closeReason` равен `render-error`), а при наличии слушателя остаток кадра пропускается и рендеринг продолжается. Опция `debug: true` сообщает через `console.warn` и logcat об ошибках использования, например `begin` без `end`, и показывает окна Metrics и Debug Log. Глобальные методы `setTouchable` / `setGlobalAlpha` / `getComponent` и подобные действуют на текущую сессию и без активной сессии выбрасывают `imgui.<name>: no active session`.
 
-Компоненты высокого уровня подключаются к активной сессии и рисуются после пользовательского callback: `logWindow` предоставляет уровни с цветами, очистку, экспорт и автопрокрутку; `toast` - позиционированные временные уведомления; `alert` / `confirm` / `singleChoice` / `multiChoice` возвращают Promise; `statsOverlay` строит график времени кадра; `dataTable` предоставляет выбор и CRUD. Семь встроенных примеров (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling`, `background-task`) доступны через `listExamples` / `getExampleSource` и запускаются `runExample`. Центр плагинов AutoJs6 6.8 пока не использует общие метаданные примеров, поэтому до поддержки хостом запускайте приведённый ниже вызов напрямую:
+Компоненты высокого уровня подключаются к активной сессии и рисуются после пользовательского callback: `logWindow` предоставляет уровни с цветами, очистку, экспорт и автопрокрутку; `toast` - позиционированные временные уведомления; `alert` / `confirm` / `singleChoice` / `multiChoice` возвращают Promise; `statsOverlay` строит график времени кадра и показывает рабочее время каждого кадра; `dataTable` предоставляет выбор и CRUD. Девять встроенных примеров (`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling`, `background-task`, `large-list`, `texture-refresh`) доступны через `listExamples` / `getExampleSource` и запускаются `runExample`. Центр плагинов AutoJs6 6.8 пока не использует общие метаданные примеров, поэтому до поддержки хостом запускайте приведённый ниже вызов напрямую:
 
 ```js
 imgui.runExample("widget-overview");
@@ -142,14 +142,14 @@ imgui.runExample("widget-overview");
 
 Для часто используемых API есть и псевдонимы PascalCase (например, `ui.Button` эквивалентен `ui.button`). Псевдонимы сохраняют стиль аргументов плагина (изменяемые значения через `imgui.ref` и т. п.) и не соответствуют исходным сигнатурам C++ один к одному; список и отличия приведены в [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). Методы lower camel case повторяют одноименные операции Dear ImGui и делятся на следующие группы:
 
-- Среда сессии: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, перевод единиц `density` / `dp` / `px`, а также `on` / `once` / `off` и их формы для сессии, событие сессии `error`, сообщающее об ошибках колбэков, и опция `debug`, включающая режим отладки.
+- Среда сессии: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, перевод единиц `density` / `dp` / `px`, а также `on` / `once` / `off` и их формы для сессии, событие сессии `error`, сообщающее об ошибках колбэков, опция `debug`, включающая режим отладки, и энергосбережение через `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` и события `idle` / `active`.
 - Обнаружение бэкенда: `getBackendCapabilities` / `BackendStatus` сообщает о доступности и готовности к эксплуатации окон, разделенной обработки касаний, привилегированного процесса, прямого ввода, Docking и Multi-Viewport, не повышая привилегии.
 - Сессия и окна: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, а также запросы состояния окна, такие как `isWindowHovered`.
 - Текст и элементы управления: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` и другие.
-- Контейнеры и навигация: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / семейство таблиц `withTable` / `withListBox` / `withCombo` / `selectable`.
+- Контейнеры и навигация: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / семейство таблиц `withTable` / `withListBox` / `withCombo` / `selectable`, а также `listClipper` для длинных списков.
 - Всплывающие окна и меню: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
 - Стиль и компоновка: `styleColorsDark` / `styleColorsLight` / `styleColorsClassic` / `pushStyleColor` / `pushStyleVar` / `setWindowFontScale` / `withGroup` / `withDisabled` / `withId` / `indent` / `sameLine` / `separator` / `spacing`, а также семейства курсора и прокрутки.
-- Текстуры и рисование: `createTexture` / `destroyTexture` / `image` / `imageButton` / `colorU32`, а также `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` с примитивами линии, прямоугольника, круга, треугольника, текста, ломаной, кривой Безье и изображения.
+- Текстуры и рисование: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, а также `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` с примитивами линии, прямоугольника, круга, треугольника, текста, ломаной, кривой Безье и изображения.
 - Запросы и ввод: запросы состояния, такие как `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate`, активный фокус через `setKeyboardFocusHere` и примитивы `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput`. Все открытые значения `InputTextFlags` передаются в Dear ImGui; флаги, зависящие от callback, не открыты, а `WordWrap` действует только для многострочного ввода.
 - Компоненты высокого уровня и примеры: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, а также `listExamples` / `getExampleSource` / `runExample`; те же фабрики есть у каждой сессии.
 - Изменяемые ссылки: лёгкая `imgui.ref` (или обычный объект `{value: x}`) и совместимые помощники Java-массивов `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.strings`.
@@ -170,6 +170,18 @@ imgui.runExample("widget-overview");
 ### История выпусков
 
 ******
+
+#### v1.13.0
+
+###### 2026/10/30
+
+* `Подсказка` Изменение поведения: для экономии батареи окно после 3 секунд без касаний и нажатий клавиш рисует только 10 кадров в секунду, а при выключенном или заблокированном экране перестаёт рисовать; следующее касание сразу возвращает полную частоту кадров. Если окно показывает анимацию или данные, которые меняются без ввода (таймер, график, индикатор хода), передайте idleFps: 0 в createWindow или вызовите session.setIdleFps(0), чтобы сохранить полную частоту
+* `Функция` ui.listClipper(itemCount, options, callback) (псевдоним ListClipper) рисует только видимые строки, поэтому список из 100000 строк прокручивается плавно; см. новый пример large-list
+* `Функция` Управление частотой кадров: опции createWindow idleFps / idleDelay, session.setFps / setIdleFps / getFps, события сессии idle / active и поля idle / paused
+* `Функция` texture.update(source) заменяет изображение текстуры и сохраняет её дескриптор, поэтому вызовы image, которые её показывают, менять не нужно; texture.width / height следуют за новым размером. См. новый пример texture-refresh, который обновляет превью дважды в секунду
+* `Функция` createTexture и texture.update также принимают ArrayBuffer или типизированный массив (например, Uint8Array) с данными PNG или JPEG
+* `Функция` statsOverlay показывает рабочее время каждого кадра (время отрисовки без ожидания экрана), а snapshot() возвращает его как workTime
+* `Улучшение` docs/FRAME-LOOP.md описывает частоты кадров и энергосбережение, а docs/LIMITS.md - ограничения listClipper
 
 #### v1.12.0
 
@@ -203,15 +215,6 @@ imgui.runExample("widget-overview");
 * `Исправление` Параметры valuesOffset и stride в plotLines / plotHistogram не действовали
 * `Улучшение` Ошибки функции отрисовки или обработчика события выводятся в консоль со стеком вызовов, а повторяющаяся подряд одна и та же ошибка выводится один раз
 * `Улучшение` В README псевдонимы описаны как "псевдонимы часто используемых API", добавлены описание модели с одной сессией (новая сессия закрывает предыдущую) и использование новых членов, целевой SDK исправлен на 37
-
-#### v1.10.0
-
-###### 2026/10/29
-
-* `Подсказка` Требуется AutoJs6 6.8.0 или новее (versionCode не ниже 5935)
-* `Исправление` Параметры колбэка отрисовки createWindow / launchFloaty / launch / launchPrivileged были объявлены в декларациях TypeScript как (session); теперь они соответствуют фактическому вызову (ui, session), добавлен тип RenderCallback
-* `Улучшение` После включения плагин используется напрямую как глобальный объект imgui: его регистрирует AutoJs6, а плагин загружается при первом обращении к члену, поэтому plugins.load больше не нужен; прежний вызов plugins.load("io.github.supermonster003.autojs6.plugin.imgui") возвращает тот же объект
-* `Улучшение` Примеры скриптов, инструкция по использованию, README и декларации TypeScript обновлены под использование глобального объекта; файл деклараций больше не расширяет plugins.load перегрузками
 
 ##### Дополнительная история выпусков
 

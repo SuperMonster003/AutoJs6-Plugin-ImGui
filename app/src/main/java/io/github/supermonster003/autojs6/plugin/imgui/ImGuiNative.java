@@ -65,6 +65,8 @@ final class ImGuiNative {
 
     static native long[] nativeCreateTexture(Bitmap bitmap, int flags);
 
+    static native long[] nativeUpdateTexture(long handle, Bitmap bitmap);
+
     static native boolean nativeDestroyTexture(long handle);
 
     static native void nativeImage(
@@ -339,6 +341,12 @@ final class ImGuiNative {
         float width,
         float height
     );
+
+    static native void nativeListClipperBegin(int itemsCount, float itemsHeight, int[] includeItems);
+
+    static native int[] nativeListClipperStep();
+
+    static native void nativeListClipperEnd();
 
     static native boolean nativeCollapsingHeader(String label, int flags);
 

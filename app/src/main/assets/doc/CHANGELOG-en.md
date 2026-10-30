@@ -4,6 +4,18 @@
 
 ******
 
+# v1.13.0
+
+###### 2026/10/30
+
+* `Hint` Behavior change: to save battery, a window now draws only 10 frames per second after 3 seconds without touch or key input, and stops drawing while the screen is off or locked; the next touch brings back the full frame rate at once. If the window shows an animation or data that changes without input (a timer, a chart, a progress bar), pass idleFps: 0 to createWindow or call session.setIdleFps(0) to keep the full rate
+* `Feature` ui.listClipper(itemCount, options, callback) (alias ListClipper) draws only the visible rows, so a list of 100000 rows scrolls smoothly; see the new large-list example
+* `Feature` Frame rate control: createWindow options idleFps / idleDelay, session.setFps / setIdleFps / getFps, the session idle / active events and the idle / paused fields
+* `Feature` texture.update(source) replaces the picture of a texture and keeps its handle, so the image calls that show it need no change; texture.width / height follow a new size. See the new texture-refresh example, which refreshes a preview twice a second
+* `Feature` createTexture and texture.update also accept an ArrayBuffer or a typed array (such as Uint8Array) holding PNG or JPEG data
+* `Feature` statsOverlay shows the work time of each frame (the time spent drawing, without waiting for the screen), and snapshot() returns it as workTime
+* `Improvement` docs/FRAME-LOOP.md explains the frame rates and power saving, and docs/LIMITS.md the limits of listClipper
+
 # v1.12.0
 
 ###### 2026/10/29

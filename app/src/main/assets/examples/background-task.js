@@ -5,7 +5,8 @@
 // - threads.start runs the slow part (counting primes here) on a worker thread. The worker never touches imgui or the
 //   render state: it posts JSON messages to a thread-safe queue.
 // - A setInterval on the script thread drains the queue into the state the render callback draws. The window keeps
-//   drawing at full rate while the worker runs, and closing it cancels the worker and the timer.
+//   drawing while the worker runs (at idleFps, 10 by default, once no input arrives for 3 s; enough for a progress
+//   bar), and closing it cancels the worker and the timer.
 (function (factory) {
     if (typeof module !== "undefined" && module.exports &&
         typeof options !== "undefined" && options.__imguiExampleLoader === true

@@ -20,6 +20,30 @@ This prevents JavaScript and GPU work from being added to every frame period. A 
 than one interval resets the schedule rather than issuing an unbounded burst of catch-up frames. Collapsed
 windows switch to their independent `collapsedFps` deadline.
 
+## Frame rates and power saving (v1.13.0)
+
+The loop picks its interval by priority, the first that applies:
+
+| State | Rate | Renders |
+| --- | --- | --- |
+| Screen off or keyguard locked (`session.paused`) | 1 tick per second, only to notice the screen coming back | No |
+| Collapsed (`session.collapsed`) | `collapsedFps` (1..15, default 5) | No |
+| Idle (`session.idle`): no touch, IME or wheel input for `idleDelay` ms | `idleFps` (0..120, default 10; never above `fps`) | Yes |
+| Normal | `fps` (15..120, default 60) | Yes |
+
+- Every input path of the connection (touch, including the privileged input callback, IME characters and keys,
+  wheel and fling) notes the input time. A held pointer keeps the session active.
+- On entering the idle rate the script arms a one-shot wake; the next input posts the wake to the script thread,
+  which renders the next frame at once and returns to `fps`, so the first frame after an input is not delayed by
+  the idle interval. Expanding a collapsed window and clicking a floating button count as input.
+- `SCREEN_OFF`, `SCREEN_ON` and `USER_PRESENT` broadcasts pause and resume the loop; the paused tick also polls
+  the screen state in case a broadcast is missed. Turning the screen back on counts as input.
+- The session raises `idle` (`fps`, `idleDelay`) and `active` (`fps`, `reason`: `"input"`, `"screen"` or `"api"`)
+  on the script thread.
+- `session.setFps(fps)`, `session.setIdleFps(idleFps, idleDelay)` and `session.getFps()` change and read the rates
+  while the session runs. Frame-driven animations (progress that advances each frame, plots of live data) need
+  `idleFps: 0` or `session.setIdleFps(0)` while they run; otherwise they slow down to `idleFps` after `idleDelay`.
+
 ## Choreographer evaluation
 
 `Choreographer` aligns callbacks with Android display vsync, but its callback runs on the thread whose

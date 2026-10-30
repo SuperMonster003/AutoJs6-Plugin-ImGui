@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -47,6 +48,7 @@ struct TextureRecord {
     int width = 0;
     int height = 0;
     bool pendingDelete = false;
+    bool mipmaps = false;
 };
 
 struct RendererState {
@@ -75,6 +77,8 @@ struct RendererState {
     std::vector<std::string> debugMessages;
     std::vector<std::string> debugMessagesInFrame;
     std::vector<std::string> debugMessagesInPreviousFrame;
+    // Open listClipper scopes, innermost last. The script facade ends each one in a finally block.
+    std::vector<std::unique_ptr<ImGuiListClipper>> clippers;
 };
 
 RendererState gState;
@@ -290,6 +294,22 @@ void DestroyPendingTextures() {
     }
 }
 
+// Drops clippers a previous frame left open without seeking the cursor of a window that no longer exists.
+void DiscardOpenClippers() {
+    if (gState.clippers.empty()) {
+        return;
+    }
+    ImGuiContext* context = ImGui::GetCurrentContext();
+    for (auto& clipper : gState.clippers) {
+        if (clipper->TempData != nullptr && context != nullptr && context->ClipperTempDataStacked > 0) {
+            --context->ClipperTempDataStacked;
+        }
+        clipper->TempData = nullptr;
+        clipper->ItemsCount = -1;
+    }
+    gState.clippers.clear();
+}
+
 void ShutdownRenderer() {
     gState.ready = false;
     gState.suspended = false;
@@ -332,6 +352,7 @@ void ShutdownRenderer() {
         if (!gState.iniPath.empty()) {
             ImGui::SaveIniSettingsToDisk(gState.iniPath.c_str());
         }
+        DiscardOpenClippers();
         DestroyAllTextures();
         if (gState.rendererBackendInitialized) {
             ImGui_ImplOpenGL3_Shutdown();
@@ -1340,6 +1361,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeNewFrame(
     if (!gState.ready || gState.frameActive || !EnsureCurrent()) {
         return JNI_FALSE;
     }
+    DiscardOpenClippers();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplAndroid_NewFrame();
     ImGui::NewFrame();
@@ -1570,7 +1592,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeCreateText
         }
         handle = gNextTextureHandle++;
     }
-    gState.textures.emplace(handle, TextureRecord{textureId, width, height, false});
+    gState.textures.emplace(handle, TextureRecord{textureId, width, height, false, mipmaps});
     releaseIfAcquired();
     LOG_INFO(
         "Created managed ImGui texture %llu (%dx%d, GL %u)",
@@ -1580,6 +1602,98 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeCreateText
         textureId
     );
     return NewTextureResult(env, handle, width, height);
+}
+
+// Replaces the pixels of a managed texture: the same size reuses the storage (glTexSubImage2D), another size
+// respecifies it on the same GL texture, so the handle and the GL id stay the same either way.
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeUpdateTexture(
+    JNIEnv* env,
+    jclass,
+    jlong handle,
+    jobject bitmap
+) {
+    if (!RequireContext(env)) return nullptr;
+    TextureRecord* texture = ResolveTexture(env, handle);
+    if (texture == nullptr) {
+        return nullptr;
+    }
+
+    std::vector<uint8_t> pixels;
+    int width = 0;
+    int height = 0;
+    if (!CopyBitmapToRgba(env, bitmap, pixels, width, height)) {
+        return nullptr;
+    }
+
+    const bool contextWasCurrent = IsRendererContextCurrent();
+    if (!EnsureCurrent()) {
+        ThrowIllegalState(env, "Unable to make the ImGui OpenGL context current");
+        return nullptr;
+    }
+    const auto releaseIfAcquired = [contextWasCurrent]() {
+        if (!contextWasCurrent && !gState.frameActive) {
+            ReleaseCurrent();
+        }
+    };
+
+    const bool resized = width != texture->width || height != texture->height;
+    if (resized) {
+        GLint maxTextureSize = 0;
+        glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+        if (maxTextureSize <= 0 || width > maxTextureSize || height > maxTextureSize) {
+            releaseIfAcquired();
+            ThrowIllegalArgument(env, "Texture dimensions exceed the device OpenGL limit");
+            return nullptr;
+        }
+    }
+
+    GLint previousActiveTexture = GL_TEXTURE0;
+    GLint previousTexture = 0;
+    GLint previousUnpackAlignment = 4;
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &previousActiveTexture);
+    glActiveTexture(GL_TEXTURE0);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousTexture);
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &previousUnpackAlignment);
+    while (glGetError() != GL_NO_ERROR) {
+        // Clear unrelated errors so upload failure reporting remains deterministic.
+    }
+
+    glBindTexture(GL_TEXTURE_2D, texture->glId);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    if (resized) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    } else {
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    }
+    if (texture->mipmaps) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    const GLenum uploadError = glGetError();
+    glPixelStorei(GL_UNPACK_ALIGNMENT, previousUnpackAlignment);
+    glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(previousTexture));
+    glActiveTexture(static_cast<GLenum>(previousActiveTexture));
+
+    if (uploadError != GL_NO_ERROR) {
+        releaseIfAcquired();
+        LOG_ERROR("OpenGL texture update failed: 0x%x", uploadError);
+        ThrowIllegalState(env, "OpenGL texture update failed");
+        return nullptr;
+    }
+    texture->width = width;
+    texture->height = height;
+    const GLuint textureId = texture->glId;
+    releaseIfAcquired();
+    if (resized) {
+        LOG_INFO(
+            "Resized managed ImGui texture %llu to %dx%d (GL %u)",
+            static_cast<unsigned long long>(handle),
+            width,
+            height,
+            textureId
+        );
+    }
+    return NewTextureResult(env, static_cast<uint64_t>(handle), width, height);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -2529,6 +2643,77 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSelectable
         static_cast<ImGuiSelectableFlags>(flags),
         ImVec2(width, height)
     ) ? JNI_TRUE : JNI_FALSE;
+}
+
+// listClipper (R2.1): Begin, then Step until it returns null; every Step yields the visible range [start, end).
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeListClipperBegin(
+    JNIEnv* env,
+    jclass,
+    jint itemsCount,
+    jfloat itemsHeight,
+    jintArray includeItems
+) {
+    if (!RequireFrame(env)) return;
+    if (itemsCount < 0) {
+        ThrowIllegalArgument(env, "listClipper item count must not be negative");
+        return;
+    }
+    auto clipper = std::make_unique<ImGuiListClipper>();
+    clipper->Begin(static_cast<int>(itemsCount), itemsHeight > 0.0F ? itemsHeight : -1.0F);
+    if (includeItems != nullptr) {
+        const jsize length = env->GetArrayLength(includeItems);
+        std::vector<jint> indices(static_cast<size_t>(length));
+        if (length > 0) {
+            env->GetIntArrayRegion(includeItems, 0, length, indices.data());
+        }
+        for (const jint index : indices) {
+            if (index >= 0 && index < itemsCount) {
+                clipper->IncludeItemByIndex(static_cast<int>(index));
+            }
+        }
+    }
+    gState.clippers.push_back(std::move(clipper));
+}
+
+extern "C" JNIEXPORT jintArray JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeListClipperStep(
+    JNIEnv* env,
+    jclass
+) {
+    if (!RequireFrame(env)) return nullptr;
+    if (gState.clippers.empty()) {
+        ThrowIllegalState(env, "listClipper step without an open clipper");
+        return nullptr;
+    }
+    ImGuiListClipper& clipper = *gState.clippers.back();
+    if (!clipper.Step()) {
+        return nullptr;
+    }
+    const jint range[] = {
+        static_cast<jint>(clipper.DisplayStart),
+        static_cast<jint>(clipper.DisplayEnd),
+    };
+    jintArray result = env->NewIntArray(2);
+    if (result != nullptr) {
+        env->SetIntArrayRegion(result, 0, 2, range);
+    }
+    return result;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeListClipperEnd(
+    JNIEnv*,
+    jclass
+) {
+    if (gState.clippers.empty()) return;
+    // Runs from a finally block: never throw over the callback's own exception.
+    if (!gState.ready || !gState.frameActive || ImGui::GetCurrentContext() == nullptr) {
+        DiscardOpenClippers();
+        return;
+    }
+    gState.clippers.back()->End();
+    gState.clippers.pop_back();
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

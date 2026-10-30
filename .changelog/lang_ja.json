@@ -5,6 +5,22 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.13.0": {
+      "released_date": "2026/10/30",
+      "hint": [
+        "動作の変更: 電池を節約するため, タッチやキー入力が 3 秒ないとウィンドウは毎秒 10 フレームだけ描画し, 画面がオフまたはロック中は描画を止めます. 次にタッチするとすぐに通常のフレームレートに戻ります. アニメーションや入力なしで変わるデータ (タイマー, グラフ, 進捗バー) を表示するウィンドウでは, createWindow に idleFps: 0 を渡すか session.setIdleFps(0) を呼んで通常のフレームレートを保ってください"
+      ],
+      "feature": [
+        "ui.listClipper(itemCount, options, callback) (エイリアス ListClipper) は見えている行だけを描画するため, 10 万行のリストもなめらかにスクロールできます. 新しいサンプル large-list を参照してください",
+        "フレームレートの制御: createWindow のオプション idleFps / idleDelay, session.setFps / setIdleFps / getFps, セッションイベント idle / active, フィールド idle / paused",
+        "texture.update(source) はテクスチャの画像を置き換え, ハンドルは変わらないため, それを表示する image の呼び出しはそのままで構いません. サイズが変わると texture.width / height も更新されます. 1 秒に 2 回プレビューを更新する新しいサンプル texture-refresh を参照してください",
+        "createTexture と texture.update は PNG または JPEG データを含む ArrayBuffer や型付き配列 (Uint8Array など) も受け付けます",
+        "statsOverlay は各フレームの処理時間 (画面の更新待ちを除いた描画時間) を表示し, snapshot() はそれを workTime として返します"
+      ],
+      "improvement": [
+        "docs/FRAME-LOOP.md でフレームレートと省電力の仕組みを, docs/LIMITS.md で listClipper の制限を説明します"
+      ]
+    },
     "v1.12.0": {
       "released_date": "2026/10/29",
       "hint": [

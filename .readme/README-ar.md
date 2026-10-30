@@ -56,7 +56,7 @@
 - جلسات تراكب متجاوبة وActivity بملء الشاشة مع تمرير اللمس التلقائي والطي/التوسيع وأزرار عائمة مستقلة والتحكم في الشفافية/الأمان وحفظ التخطيط وأحداث دورة الحياة.
 - يوفر `launchPrivileged` وضع SurfaceFlinger إنتاجياً صريحاً عبر Shizuku/root المُدار من AutoJs6؛ ينقل Binder الموثّق الـ Surface ذات الامتياز إلى العارض الكامل الموجود، ويوفر `/dev/input` إدخال مؤشر بالمراقبة.
 - يسجل AutoJs6 الإضافة مباشرة بوصفها الكائن العام `imgui`, فلا حاجة إلى خطوة تحميل بعد تفعيلها, كما في الإضافات الرسمية مثل pinyin / mediainfo.
-- نوافذ عائمة شفافة بحجم وموضع ومعدل إطارات وخط قابلة للضبط; اسحب مساحة فارغة للتحريك واستخدم التمرير بالقصور الذاتي بإصبعين والضغط المطول بإصبع واحد للنقر بزر الفأرة الأيمن.
+- نوافذ عائمة شفافة بحجم وموضع ومعدل إطارات وخط قابلة للضبط; اسحب مساحة فارغة للتحريك واستخدم التمرير بالقصور الذاتي بإصبعين والضغط المطول بإصبع واحد للنقر بزر الفأرة الأيمن. بعد بضع ثوانٍ دون إدخال ينخفض معدل الإطارات لتوفير البطارية, ويتوقف الرسم عند إطفاء الشاشة.
 - ترتبط عائلة `inputText` بالكامل بمحرر الإدخال (IME) في النظام، بما في ذلك النص قيد التركيب والإظهار التلقائي للوحة المفاتيح ومفاتيح التحرير الشائعة.
 - نوافذ وعلامات تبويب وعقد شجرية وجداول ونوافذ منبثقة وقوائم وتلميحات وأكثر من 60 عنصر تحكم بنمط فوري بما في ذلك مفتاح `toggle` بأسلوب الأجهزة المحمولة.
 - نظام مرئي وخطي يضم 11 قيمة `Themes` وأنماطاً دفعية ومظاهر مستديرة/محددة/مظللة ومكدس خطوط متعدد واحتياط CJK ومجموعة Material Icons فرعية.
@@ -64,7 +64,7 @@
 - تعمل مراجع `imgui.ref(value)` / `{value: x}` الخفيفة مع كل عناصر التحكم ذات الحالة، مع بقاء مساعدات مراجع مصفوفات Java القديمة متوافقة بالكامل.
 - توفر مكونات الجلسة `logWindow` و`toast` المكدسة وحوارات Promise و`statsOverlay` الملوّن حسب العتبات و`dataTable` القابل للتحديد وCRUD واجهة تصحيح جاهزة.
 - تتوفر أسماء PascalCase بديلة للواجهات البرمجية الشائعة وتعدادات الثوابت (مثلًا `ui.Button`) وهي تحافظ على أسلوب وسائط الإضافة; قائمة الأسماء البديلة والفروق عن توقيعات C++ الأصلية في [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md).
-- يشمل الدعم الهندسي تصريحات TypeScript كاملة وسبعة أمثلة قابلة للتشغيل واختبارات رسم Android وطابور إدخال غير حاجب وأدوات تحديث upstream قابلة للتحقق وأتمتة إصدارات CI.
+- يشمل الدعم الهندسي تصريحات TypeScript كاملة وتسعة أمثلة قابلة للتشغيل واختبارات رسم Android وطابور إدخال غير حاجب وأدوات تحديث upstream قابلة للتحقق وأتمتة إصدارات CI.
 - توطين معلومات الإضافة وتعليمات الاستخدام و README و CHANGELOG بعشر لغات.
 
 ******
@@ -124,11 +124,11 @@ imgui.createWindow(function (ui, overlay) {
 
 السمات والخطوط: يقبل `setTheme` قيم `Themes` الإحدى عشرة ويحدّث `setStyleProperties` عدة قيم `StyleVar` دفعة واحدة؛ كما يقبل `createWindow` الخيارات `theme` و`appearance` و`style` و`shadow`. تحمّل مصفوفة `fonts` خطوط assets (`asset://...`) أو الملفات لاستخدامها مع `pushFont` / `withFont`. يدمج احتياط CJK والأيقونات تلقائياً؛ استخدم `Icons` / `icon(name)` للحصول على رسوم الأيقونات.
 
-الأنسجة والرسم المخصص: استدعِ `createTexture` بعد أن تصبح جلسة النافذة جاهزة فقط (عادةً مرة واحدة داخل callback العرض). يعرض الكائن الناتج `width` و`height` والدالتين التكراريتين الآمنتين `dispose()` / `close()`؛ وتُحرر الأنسجة المتبقية تلقائياً عند إغلاق الجلسة. تعرض `image` / `imageButton` الأنسجة، بينما توفر `getWindowDrawList` و`getForegroundDrawList` و`getBackgroundDrawList` بدائيات الرسم الشائعة. تستخدم إحداثيات DrawList بكسلات Surface. يمكن تمرير قيم AutoJs6 `Image` من `images.read(...)` أو لقطات الشاشة مباشرةً.
+الأنسجة والرسم المخصص: استدعِ `createTexture` بعد أن تصبح جلسة النافذة جاهزة فقط (عادةً مرة واحدة داخل callback العرض). يعرض الكائن الناتج `width` و`height` و`update(source)` (تستبدل البكسلات وتحافظ على المقبض, ويتبع `width` / `height` الحجم الجديد) والدالتين التكراريتين الآمنتين `dispose()` / `close()`; وتُحرر الأنسجة المتبقية تلقائياً عند إغلاق الجلسة. تعرض `image` / `imageButton` الأنسجة، بينما توفر `getWindowDrawList` و`getForegroundDrawList` و`getBackgroundDrawList` بدائيات الرسم الشائعة. تستخدم إحداثيات DrawList بكسلات Surface. يمكن تمرير قيم AutoJs6 `Image` من `images.read(...)` أو لقطات الشاشة مباشرةً, وكذلك `ArrayBuffer` أو مصفوفة typed تحتوي بيانات PNG أو JPEG.
 
 جلسات النوافذ: يستخدم التراكب `TouchMode.Auto` افتراضياً، فتظل نوافذ ImGui الجذرية تفاعلية بينما تنتقل لمسات مناطق Surface الفارغة إلى التطبيق أسفلها؛ اختر `Touchable` أو `Passthrough` لسياسة ثابتة. تستطيع الجلسة تغيير الشفافية/الأمان/وضع اللمس، والانطواء إلى فقاعة منخفضة الإطارات، وإنشاء `addButtonEx` مستقلة، واتباع محتوى `AlwaysAutoResize`، وحفظ التخطيط عبر `iniPath`، ونشر الأحداث عبر `on` / `once` / `off` أو callbacks الخيارات. ينشئ `imgui.launch(...)` سطحاً بملء الشاشة في Activity ‏AutoJs6 الحالية بحالة resumed، بينما يختار `launchFloaty(...)` التراكب صراحةً. لكل محرك نصوص جلسة عرض أصلية واحدة، لكن يمكن لـ callback الخاص بها إنشاء أي عدد من جذور ImGui عبر `begin` / `withWindow`؛ وتغلق الجلسة الجديدة السابقة. عندما يرمي callback الرسم أو callback حدث استثناءً, يطبع `console.error` الخطأ مع مكدس الاستدعاء (مرة واحدة لسلسلة الخطأ نفسه) ويُطلق الحدث `error` (`error` / `phase` / `frame`); من دون مستمع `error` يغلق خطأ الرسم الجلسة (`closeReason` هو `render-error`), ومع وجود مستمع يُتخطى باقي الإطار ويستمر الرسم. يبلّغ الخيار `debug: true` عبر `console.warn` وlogcat عن أخطاء الاستخدام مثل `begin` دون `end`, ويعرض نافذتي Metrics وDebug Log. تعمل الأساليب العامة مثل `setTouchable` / `setGlobalAlpha` / `getComponent` على الجلسة الحالية وترمي `imgui.<name>: no active session` عند عدم وجود جلسة نشطة.
 
-ترتبط المكونات عالية المستوى بالجلسة النشطة وتُرسم بعد callback المستخدم: يوفر `logWindow` مستويات ملوّنة ومسحاً وتصديراً وتمريراً تلقائياً; ويعرض `toast` إشعارات مؤقتة ذات موضع; وتُرجع `alert` / `confirm` / `singleChoice` / `multiChoice` كائنات Promise; ويرسم `statsOverlay` زمن الإطار; ويوفر `dataTable` التحديد وCRUD. يمكن اكتشاف الأمثلة السبعة (`widget-overview` و`parameter-panel` و`log-hud` و`data-table-demo` و`theme-gallery` و`error-handling` و`background-task`) عبر `listExamples` / `getExampleSource` وتشغيلها بـ `runExample`. لا يستهلك مركز إضافات AutoJs6 6.8 بيانات الأمثلة العامة بعد, لذا شغّل الاستدعاء أدناه مباشرة حتى يضيف المضيف الدعم:
+ترتبط المكونات عالية المستوى بالجلسة النشطة وتُرسم بعد callback المستخدم: يوفر `logWindow` مستويات ملوّنة ومسحاً وتصديراً وتمريراً تلقائياً; ويعرض `toast` إشعارات مؤقتة ذات موضع; وتُرجع `alert` / `confirm` / `singleChoice` / `multiChoice` كائنات Promise; ويرسم `statsOverlay` زمن الإطار ويعرض زمن عمل كل إطار; ويوفر `dataTable` التحديد وCRUD. يمكن اكتشاف الأمثلة التسعة (`widget-overview` و`parameter-panel` و`log-hud` و`data-table-demo` و`theme-gallery` و`error-handling` و`background-task` و`large-list` و`texture-refresh`) عبر `listExamples` / `getExampleSource` وتشغيلها بـ `runExample`. لا يستهلك مركز إضافات AutoJs6 6.8 بيانات الأمثلة العامة بعد, لذا شغّل الاستدعاء أدناه مباشرة حتى يضيف المضيف الدعم:
 
 ```js
 imgui.runExample("widget-overview");
@@ -142,14 +142,14 @@ imgui.runExample("widget-overview");
 
 تتوفر للواجهات الشائعة أسماء PascalCase بديلة (مثلًا `ui.Button` يكافئ `ui.button`). تحافظ الأسماء البديلة على أسلوب وسائط الإضافة (القيم القابلة للتغيير عبر `imgui.ref` مثلًا) ولا تطابق توقيعات C++ الأصلية واحدًا لواحد; القائمة والفروق في [ALIASES.md](https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/ALIASES.md). تعكس أساليب lower camel case عمليات Dear ImGui التي تحمل الاسم نفسه, وهي مقسمة إلى المجموعات التالية:
 
-- وقت تشغيل الجلسة: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode` و`setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure` و`collapseWindow` / `expandWindow` و`addButtonEx` وتحويل الوحدات `density` / `dp` / `px` و`on` / `once` / `off` مع صيغها الخاصة بالجلسة, والحدث `error` للجلسة الذي يبلّغ عن أخطاء الدوال, والخيار `debug` الذي يفعّل وضع التصحيح.
+- وقت تشغيل الجلسة: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode` و`setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure` و`collapseWindow` / `expandWindow` و`addButtonEx` وتحويل الوحدات `density` / `dp` / `px` و`on` / `once` / `off` مع صيغها الخاصة بالجلسة, والحدث `error` للجلسة الذي يبلّغ عن أخطاء الدوال, والخيار `debug` الذي يفعّل وضع التصحيح, وتوفير الطاقة عبر `idleFps` / `idleDelay` و`setFps` / `setIdleFps` / `getFps` والحدثين `idle` / `active`.
 - اكتشاف الواجهة الخلفية: تعرض `getBackendCapabilities` / `BackendStatus` مدى التوفر والجاهزية للإنتاج للنوافذ واللمس المقسم والعملية ذات الامتيازات والإدخال المباشر وDocking وMulti-Viewport, من دون رفع الامتيازات.
 - الجلسة والنوافذ: `createWindow` و `closeWindow` و `withWindow` و `withChild` و `setNextWindowPos` و `setNextWindowSize` و `setNextWindowBgAlpha` إضافة إلى استعلامات حالة النافذة مثل `isWindowHovered`.
 - النص وعناصر التحكم: `text` و `textColored` و `textWrapped` و `separatorText` و `bulletText` و `labelText` و `button` و `arrowButton` و `invisibleButton` و `checkbox` و `toggle` و `radioButton` و `sliderFloat` و `sliderInt` و `vSliderFloat` و `dragFloat` و `dragInt` و `inputText` و `inputInt` و `inputFloat` و `inputTextMultiline` و `colorEdit3` و `colorEdit4` و `colorPicker4` و `colorButton` و `progressBar` و `plotLines` و `plotHistogram` وغيرها.
-- الحاويات والتنقل: `withTabBar` و `withTabItem` و `withTreeNode` و `treeNodeEx` و `collapsingHeader` وعائلة الجداول `withTable` و `withListBox` و `withCombo` و `selectable`.
+- الحاويات والتنقل: `withTabBar` و `withTabItem` و `withTreeNode` و `treeNodeEx` و `collapsingHeader` وعائلة الجداول `withTable` و `withListBox` و `withCombo` و `selectable`, إضافة إلى `listClipper` للقوائم الطويلة.
 - النوافذ المنبثقة والقوائم: `openPopup` و `withPopup` و `withPopupModal` و `beginPopupContextItem` و `beginPopupContextWindow` و `withContextItem` و `withContextWindow` و `closeCurrentPopup` و `withMenuBar` و `withMenu` و `menuItem` و `setTooltip` و `setItemTooltip` و `withItemTooltip`.
 - الأنماط والتخطيط: `styleColorsDark` و `styleColorsLight` و `styleColorsClassic` و `pushStyleColor` و `pushStyleVar` و `setWindowFontScale` و `withGroup` و `withDisabled` و `withId` و `indent` و `sameLine` و `separator` و `spacing` إضافة إلى عائلتي المؤشر والتمرير.
-- الأنسجة والرسم: `createTexture` و`destroyTexture` و`image` و`imageButton` و`colorU32`، إضافة إلى `getWindowDrawList` و`getForegroundDrawList` و`getBackgroundDrawList` مع بدائيات الخط والمستطيل والدائرة والمثلث والنص والخط المتعدد ومنحنى Bézier والصورة.
+- الأنسجة والرسم: `createTexture` و`texture.update` و`destroyTexture` و`image` و`imageButton` و`colorU32`، إضافة إلى `getWindowDrawList` و`getForegroundDrawList` و`getBackgroundDrawList` مع بدائيات الخط والمستطيل والدائرة والمثلث والنص والخط المتعدد ومنحنى Bézier والصورة.
 - الاستعلامات والإدخال: استعلامات الحالة مثل `isItemClicked` و `isItemHovered` و `isItemActive` و `isItemEdited` و `isMouseDown` و `getMousePos` و `calcTextSize` و `framerate`، والتركيز النشط عبر `setKeyboardFocusHere`، وأوليات `addInputCharacters` و `sendKey` و `addMouseWheel` و `wantTextInput`. تُمرر كل قيم `InputTextFlags` المكشوفة حاليًا إلى Dear ImGui؛ أما العلامات المعتمدة على callbacks فغير مكشوفة و `WordWrap` للإدخال متعدد الأسطر فقط.
 - المكونات عالية المستوى والأمثلة: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`، إضافة إلى `listExamples` / `getExampleSource` / `runExample`؛ وتتوفر المصانع نفسها في كل جلسة.
 - المراجع القابلة للتغيير: `imgui.ref` الخفيف (أو كائن `{value: x}` عادي)، ومساعدات مصفوفات Java المتوافقة `imgui.bool` و `imgui.int` و `imgui.float` و `imgui.string` و `imgui.floats` و `imgui.strings`.
@@ -170,6 +170,18 @@ imgui.runExample("widget-overview");
 ### سجل الإصدارات
 
 ******
+
+#### v1.13.0
+
+###### 2026/10/30
+
+* `تلميح` تغيير في السلوك: لتوفير البطارية, ترسم النافذة الآن 10 إطارات فقط في الثانية بعد 3 ثوانٍ دون لمس أو ضغط مفاتيح, وتتوقف عن الرسم عند إطفاء الشاشة أو قفلها; وتعيد اللمسة التالية معدل الإطارات الكامل فورًا. إذا كانت النافذة تعرض حركة أو بيانات تتغير دون إدخال (مؤقت أو رسم بياني أو شريط تقدم), فمرّر idleFps: 0 إلى createWindow أو استدعِ session.setIdleFps(0) للإبقاء على المعدل الكامل
+* `ميزة` ترسم ui.listClipper(itemCount, options, callback) (الاسم البديل ListClipper) الصفوف المرئية فقط, لذا تُمرَّر قائمة من 100000 صف بسلاسة; راجع المثال الجديد large-list
+* `ميزة` التحكم في معدل الإطارات: الخياران idleFps / idleDelay في createWindow, و session.setFps / setIdleFps / getFps, وحدثا الجلسة idle / active, والحقلان idle / paused
+* `ميزة` تستبدل texture.update(source) صورة النسيج وتحافظ على مقبضه, فلا تحتاج استدعاءات image التي تعرضه إلى تغيير; ويتبع texture.width / height الحجم الجديد. راجع المثال الجديد texture-refresh الذي يحدّث معاينة مرتين في الثانية
+* `ميزة` تقبل createTexture و texture.update أيضًا ArrayBuffer أو مصفوفة typed (مثل Uint8Array) تحتوي بيانات PNG أو JPEG
+* `ميزة` يعرض statsOverlay زمن عمل كل إطار (وقت الرسم دون انتظار تحديث الشاشة), وتعيده snapshot() باسم workTime
+* `تحسين` يشرح docs/FRAME-LOOP.md معدلات الإطارات وتوفير الطاقة, ويوضح docs/LIMITS.md حدود listClipper
 
 #### v1.12.0
 
@@ -203,15 +215,6 @@ imgui.runExample("widget-overview");
 * `إصلاح` لم يكن لخياري valuesOffset و stride في plotLines / plotHistogram أي تأثير
 * `تحسين` تُطبع أخطاء دالة الرسم أو دوال الأحداث في وحدة التحكم مع مكدس الاستدعاءات, ويُطبع الخطأ نفسه المتكرر مرة واحدة فقط
 * `تحسين` يصف README الأسماء البديلة بأنها "أسماء بديلة للواجهات الشائعة", ويشرح نموذج الجلسة الواحدة (الجلسة الجديدة تغلق السابقة) واستخدام الأعضاء الجديدة, ويذكر أن SDK المستهدف هو 37
-
-#### v1.10.0
-
-###### 2026/10/29
-
-* `تلميح` يتطلب AutoJs6 6.8.0 أو أحدث (versionCode لا يقل عن 5935)
-* `إصلاح` كانت معاملات دالة الرسم (render callback) في createWindow / launchFloaty / launch / launchPrivileged مصرحة في تصريحات TypeScript بالشكل (session); وأصبحت الآن مطابقة للاستدعاء الفعلي (ui, session) مع إضافة النوع RenderCallback
-* `تحسين` بعد تفعيل الإضافة تُستخدم مباشرة بوصفها الكائن العام imgui الذي يسجله AutoJs6 ويحمّل الإضافة عند أول استدعاء لأحد أعضائه, فلم تعد هناك حاجة إلى plugins.load; وتعيد الصيغة السابقة plugins.load("io.github.supermonster003.autojs6.plugin.imgui") الكائن نفسه
-* `تحسين` تحديث أمثلة السكربتات وتعليمات الاستخدام و README وتصريحات TypeScript وفق استخدام الكائن العام, ولم يعد ملف التصريحات يضيف تحميلات زائدة (overloads) إلى plugins.load
 
 ##### لمزيد من سجل الإصدارات
 

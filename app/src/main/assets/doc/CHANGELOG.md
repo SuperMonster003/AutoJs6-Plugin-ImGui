@@ -4,6 +4,18 @@
 
 ******
 
+# v1.13.0
+
+###### 2026/10/30
+
+* `提示` 行为变化: 为了省电, 窗口在 3 秒内没有触摸或按键输入后每秒只绘制 10 帧, 屏幕熄灭或锁屏时停止绘制; 再次触摸后立即恢复正常帧率. 如果窗口有动画, 或显示不靠输入就会变化的数据 (定时器, 图表, 进度条), 请给 createWindow 传 idleFps: 0 或调用 session.setIdleFps(0) 保持正常帧率
+* `新增` ui.listClipper(itemCount, options, callback) (别名 ListClipper) 只绘制可见的行, 10 万行的列表也能流畅滚动; 见新示例 large-list
+* `新增` 帧率控制: createWindow 选项 idleFps / idleDelay, session.setFps / setIdleFps / getFps, 会话事件 idle / active 以及字段 idle / paused
+* `新增` texture.update(source) 替换纹理的图像并保持句柄不变, 显示它的 image 调用无需修改; 尺寸变化时 texture.width / height 随之更新. 见新示例 texture-refresh, 每秒刷新两次预览
+* `新增` createTexture 与 texture.update 也接受装有 PNG 或 JPEG 数据的 ArrayBuffer 或类型化数组 (如 Uint8Array)
+* `新增` statsOverlay 显示每帧的工作耗时 (绘制所用时间, 不含等待屏幕刷新), snapshot() 以 workTime 返回该值
+* `优化` docs/FRAME-LOOP.md 说明帧率与省电机制, docs/LIMITS.md 补充 listClipper 的限制
+
 # v1.12.0
 
 ###### 2026/10/29
