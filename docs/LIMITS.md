@@ -10,7 +10,9 @@ numeric literals.
 | `combo` / `listBox` items | 512 items | More than 512 items throws `RangeError` in JavaScript and `IllegalArgumentException` at JNI defense-in-depth. No silent truncation occurs. | The hard ceiling remains fixed. Large data sets should use `beginCombo` plus `listClipper` and `selectable` rows (see below), filtering, or paging. Passing thousands of Java strings across JNI per frame is not a useful configuration target. |
 | Input FIFO | 2,048 events | Producers discard the oldest event on overflow; the renderer drains pending input before the next frame. | Fixed per native session. The value is sized to absorb bursts while bounding retained Java objects. |
 | Additional fonts | 16 fonts | `createWindow({fonts})` rejects larger arrays. | Fixed because every font expands the atlas and increases initialization/GPU memory. |
-| Draw-list points | 4,096 points per polyline call | JNI rejects larger flattened point arrays. | Split unusually large paths into multiple draw calls. |
+| Draw-list points | 4,096 points per polyline or filled polygon call | JNI rejects larger flattened point arrays. | Split unusually large paths into multiple draw calls. |
+| Draw-list arcs | 16 turns per `pathArcTo` / `pathArcToFast` call | A larger sweep throws `RangeError`. | Fixed: a path is built point by point, so a stray angle would otherwise exhaust the memory. |
+| Drag-and-drop payload | 65,536 bytes of JSON, `imgui.Limits.DragDropPayloadMaxBytes`; type of 32 bytes | A larger payload or type throws `RangeError`. | Fixed: the payload is serialized and copied each frame of a drag. Pass an index or a key instead of a large object. |
 | Encoded texture source | 128 MiB | Java rejects larger encoded inputs before decode. | Fixed safety ceiling. |
 | Decoded texture area | 32 megapixels | Java rejects larger bitmaps before upload. | Fixed safety ceiling; downsample source images before creating textures. |
 
@@ -25,6 +27,25 @@ multi-byte CJK characters. Use a larger per-call capacity when necessary, up to
 var query = imgui.string("");
 imgui.inputText("Query", query, Math.min(4096, imgui.Limits.InputTextMaxBytes));
 ```
+
+## Clipboard
+
+`getClipboardText` / `setClipboardText` and Ctrl+C / Ctrl+V in text fields use the Android clipboard, the same one as the
+host's `getClip` / `setClip`. Writing always works. Reading is restricted by the system: from Android 10 only the
+default input method and the application with the input focus can read it, so `getClipboardText` returns an empty or an
+old value while the script runs in the background. An AutoJs6 Activity in the foreground, `imgui.launch`, or an overlay
+window whose text field has the keyboard open have the focus; a plain overlay window does not. A value read earlier
+stays valid, so read it while a window has the focus and keep it if it is needed later. The privileged renderer
+(`launchPrivileged`) is a separate process without Android context: Ctrl+C / Ctrl+V in it stay inside that process.
+
+## Injected pointer events
+
+`addMousePosEvent(x, y)` and `addMouseButtonEvent(button, down)` queue events like a finger on the window: the same
+input FIFO, in the order of the calls, taking effect from the next frame. Coordinates are frame pixels (`getMousePos`,
+`getCursorPos`), not the dp of `createWindow`, and `button` takes the `MouseButton` values. Dear ImGui applies a change of
+position and a change of button in separate frames, so one call per frame is not needed, but a press needs a frame at
+that position first to count as a press on the item below it. The events reach only Dear ImGui: nothing happens on the
+apps below the window, and a session in `launchPrivileged` ignores them.
 
 ## Large selections
 

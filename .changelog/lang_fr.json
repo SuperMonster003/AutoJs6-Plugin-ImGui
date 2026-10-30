@@ -5,6 +5,16 @@
   "changelog_label_improvement": "Amélioration",
   "changelog_label_dependency": "Dépendance",
   "$data": {
+    "v1.15.0": {
+      "released_date": "2026/10/30",
+      "feature": [
+        "Requêtes clavier : isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, et raccourcis clavier avec shortcut et setNextItemShortcut. Les combinaisons s'écrivent ui.Mod.Ctrl | ui.Key.S. Les constantes Key couvrent désormais tout le clavier : A à Z, Digit0 à Digit9, F1 à F24, le pavé numérique, etc.",
+        "Presse-papiers : getClipboardText / setClipboardText utilisent le même presse-papiers Android que getClip / setClip de l'hôte, tout comme Ctrl+C / Ctrl+V dans les champs de texte. Depuis Android 10, le système ne laisse lire le presse-papiers qu'à l'application qui a le focus de saisie ; docs/LIMITS.md explique l'effet sur les fenêtres flottantes",
+        "Glisser-déposer : faites glisser un élément sur un autre avec beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload et les fonctions withDragDropSource / withDragDropTarget (DragDropFlags règle les options). La charge utile peut être une chaîne, un nombre ou tout objet sérialisable en JSON, et les couleurs peuvent être glissées depuis les contrôles de couleur ; voir la nouvelle section de l'exemple widget-overview",
+        "Dessin personnalisé : fonctions de tracé (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex, etc.), pushClipRect / popClipRect sur les listes de dessin et les fenêtres, et nouvelles formes : addEllipse, addNgon, addQuad et leurs versions remplies, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded ; voir l'exemple widget-overview",
+        "Toucher simulé : addMousePosEvent(x, y) et addMouseButtonEvent(button, down) permettent à un script d'agir comme un doigt sur la fenêtre, par exemple pour tester une interface automatiquement. Les coordonnées sont des pixels de la trame, comme getMousePos, et non les dp de createWindow ; les applications sous la fenêtre ne sont pas touchées"
+      ]
+    },
     "v1.14.0": {
       "released_date": "2026/10/30",
       "hint": [

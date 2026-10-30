@@ -5,6 +5,16 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "依賴",
   "$data": {
+    "v1.15.0": {
+      "released_date": "2026/10/30",
+      "feature": [
+        "鍵盤查詢: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, 以及快速鍵 shortcut 和 setNextItemShortcut. 組合鍵寫成 ui.Mod.Ctrl | ui.Key.S. Key 常數現在涵蓋整個鍵盤: A 到 Z, Digit0 到 Digit9, F1 到 F24, 數字鍵盤等",
+        "剪貼簿: getClipboardText / setClipboardText 與宿主的 getClip / setClip 是同一個 Android 剪貼簿, 輸入框裡的 Ctrl+C / Ctrl+V 也一樣. 從 Android 10 起, 系統只允許擁有輸入焦點的應用程式讀取剪貼簿; docs/LIMITS.md 說明了這對懸浮窗的影響",
+        "拖放: 用 beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload 以及輔助函式 withDragDropSource / withDragDropTarget 把一個控制項拖到另一個控制項上 (DragDropFlags 設定選項). 載荷可以是字串, 數字或任何可 JSON 序列化的物件, 顏色控制項的顏色也可以拖動; 見範例 widget-overview 的新分區",
+        "自訂繪製: 路徑函式 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex 等), 繪製列表與視窗的 pushClipRect / popClipRect, 以及新圖形 addEllipse, addNgon, addQuad 及其填充版本, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded; 見範例 widget-overview",
+        "模擬觸控: addMousePosEvent(x, y) 與 addMouseButtonEvent(button, down) 讓腳本像手指一樣操作視窗, 例如自動測試介面. 座標是幀內像素, 與 getMousePos 相同, 不是 createWindow 的 dp; 不影響視窗下方的應用程式"
+      ]
+    },
     "v1.14.0": {
       "released_date": "2026/10/30",
       "hint": [

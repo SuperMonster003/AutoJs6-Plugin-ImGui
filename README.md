@@ -149,12 +149,13 @@ imgui.runExample("widget-overview");
 - 容器与导航: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / `withTable` 表格族 / `withListBox` / `withCombo` / `selectable`, 以及用于长列表的 `listClipper`. 表格排序: `tableGetSortSpecs` / `SortDirection`, 以及 `dataTable` 的 `sortable: true`.
 - 弹窗与菜单: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
 - 样式与布局: `styleColorsDark` / `styleColorsLight` / `styleColorsClassic` / `pushStyleColor` / `pushStyleVar` / `setWindowFontScale` / `withGroup` / `withDisabled` / `withId` / `indent` / `sameLine` / `separator` / `spacing` / 光标与滚动控制族.
-- 纹理与自绘: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, 以及带线段/矩形/圆形/三角形/文本/折线/贝塞尔曲线/图像原语的 `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`.
-- 查询与输入: `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate` 等状态查询, `setKeyboardFocusHere` 主动聚焦, 以及 `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput` 输入原语. `InputTextFlags` 当前公开的全部标志都会实际透传至 Dear ImGui; 依赖回调的标志未公开, `WordWrap` 仅用于多行输入.
+- 纹理与自绘: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, 以及带线段/矩形/圆形/三角形/文本/折线/贝塞尔曲线/图像原语的 `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`. 路径绘制: `pathLineTo` / `pathArcTo` / `pathArcToFast` / `pathBezierCubicCurveTo` / `pathBezierQuadraticCurveTo` / `pathRect` / `pathStroke` / `pathFillConvex` / `pathFillConcave`; 绘制列表与窗口的 `pushClipRect` / `popClipRect`; 更多图形: `addEllipse` / `addNgon` / `addQuad` / `addBezierQuadratic` / `addRectFilledMultiColor` / `addConvexPolyFilled` / `addConcavePolyFilled` / `addImageQuad` / `addImageRounded`.
+- 查询与输入: `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate` 等状态查询, `setKeyboardFocusHere` 主动聚焦, 以及 `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput` 输入原语. `InputTextFlags` 当前公开的全部标志都会实际透传至 Dear ImGui; 依赖回调的标志未公开, `WordWrap` 仅用于多行输入. 按键查询与快捷键: `isKeyDown` / `isKeyPressed` / `isKeyReleased` / `getKeyPressedAmount` / `getKeyName` / `isKeyChordPressed` / `shortcut` / `setNextItemShortcut`, 组合键写成 `ui.Mod.Ctrl | ui.Key.S`. 剪贴板: `getClipboardText` / `setClipboardText`. 用于界面自动化测试的指针注入: `addMousePosEvent` / `addMouseButtonEvent` (帧内像素, 与 `getMousePos` 相同).
+- 拖放: `withDragDropSource` / `withDragDropTarget`, `beginDragDropSource` / `setDragDropPayload` / `endDragDropSource` / `beginDragDropTarget` / `acceptDragDropPayload` / `endDragDropTarget` / `getDragDropPayload`, 以及 `DragDropFlags`; 载荷可以是字符串, 数字或任何可 JSON 序列化的对象.
 - 调试工具: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide` 显示 Dear ImGui 自带的工具窗口; 每个都可传入一个可变布尔引用, 点关闭按钮时它变为 false.
 - 高层组件与示例: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, 以及 `listExamples` / `getExampleSource` / `runExample`; 每个会话也提供同名工厂.
 - 可变引用: 轻量 `imgui.ref` (或普通 `{value: x}` 对象), 以及兼容的 Java 数组辅助方法 `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.ints` / `imgui.strings`.
-- 常量: `BackendStatus` / `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `SortDirection` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, 取值与 Dear ImGui 同名枚举或插件常量表一一对应.
+- 常量: `BackendStatus` / `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `SortDirection` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `Mod` / `InputFlags` / `DragDropFlags` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, 取值与 Dear ImGui 同名枚举或插件常量表一一对应.
 
 ******
 
@@ -171,6 +172,16 @@ imgui.runExample("widget-overview");
 ### 发行历史
 
 ******
+
+#### v1.15.0
+
+###### 2026/10/30
+
+* `新增` 键盘查询: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, 以及快捷键 shortcut 和 setNextItemShortcut. 组合键写成 ui.Mod.Ctrl | ui.Key.S. Key 常量现在覆盖整个键盘: A 到 Z, Digit0 到 Digit9, F1 到 F24, 小键盘等
+* `新增` 剪贴板: getClipboardText / setClipboardText 与宿主的 getClip / setClip 是同一个 Android 剪贴板, 输入框里的 Ctrl+C / Ctrl+V 也一样. 从 Android 10 起, 系统只允许拥有输入焦点的应用读取剪贴板; docs/LIMITS.md 说明了这对悬浮窗的影响
+* `新增` 拖放: 用 beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload 以及辅助函数 withDragDropSource / withDragDropTarget 把一个控件拖到另一个控件上 (DragDropFlags 设置选项). 载荷可以是字符串, 数字或任何可 JSON 序列化的对象, 颜色控件的颜色也可以拖动; 见示例 widget-overview 的新分区
+* `新增` 自定义绘制: 路径函数 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex 等), 绘制列表与窗口的 pushClipRect / popClipRect, 以及新图形 addEllipse, addNgon, addQuad 及其填充版本, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded; 见示例 widget-overview
+* `新增` 模拟触摸: addMousePosEvent(x, y) 与 addMouseButtonEvent(button, down) 让脚本像手指一样操作窗口, 例如自动测试界面. 坐标是帧内像素, 与 getMousePos 相同, 不是 createWindow 的 dp; 不影响窗口下方的应用
 
 #### v1.14.0
 
@@ -193,25 +204,6 @@ imgui.runExample("widget-overview");
 * `新增` createTexture 与 texture.update 也接受装有 PNG 或 JPEG 数据的 ArrayBuffer 或类型化数组 (如 Uint8Array)
 * `新增` statsOverlay 显示每帧的工作耗时 (绘制所用时间, 不含等待屏幕刷新), snapshot() 以 workTime 返回该值
 * `优化` docs/FRAME-LOOP.md 说明帧率与省电机制, docs/LIMITS.md 补充 listClipper 的限制
-
-#### v1.12.0
-
-###### 2026/10/29
-
-* `提示` 不兼容变更: 窗口的位置与尺寸统一改用 dp. createWindow 的 x / y, Session 的 x / y / width / height / displayWidth / displayHeight, setPosition / setSize, 事件数据以及悬浮按钮的 x / y 以前是 px; 帧内坐标仍是 px. 脚本的改法见 docs/MIGRATION-1.12.md
-* `提示` 不兼容变更: 参数有误 (类型不对, NaN, 数字字符串或超出范围) 时改为抛出 TypeError 或 RangeError, 消息写明方法名与参数名, 例如 `imgui.sliderFloat: argument "max" must be a finite number`, 不再静默转换或截断; fps, alpha, fontSize 等窗口选项同样检查
-* `提示` 不兼容变更: Session 与悬浮按钮的字段改为只读 (严格模式下赋值会抛错), 请改用对应的 set 方法. FloatingButton.setPosition 不再接受 source 参数; 悬浮按钮颜色传数字时与其他 imgui 颜色一样按 0xAABBGGRR (即 colorU32 的返回值) 解释, 不再按 Android ARGB 解释
-* `提示` 不兼容变更: 会话事件, 悬浮按钮回调与对话框结果改在脚本线程 (渲染回调所在的线程) 执行, 不再在 Android UI 线程执行, 详见 docs/THREADING.md
-* `新增` imgui.dp() / imgui.px() (别名 Dp / Px) 在 dp 与 px 之间换算, imgui.density 给出每 dp 对应的 px 数
-* `新增` 所有颜色参数都接受打包整数, [r, g, b, a], {r, g, b, a} 或 "#rrggbbaa", 包括 textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; 分别传入 r, g, b, a 的写法仍然可用
-* `新增` 示例 background-task: 工作线程执行耗时任务, 窗口照常绘制, 带进度显示与取消
-* `新增` 文档 docs/THREADING.md 说明各回调在哪个线程执行以及如何在后台执行耗时任务, docs/MIGRATION-1.12.md 列出升级到本版本时脚本需要的改动
-* `修复` 事件回调与悬浮按钮回调可能与渲染回调同时执行, 且在其中调用 sleep 会报错的问题
-* `修复` 调用 imgui.setTheme 后 Session.theme 不变的问题
-* `修复` 拖动窗口时 moved 事件的 source 为 api 而不是 drag 的问题
-* `优化` 示例改用 ui.dp(), 不再手动乘以 window.density
-* `优化` TypeScript 声明写明每个尺寸, 位置与选项的单位和取值范围, 并把 Session 与悬浮按钮的字段标为只读
-* `优化` 每个 GitHub Release 附带 SHA256SUMS 文件, 便于校验下载的 APK
 
 ##### 更多发行历史可参阅
 

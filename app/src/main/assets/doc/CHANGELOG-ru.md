@@ -4,6 +4,16 @@
 
 ******
 
+# v1.15.0
+
+###### 2026/10/30
+
+* `Функция` Запросы клавиатуры: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, а также сочетания клавиш через shortcut и setNextItemShortcut. Сочетания записываются как ui.Mod.Ctrl | ui.Key.S. Константы Key теперь охватывают всю клавиатуру: A - Z, Digit0 - Digit9, F1 - F24, цифровой блок и другие клавиши
+* `Функция` Буфер обмена: getClipboardText / setClipboardText используют тот же буфер обмена Android, что и getClip / setClip хоста, как и Ctrl+C / Ctrl+V в текстовых полях. Начиная с Android 10 система разрешает читать буфер обмена только приложению с фокусом ввода; о влиянии на плавающие окна см. docs/LIMITS.md
+* `Функция` Перетаскивание: перетаскивайте один элемент на другой с помощью beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload и вспомогательных функций withDragDropSource / withDragDropTarget (параметры задаёт DragDropFlags). Полезная нагрузка - строка, число или любой объект, сериализуемый в JSON; можно перетаскивать и цвета из виджетов цвета. См. новый раздел примера widget-overview
+* `Функция` Пользовательское рисование: функции контуров (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex и другие), pushClipRect / popClipRect для списков рисования и окон и новые фигуры: addEllipse, addNgon, addQuad и их залитые варианты, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded. См. пример widget-overview
+* `Функция` Имитация касаний: addMousePosEvent(x, y) и addMouseButtonEvent(button, down) позволяют скрипту действовать как палец на окне, например для автоматического тестирования интерфейса. Координаты - пиксели кадра, как в getMousePos, а не dp из createWindow; приложения под окном это не затрагивает
+
 # v1.14.0
 
 ###### 2026/10/30

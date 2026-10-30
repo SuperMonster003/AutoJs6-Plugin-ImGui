@@ -22,6 +22,7 @@
     var spanMin = imgui.ref(0.25);
     var spanMax = imgui.ref(0.75);
     var angle = imgui.ref(Math.PI / 4);
+    var slots = ["Alpha", "Beta", "Gamma", null];
     var debugWindows = [
         {label: "Metrics/Debugger", show: imgui.showMetricsWindow, open: imgui.ref(false)},
         {label: "Debug Log", show: imgui.showDebugLogWindow, open: imgui.ref(false)},
@@ -136,6 +137,53 @@
                 "Position=" + position.value.map(function (v) { return v.toFixed(2); }).join(", ") +
                 ", angle=" + angle.value.toFixed(3) + " rad"
             );
+
+            ui.separatorText("Drag and drop");
+            ui.textDisabled("Drag a slot onto another to swap them.");
+            slots.forEach(function (slot, index) {
+                if (index > 0) {
+                    ui.sameLine();
+                }
+                ui.button((slot === null ? "Empty" : slot) + "##slot" + index, ui.dp(72), 0);
+                if (slot !== null) {
+                    ui.withDragDropSource(function () {
+                        ui.setDragDropPayload("OVERVIEW_SLOT", index);
+                        ui.text("Move " + slot);
+                    });
+                }
+                ui.withDragDropTarget(function () {
+                    var payload = ui.acceptDragDropPayload("OVERVIEW_SLOT");
+                    if (payload !== null) {
+                        var moved = slots[payload.data];
+                        slots[payload.data] = slots[index];
+                        slots[index] = moved;
+                    }
+                });
+            });
+
+            ui.separatorText("Custom drawing");
+            var origin = ui.getWindowPos();
+            var cursor = ui.getCursorPos();
+            var size = ui.dp(64);
+            var left = origin[0] + cursor[0];
+            var top = origin[1] + cursor[1] - ui.getScrollY();
+            var draw = ui.getWindowDrawList();
+            ui.dummy(size * 5, size);
+            draw.addRectFilledMultiColor(
+                [left, top], [left + size, top + size],
+                [0.96, 0.26, 0.21, 1], [0.13, 0.59, 0.95, 1], [0.30, 0.69, 0.31, 1], [1, 0.76, 0.03, 1]
+            );
+            draw.addNgonFilled([left + size * 1.6, top + size / 2], size * 0.45, accent.value, 6);
+            draw.addEllipse([left + size * 2.7, top + size / 2], [size * 0.48, size * 0.28], accent.value, 0.5, 0, ui.dp(2));
+            // A pie slice built as a path: from the center along an arc and back.
+            draw.pathClear()
+                .pathLineTo([left + size * 3.8, top + size / 2])
+                .pathArcTo([left + size * 3.8, top + size / 2], size * 0.45, 0, Math.PI * 1.5)
+                .pathFillConcave([0.13, 0.59, 0.95, 1]);
+            // Only the left half of this circle stays inside the clip rectangle.
+            draw.pushClipRect([left + size * 4.4, top], [left + size * 4.8, top + size], true)
+                .addCircleFilled([left + size * 4.8, top + size / 2], size * 0.45, [0.30, 0.69, 0.31, 1])
+                .popClipRect();
 
             ui.separatorText("Toast and log");
             if (ui.button("Info toast")) {

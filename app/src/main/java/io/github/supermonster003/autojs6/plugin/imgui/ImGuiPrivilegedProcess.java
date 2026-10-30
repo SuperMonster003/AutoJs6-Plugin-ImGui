@@ -1022,6 +1022,16 @@ public final class ImGuiPrivilegedProcess {
             public void wheel(float wheelX, float wheelY) {
                 // Direct evdev input currently supplies pointer events only.
             }
+
+            @Override
+            public void mousePos(float x, float y) {
+                // Direct evdev input currently supplies pointer events only.
+            }
+
+            @Override
+            public void mouseButton(int button, boolean down) {
+                // Direct evdev input currently supplies pointer events only.
+            }
         };
         private ImGuiLinuxInput.DirectReader inputReader;
         private volatile String inputStatus = "unavailable";

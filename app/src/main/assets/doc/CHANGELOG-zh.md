@@ -4,6 +4,16 @@
 
 ******
 
+# v1.15.0
+
+###### 2026/10/30
+
+* `新增` 键盘查询: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, 以及快捷键 shortcut 和 setNextItemShortcut. 组合键写成 ui.Mod.Ctrl | ui.Key.S. Key 常量现在覆盖整个键盘: A 到 Z, Digit0 到 Digit9, F1 到 F24, 小键盘等
+* `新增` 剪贴板: getClipboardText / setClipboardText 与宿主的 getClip / setClip 是同一个 Android 剪贴板, 输入框里的 Ctrl+C / Ctrl+V 也一样. 从 Android 10 起, 系统只允许拥有输入焦点的应用读取剪贴板; docs/LIMITS.md 说明了这对悬浮窗的影响
+* `新增` 拖放: 用 beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload 以及辅助函数 withDragDropSource / withDragDropTarget 把一个控件拖到另一个控件上 (DragDropFlags 设置选项). 载荷可以是字符串, 数字或任何可 JSON 序列化的对象, 颜色控件的颜色也可以拖动; 见示例 widget-overview 的新分区
+* `新增` 自定义绘制: 路径函数 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex 等), 绘制列表与窗口的 pushClipRect / popClipRect, 以及新图形 addEllipse, addNgon, addQuad 及其填充版本, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded; 见示例 widget-overview
+* `新增` 模拟触摸: addMousePosEvent(x, y) 与 addMouseButtonEvent(button, down) 让脚本像手指一样操作窗口, 例如自动测试界面. 坐标是帧内像素, 与 getMousePos 相同, 不是 createWindow 的 dp; 不影响窗口下方的应用
+
 # v1.14.0
 
 ###### 2026/10/30

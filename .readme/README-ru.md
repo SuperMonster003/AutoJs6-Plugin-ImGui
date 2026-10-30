@@ -149,12 +149,13 @@ imgui.runExample("widget-overview");
 - Контейнеры и навигация: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / семейство таблиц `withTable` / `withListBox` / `withCombo` / `selectable`, а также `listClipper` для длинных списков. Сортировка таблиц: `tableGetSortSpecs` / `SortDirection` и `dataTable` с `sortable: true`.
 - Всплывающие окна и меню: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
 - Стиль и компоновка: `styleColorsDark` / `styleColorsLight` / `styleColorsClassic` / `pushStyleColor` / `pushStyleVar` / `setWindowFontScale` / `withGroup` / `withDisabled` / `withId` / `indent` / `sameLine` / `separator` / `spacing`, а также семейства курсора и прокрутки.
-- Текстуры и рисование: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, а также `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` с примитивами линии, прямоугольника, круга, треугольника, текста, ломаной, кривой Безье и изображения.
-- Запросы и ввод: запросы состояния, такие как `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate`, активный фокус через `setKeyboardFocusHere` и примитивы `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput`. Все открытые значения `InputTextFlags` передаются в Dear ImGui; флаги, зависящие от callback, не открыты, а `WordWrap` действует только для многострочного ввода.
+- Текстуры и рисование: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, а также `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` с примитивами линии, прямоугольника, круга, треугольника, текста, ломаной, кривой Безье и изображения. Рисование контуров: `pathLineTo` / `pathArcTo` / `pathArcToFast` / `pathBezierCubicCurveTo` / `pathBezierQuadraticCurveTo` / `pathRect` / `pathStroke` / `pathFillConvex` / `pathFillConcave`; `pushClipRect` / `popClipRect` для списков рисования и окон; другие фигуры: `addEllipse` / `addNgon` / `addQuad` / `addBezierQuadratic` / `addRectFilledMultiColor` / `addConvexPolyFilled` / `addConcavePolyFilled` / `addImageQuad` / `addImageRounded`.
+- Запросы и ввод: запросы состояния, такие как `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate`, активный фокус через `setKeyboardFocusHere` и примитивы `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput`. Все открытые значения `InputTextFlags` передаются в Dear ImGui; флаги, зависящие от callback, не открыты, а `WordWrap` действует только для многострочного ввода. Запросы клавиш и сочетания: `isKeyDown` / `isKeyPressed` / `isKeyReleased` / `getKeyPressedAmount` / `getKeyName` / `isKeyChordPressed` / `shortcut` / `setNextItemShortcut`, сочетания записываются как `ui.Mod.Ctrl | ui.Key.S`. Буфер обмена: `getClipboardText` / `setClipboardText`. Внедрение указателя для автоматических тестов интерфейса: `addMousePosEvent` / `addMouseButtonEvent` (пиксели кадра, как в `getMousePos`).
+- Перетаскивание: `withDragDropSource` / `withDragDropTarget`, `beginDragDropSource` / `setDragDropPayload` / `endDragDropSource` / `beginDragDropTarget` / `acceptDragDropPayload` / `endDragDropTarget` / `getDragDropPayload`, а также `DragDropFlags`; полезная нагрузка - строка, число или любой объект, сериализуемый в JSON.
 - Отладочные инструменты: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide` показывают встроенные окна инструментов Dear ImGui; каждая функция принимает необязательную изменяемую логическую ссылку, которую кнопка закрытия сбрасывает в false.
 - Компоненты высокого уровня и примеры: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, а также `listExamples` / `getExampleSource` / `runExample`; те же фабрики есть у каждой сессии.
 - Изменяемые ссылки: лёгкая `imgui.ref` (или обычный объект `{value: x}`) и совместимые помощники Java-массивов `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.ints` / `imgui.strings`.
-- Константы: `BackendStatus` / `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `SortDirection` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, соответствующие одноименным перечислениям Dear ImGui или таблицам плагина.
+- Константы: `BackendStatus` / `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `SortDirection` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `Mod` / `InputFlags` / `DragDropFlags` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, соответствующие одноименным перечислениям Dear ImGui или таблицам плагина.
 
 ******
 
@@ -171,6 +172,16 @@ imgui.runExample("widget-overview");
 ### История выпусков
 
 ******
+
+#### v1.15.0
+
+###### 2026/10/30
+
+* `Функция` Запросы клавиатуры: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, а также сочетания клавиш через shortcut и setNextItemShortcut. Сочетания записываются как ui.Mod.Ctrl | ui.Key.S. Константы Key теперь охватывают всю клавиатуру: A - Z, Digit0 - Digit9, F1 - F24, цифровой блок и другие клавиши
+* `Функция` Буфер обмена: getClipboardText / setClipboardText используют тот же буфер обмена Android, что и getClip / setClip хоста, как и Ctrl+C / Ctrl+V в текстовых полях. Начиная с Android 10 система разрешает читать буфер обмена только приложению с фокусом ввода; о влиянии на плавающие окна см. docs/LIMITS.md
+* `Функция` Перетаскивание: перетаскивайте один элемент на другой с помощью beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload и вспомогательных функций withDragDropSource / withDragDropTarget (параметры задаёт DragDropFlags). Полезная нагрузка - строка, число или любой объект, сериализуемый в JSON; можно перетаскивать и цвета из виджетов цвета. См. новый раздел примера widget-overview
+* `Функция` Пользовательское рисование: функции контуров (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex и другие), pushClipRect / popClipRect для списков рисования и окон и новые фигуры: addEllipse, addNgon, addQuad и их залитые варианты, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded. См. пример widget-overview
+* `Функция` Имитация касаний: addMousePosEvent(x, y) и addMouseButtonEvent(button, down) позволяют скрипту действовать как палец на окне, например для автоматического тестирования интерфейса. Координаты - пиксели кадра, как в getMousePos, а не dp из createWindow; приложения под окном это не затрагивает
 
 #### v1.14.0
 
@@ -193,25 +204,6 @@ imgui.runExample("widget-overview");
 * `Функция` createTexture и texture.update также принимают ArrayBuffer или типизированный массив (например, Uint8Array) с данными PNG или JPEG
 * `Функция` statsOverlay показывает рабочее время каждого кадра (время отрисовки без ожидания экрана), а snapshot() возвращает его как workTime
 * `Улучшение` docs/FRAME-LOOP.md описывает частоты кадров и энергосбережение, а docs/LIMITS.md - ограничения listClipper
-
-#### v1.12.0
-
-###### 2026/10/29
-
-* `Подсказка` Несовместимое изменение: положение и размеры окна теперь везде задаются в dp. Раньше в px были x / y в createWindow, x / y / width / height / displayWidth / displayHeight в Session, setPosition / setSize, данные событий и x / y плавающих кнопок; координаты внутри кадра по-прежнему в px. Как обновить скрипты, описано в docs/MIGRATION-1.12.md
-* `Подсказка` Несовместимое изменение: неверный аргумент (неверный тип, NaN, число в строке или значение вне диапазона) теперь вызывает TypeError или RangeError с именем метода и аргумента, например `imgui.sliderFloat: argument "max" must be a finite number`, вместо тихого преобразования или ограничения; параметры окна, такие как fps, alpha и fontSize, проверяются так же
-* `Подсказка` Несовместимое изменение: поля Session и плавающих кнопок доступны только для чтения (присваивание в строгом режиме вызывает исключение); используйте методы set. FloatingButton.setPosition больше не принимает аргумент source, а число в качестве цвета плавающей кнопки читается как любой другой цвет imgui (0xAABBGGRR, как возвращает colorU32), а не как цвет Android ARGB
-* `Подсказка` Несовместимое изменение: события сессии, обработчики плавающих кнопок и результаты диалогов выполняются в потоке скрипта, где работает функция отрисовки, а не в потоке интерфейса Android; см. docs/THREADING.md
-* `Функция` imgui.dp() / imgui.px() (псевдонимы Dp / Px) переводят dp в px и обратно, а imgui.density возвращает число px в одном dp
-* `Функция` Цвет везде можно задать упакованным числом, [r, g, b, a], {r, g, b, a} или "#rrggbbaa", в том числе в textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; отдельные аргументы r, g, b, a по-прежнему работают
-* `Функция` Пример background-task: рабочий поток выполняет долгую задачу, а окно продолжает отрисовку, с индикатором хода и отменой
-* `Функция` docs/THREADING.md объясняет, в каком потоке выполняется каждый обработчик и как выполнять долгую работу в фоне, а docs/MIGRATION-1.12.md перечисляет изменения в скриптах, нужные для этой версии
-* `Исправление` Обработчики событий и плавающих кнопок могли выполняться одновременно с функцией отрисовки, а вызов sleep в них приводил к ошибке
-* `Исправление` Session.theme не менялся после imgui.setTheme
-* `Исправление` При перетаскивании окна событие moved сообщало source api вместо drag
-* `Улучшение` Примеры используют ui.dp() вместо умножения на window.density
-* `Улучшение` Декларации TypeScript указывают единицы и допустимый диапазон каждого размера, положения и параметра и помечают поля Session и плавающих кнопок как readonly
-* `Улучшение` К каждому релизу на GitHub прилагается файл SHA256SUMS для проверки скачанных APK
 
 ##### Дополнительная история выпусков
 

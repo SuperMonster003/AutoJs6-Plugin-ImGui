@@ -149,12 +149,13 @@ imgui.runExample("widget-overview");
 - コンテナとナビゲーション: `withTabBar`/`withTabItem`/`withTreeNode`/`treeNodeEx`/`collapsingHeader`/`withTable` テーブルファミリー/`withListBox`/`withCombo`/`selectable`, 長いリスト向けの `listClipper`. テーブルの並べ替え: `tableGetSortSpecs` / `SortDirection` と, `dataTable` の `sortable: true`.
 - ポップアップとメニュー: `openPopup`/`withPopup`/`withPopupModal`/`beginPopupContextItem`/`beginPopupContextWindow`/`withContextItem`/`withContextWindow`/`closeCurrentPopup`/`withMenuBar`/`withMenu`/`menuItem`/`setTooltip`/`setItemTooltip`/`withItemTooltip`.
 - スタイルとレイアウト: `styleColorsDark`/`styleColorsLight`/`styleColorsClassic`/`pushStyleColor`/`pushStyleVar`/`setWindowFontScale`/`withGroup`/`withDisabled`/`withId`/`indent`/`sameLine`/`separator`/`spacing` に加え, カーソルとスクロールのファミリー.
-- テクスチャと描画: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`、および線・矩形・円・三角形・テキスト・ポリライン・ベジェ曲線・画像プリミティブを備えた `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`.
-- クエリと入力: `isItemClicked`/`isItemHovered`/`isItemActive`/`isItemEdited`/`isMouseDown`/`getMousePos`/`calcTextSize`/`framerate` などの状態クエリ, `setKeyboardFocusHere` による能動的フォーカス, 入力プリミティブ `addInputCharacters`/`sendKey`/`addMouseWheel`/`wantTextInput`. 現在公開中の `InputTextFlags` はすべて Dear ImGui に渡されます. コールバック依存フラグは公開せず, `WordWrap` は複数行入力専用です.
+- テクスチャと描画: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`、および線・矩形・円・三角形・テキスト・ポリライン・ベジェ曲線・画像プリミティブを備えた `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`. パス描画: `pathLineTo` / `pathArcTo` / `pathArcToFast` / `pathBezierCubicCurveTo` / `pathBezierQuadraticCurveTo` / `pathRect` / `pathStroke` / `pathFillConvex` / `pathFillConcave`; 描画リストとウィンドウの `pushClipRect` / `popClipRect`; 追加の図形: `addEllipse` / `addNgon` / `addQuad` / `addBezierQuadratic` / `addRectFilledMultiColor` / `addConvexPolyFilled` / `addConcavePolyFilled` / `addImageQuad` / `addImageRounded`.
+- クエリと入力: `isItemClicked`/`isItemHovered`/`isItemActive`/`isItemEdited`/`isMouseDown`/`getMousePos`/`calcTextSize`/`framerate` などの状態クエリ, `setKeyboardFocusHere` による能動的フォーカス, 入力プリミティブ `addInputCharacters`/`sendKey`/`addMouseWheel`/`wantTextInput`. 現在公開中の `InputTextFlags` はすべて Dear ImGui に渡されます. コールバック依存フラグは公開せず, `WordWrap` は複数行入力専用です. キー照会とショートカット: `isKeyDown` / `isKeyPressed` / `isKeyReleased` / `getKeyPressedAmount` / `getKeyName` / `isKeyChordPressed` / `shortcut` / `setNextItemShortcut`, キーの組み合わせは `ui.Mod.Ctrl | ui.Key.S` のように書きます. クリップボード: `getClipboardText` / `setClipboardText`. UI の自動テスト用ポインター注入: `addMousePosEvent` / `addMouseButtonEvent` (`getMousePos` と同じフレーム内ピクセル).
+- ドラッグ アンド ドロップ: `withDragDropSource` / `withDragDropTarget`, `beginDragDropSource` / `setDragDropPayload` / `endDragDropSource` / `beginDragDropTarget` / `acceptDragDropPayload` / `endDragDropTarget` / `getDragDropPayload`, および `DragDropFlags`. ペイロードは文字列, 数値, または JSON に変換できる任意のオブジェクトです.
 - デバッグツール: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide` は Dear ImGui 組み込みのツールウィンドウを表示します. それぞれ省略可能な可変 boolean 参照を受け取り, 閉じるボタンで false になります.
 - 高レベルコンポーネントと例: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`、および `listExamples` / `getExampleSource` / `runExample`. 各セッションにも同名のファクトリがあります.
 - 可変参照: 軽量な `imgui.ref` (または通常の `{value: x}` オブジェクト) と、互換 Java 配列ヘルパー `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.ints` / `imgui.strings`.
-- 定数: `BackendStatus` / `Cond`/`WindowFlags`/`ChildFlags`/`InputTextFlags`/`SliderFlags`/`TreeNodeFlags`/`SelectableFlags`/`TabBarFlags`/`TabItemFlags`/`ComboFlags`/`PopupFlags`/`HoveredFlags`/`FocusedFlags`/`ColorEditFlags`/`TableFlags`/`TableColumnFlags`/`TableRowFlags`/`TableBgTarget`/`SortDirection`/`Col`/`StyleVar`/`Themes`/`Appearance`/`Fonts`/`Icons`/`Dir`/`Key`/`MouseButton`/`ButtonFlags`/`TextureFlags`/`DrawListLayer`/`DrawFlags`/`LogLevel`/`ToastPosition`/`Limits`. Dear ImGui の列挙またはプラグインの同名テーブルに対応します.
+- 定数: `BackendStatus` / `Cond`/`WindowFlags`/`ChildFlags`/`InputTextFlags`/`SliderFlags`/`TreeNodeFlags`/`SelectableFlags`/`TabBarFlags`/`TabItemFlags`/`ComboFlags`/`PopupFlags`/`HoveredFlags`/`FocusedFlags`/`ColorEditFlags`/`TableFlags`/`TableColumnFlags`/`TableRowFlags`/`TableBgTarget`/`SortDirection`/`Col`/`StyleVar`/`Themes`/`Appearance`/`Fonts`/`Icons`/`Dir`/`Key`/`Mod`/`InputFlags`/`DragDropFlags`/`MouseButton`/`ButtonFlags`/`TextureFlags`/`DrawListLayer`/`DrawFlags`/`LogLevel`/`ToastPosition`/`Limits`. Dear ImGui の列挙またはプラグインの同名テーブルに対応します.
 
 ******
 
@@ -171,6 +172,16 @@ imgui.runExample("widget-overview");
 ### リリース履歴
 
 ******
+
+#### v1.15.0
+
+###### 2026/10/30
+
+* `機能` キーボード照会: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed と, ショートカットの shortcut / setNextItemShortcut を追加. キーの組み合わせは ui.Mod.Ctrl | ui.Key.S と書きます. Key 定数はキーボード全体に対応しました: A から Z, Digit0 から Digit9, F1 から F24, テンキーなど
+* `機能` クリップボード: getClipboardText / setClipboardText はホストの getClip / setClip と同じ Android クリップボードを使い, 入力欄の Ctrl+C / Ctrl+V も同様です. Android 10 以降, クリップボードを読み取れるのは入力フォーカスを持つアプリだけです. フローティング ウィンドウへの影響は docs/LIMITS.md を参照してください
+* `機能` ドラッグ アンド ドロップ: beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload とヘルパー withDragDropSource / withDragDropTarget で, 項目を別の項目へドラッグできます (オプションは DragDropFlags). ペイロードは文字列, 数値, または JSON に変換できる任意のオブジェクトで, カラー ウィジェットの色もドラッグできます. サンプル widget-overview の新しいセクションを参照してください
+* `機能` カスタム描画: パス関数 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex など), 描画リストとウィンドウの pushClipRect / popClipRect, 新しい図形 addEllipse, addNgon, addQuad とその塗りつぶし版, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded を追加. サンプル widget-overview を参照してください
+* `機能` タッチのシミュレーション: addMousePosEvent(x, y) と addMouseButtonEvent(button, down) で, スクリプトが指のようにウィンドウを操作できます. UI の自動テストなどに使えます. 座標は getMousePos と同じフレーム内ピクセルで, createWindow の dp ではありません. ウィンドウの下のアプリには影響しません
 
 #### v1.14.0
 
@@ -193,25 +204,6 @@ imgui.runExample("widget-overview");
 * `機能` createTexture と texture.update は PNG または JPEG データを含む ArrayBuffer や型付き配列 (Uint8Array など) も受け付けます
 * `機能` statsOverlay は各フレームの処理時間 (画面の更新待ちを除いた描画時間) を表示し, snapshot() はそれを workTime として返します
 * `改善` docs/FRAME-LOOP.md でフレームレートと省電力の仕組みを, docs/LIMITS.md で listClipper の制限を説明します
-
-#### v1.12.0
-
-###### 2026/10/29
-
-* `ヒント` 互換性のない変更: ウィンドウの位置とサイズはすべて dp になりました. createWindow の x / y, Session の x / y / width / height / displayWidth / displayHeight, setPosition / setSize, イベントデータ, フローティングボタンの x / y は以前 px でした. フレーム内の座標は引き続き px です. スクリプトの直し方は docs/MIGRATION-1.12.md を参照してください
-* `ヒント` 互換性のない変更: 引数が不正なとき (型の誤り, NaN, 数値の文字列, 範囲外の値), 黙って変換や切り詰めをせず, メソッド名と引数名を含む TypeError または RangeError を投げるようになりました. 例: `imgui.sliderFloat: argument "max" must be a finite number`. fps, alpha, fontSize などのウィンドウオプションも同様に検査します
-* `ヒント` 互換性のない変更: Session とフローティングボタンのフィールドは読み取り専用になりました (strict モードでは代入すると例外). 代わりに set メソッドを使ってください. FloatingButton.setPosition は source 引数を受け取らなくなり, フローティングボタンの色に数値を渡すと Android の ARGB ではなく, ほかの imgui の色と同じ 0xAABBGGRR (colorU32 の戻り値) として解釈します
-* `ヒント` 互換性のない変更: セッションイベント, フローティングボタンのコールバック, ダイアログの結果は Android の UI スレッドではなく, 描画コールバックと同じスクリプトスレッドで実行されます. 詳しくは docs/THREADING.md を参照してください
-* `機能` imgui.dp() / imgui.px() (エイリアス Dp / Px) で dp と px を換算でき, imgui.density で 1 dp あたりの px 数を取得できます
-* `機能` 色はすべての API でパック済み整数, [r, g, b, a], {r, g, b, a}, "#rrggbbaa" のいずれでも指定できます (textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor を含む). r, g, b, a を個別に渡す書き方も引き続き使えます
-* `機能` サンプル background-task: ワーカースレッドで重い処理を行い, その間もウィンドウは描画を続けます. 進捗表示とキャンセル付き
-* `機能` docs/THREADING.md で各コールバックを実行するスレッドと重い処理をバックグラウンドで行う方法を, docs/MIGRATION-1.12.md でこのバージョンに必要なスクリプトの変更を説明します
-* `修正` イベントやフローティングボタンのコールバックが描画コールバックと同時に実行されることがあり, その中で sleep を呼ぶとエラーになる問題
-* `修正` imgui.setTheme を呼んでも Session.theme が変わらない問題
-* `修正` ウィンドウをドラッグしたときの moved イベントの source が drag ではなく api になる問題
-* `改善` サンプルは window.density を掛ける代わりに ui.dp() を使うようになりました
-* `改善` TypeScript 宣言にすべてのサイズ, 位置, オプションの単位と範囲を記載し, Session とフローティングボタンのフィールドを readonly にしました
-* `改善` 各 GitHub リリースに, ダウンロードした APK を検証するための SHA256SUMS ファイルを添付します
 
 ##### その他のリリース履歴
 

@@ -75,6 +75,16 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         public void wheel(float wheelX, float wheelY) {
             ImGuiNative.nativeAddMouseWheelEvent(wheelX, wheelY);
         }
+
+        @Override
+        public void mousePos(float x, float y) {
+            ImGuiNative.nativeAddMousePosEvent(x, y);
+        }
+
+        @Override
+        public void mouseButton(int button, boolean down) {
+            ImGuiNative.nativeAddMouseButtonEvent(button, down);
+        }
     };
     private static final int MAX_ENCODED_TEXTURE_BYTES = 128 * 1024 * 1024;
     private static final long MAX_TEXTURE_PIXELS = 32L * 1024L * 1024L;
@@ -91,6 +101,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
     private static volatile Object nativeOwnerToken;
 
     private final Context hostContext;
+    private final ImGuiClipboard clipboard;
     private final Context pluginContext;
     private final Object runtime;
     private volatile ImGuiInputQueue inputQueue = new ImGuiInputQueue();
@@ -118,6 +129,7 @@ public final class ImGuiPluginConnection implements ServiceConnection {
             throw new IllegalArgumentException("Host application context is unavailable");
         }
         this.hostContext = hostContext;
+        this.clipboard = new ImGuiClipboard(hostContext);
         Context applicationContext = pluginContext.getApplicationContext();
         this.pluginContext = applicationContext == null ? pluginContext : applicationContext;
         this.runtime = runtime;
@@ -223,7 +235,10 @@ public final class ImGuiPluginConnection implements ServiceConnection {
                 resolvedFontPaths,
                 resolvedFontSizes
             );
-            if (!initialized) {
+            if (initialized) {
+                ImGuiNative.setClipboard(clipboard);
+                ImGuiNative.nativeUsePlatformClipboard();
+            } else {
                 nativeOwnerToken = null;
             }
             revoked = !initialized;
@@ -632,6 +647,218 @@ public final class ImGuiPluginConnection implements ServiceConnection {
             layer, handle, minX, minY, maxX, maxY,
             uv0X, uv0Y, uv1X, uv1Y, tintColor
         );
+    }
+
+    /** corners and uvs: four [x, y] pairs each, flattened. */
+    public void drawImageQuad(int layer, long handle, float[] corners, float[] uvs, int tintColor) {
+        requireOwner();
+        ImGuiNative.nativeDrawImageQuad(layer, handle, corners, uvs, tintColor);
+    }
+
+    public void drawImageRounded(
+        int layer,
+        long handle,
+        float minX,
+        float minY,
+        float maxX,
+        float maxY,
+        float uv0X,
+        float uv0Y,
+        float uv1X,
+        float uv1Y,
+        int tintColor,
+        float rounding,
+        int flags
+    ) {
+        requireOwner();
+        ImGuiNative.nativeDrawImageRounded(
+            layer, handle, minX, minY, maxX, maxY,
+            uv0X, uv0Y, uv1X, uv1Y, tintColor, rounding, flags
+        );
+    }
+
+    public void drawRectFilledMultiColor(
+        int layer,
+        float minX,
+        float minY,
+        float maxX,
+        float maxY,
+        int colorUpperLeft,
+        int colorUpperRight,
+        int colorBottomRight,
+        int colorBottomLeft
+    ) {
+        requireOwner();
+        ImGuiNative.nativeDrawRectFilledMultiColor(
+            layer, minX, minY, maxX, maxY,
+            colorUpperLeft, colorUpperRight, colorBottomRight, colorBottomLeft
+        );
+    }
+
+    public void drawQuad(
+        int layer,
+        float x1,
+        float y1,
+        float x2,
+        float y2,
+        float x3,
+        float y3,
+        float x4,
+        float y4,
+        int color,
+        float thickness,
+        boolean filled
+    ) {
+        requireOwner();
+        ImGuiNative.nativeDrawQuad(layer, x1, y1, x2, y2, x3, y3, x4, y4, color, thickness, filled);
+    }
+
+    public void drawNgon(
+        int layer,
+        float x,
+        float y,
+        float radius,
+        int color,
+        int segments,
+        float thickness,
+        boolean filled
+    ) {
+        requireOwner();
+        ImGuiNative.nativeDrawNgon(layer, x, y, radius, color, segments, thickness, filled);
+    }
+
+    public void drawEllipse(
+        int layer,
+        float x,
+        float y,
+        float radiusX,
+        float radiusY,
+        int color,
+        float rotation,
+        int segments,
+        float thickness,
+        boolean filled
+    ) {
+        requireOwner();
+        ImGuiNative.nativeDrawEllipse(layer, x, y, radiusX, radiusY, color, rotation, segments, thickness, filled);
+    }
+
+    public void drawBezierQuadratic(
+        int layer,
+        float x1,
+        float y1,
+        float x2,
+        float y2,
+        float x3,
+        float y3,
+        int color,
+        float thickness,
+        int segments
+    ) {
+        requireOwner();
+        ImGuiNative.nativeDrawBezierQuadratic(layer, x1, y1, x2, y2, x3, y3, color, thickness, segments);
+    }
+
+    public void drawPolyFilled(int layer, float[] points, int color, boolean concave) {
+        requireOwner();
+        ImGuiNative.nativeDrawPolyFilled(layer, points, color, concave);
+    }
+
+    public void drawPathClear(int layer) {
+        requireOwner();
+        ImGuiNative.nativeDrawPathClear(layer);
+    }
+
+    public void drawPathLineTo(int layer, float x, float y) {
+        requireOwner();
+        ImGuiNative.nativeDrawPathLineTo(layer, x, y);
+    }
+
+    public void drawPathArcTo(
+        int layer,
+        float x,
+        float y,
+        float radius,
+        float angleMin,
+        float angleMax,
+        int segments
+    ) {
+        requireOwner();
+        ImGuiNative.nativeDrawPathArcTo(layer, x, y, radius, angleMin, angleMax, segments);
+    }
+
+    public void drawPathArcToFast(int layer, float x, float y, float radius, int minOf12, int maxOf12) {
+        requireOwner();
+        ImGuiNative.nativeDrawPathArcToFast(layer, x, y, radius, minOf12, maxOf12);
+    }
+
+    public void drawPathBezierCubicCurveTo(
+        int layer,
+        float x2,
+        float y2,
+        float x3,
+        float y3,
+        float x4,
+        float y4,
+        int segments
+    ) {
+        requireOwner();
+        ImGuiNative.nativeDrawPathBezierCubicCurveTo(layer, x2, y2, x3, y3, x4, y4, segments);
+    }
+
+    public void drawPathBezierQuadraticCurveTo(int layer, float x2, float y2, float x3, float y3, int segments) {
+        requireOwner();
+        ImGuiNative.nativeDrawPathBezierQuadraticCurveTo(layer, x2, y2, x3, y3, segments);
+    }
+
+    public void drawPathRect(
+        int layer,
+        float minX,
+        float minY,
+        float maxX,
+        float maxY,
+        float rounding,
+        int flags
+    ) {
+        requireOwner();
+        ImGuiNative.nativeDrawPathRect(layer, minX, minY, maxX, maxY, rounding, flags);
+    }
+
+    public void drawPathStroke(int layer, int color, float thickness, int flags) {
+        requireOwner();
+        ImGuiNative.nativeDrawPathStroke(layer, color, thickness, flags);
+    }
+
+    public void drawPathFill(int layer, int color, boolean concave) {
+        requireOwner();
+        ImGuiNative.nativeDrawPathFill(layer, color, concave);
+    }
+
+    public void drawPushClipRect(
+        int layer,
+        float minX,
+        float minY,
+        float maxX,
+        float maxY,
+        boolean intersectWithCurrent
+    ) {
+        requireOwner();
+        ImGuiNative.nativeDrawPushClipRect(layer, minX, minY, maxX, maxY, intersectWithCurrent);
+    }
+
+    public void drawPopClipRect(int layer) {
+        requireOwner();
+        ImGuiNative.nativeDrawPopClipRect(layer);
+    }
+
+    public void pushClipRect(float minX, float minY, float maxX, float maxY, boolean intersectWithCurrent) {
+        requireOwner();
+        ImGuiNative.nativePushClipRect(minX, minY, maxX, maxY, intersectWithCurrent);
+    }
+
+    public void popClipRect() {
+        requireOwner();
+        ImGuiNative.nativePopClipRect();
     }
 
     public void setNextWindowPos(float x, float y, int condition, float pivotX, float pivotY) {
@@ -1764,6 +1991,109 @@ public final class ImGuiPluginConnection implements ServiceConnection {
             queue.offerWheel(wheelX, wheelY);
             activityMonitor.noteActivity();
         }
+    }
+
+    public void addMousePosEvent(float x, float y) {
+        ImGuiInputQueue queue = inputQueue;
+        if (isOwner()) {
+            queue.offerMousePos(x, y);
+            activityMonitor.noteActivity();
+        }
+    }
+
+    public void addMouseButtonEvent(int button, boolean down) {
+        ImGuiInputQueue queue = inputQueue;
+        if (isOwner()) {
+            queue.offerMouseButton(button, down);
+            activityMonitor.noteActivity();
+        }
+    }
+
+    public boolean isKeyDown(int key) {
+        requireOwner();
+        return ImGuiNative.nativeIsKeyDown(key);
+    }
+
+    public boolean isKeyPressed(int key, boolean repeat) {
+        requireOwner();
+        return ImGuiNative.nativeIsKeyPressed(key, repeat);
+    }
+
+    public boolean isKeyReleased(int key) {
+        requireOwner();
+        return ImGuiNative.nativeIsKeyReleased(key);
+    }
+
+    public int getKeyPressedAmount(int key, float repeatDelay, float rate) {
+        requireOwner();
+        return ImGuiNative.nativeGetKeyPressedAmount(key, repeatDelay, rate);
+    }
+
+    public String getKeyName(int key) {
+        requireOwner();
+        return ImGuiNative.nativeGetKeyName(key);
+    }
+
+    public boolean isKeyChordPressed(int keyChord) {
+        requireOwner();
+        return ImGuiNative.nativeIsKeyChordPressed(keyChord);
+    }
+
+    public boolean shortcut(int keyChord, int flags) {
+        requireOwner();
+        return ImGuiNative.nativeShortcut(keyChord, flags);
+    }
+
+    public void setNextItemShortcut(int keyChord, int flags) {
+        requireOwner();
+        ImGuiNative.nativeSetNextItemShortcut(keyChord, flags);
+    }
+
+    /** Needs no session: the clipboard is the Android one (R4.2). */
+    public String getClipboardText() {
+        return clipboard.getText();
+    }
+
+    public void setClipboardText(String text) {
+        clipboard.setText(text);
+    }
+
+    public boolean beginDragDropSource(int flags) {
+        requireOwner();
+        return ImGuiNative.nativeBeginDragDropSource(flags);
+    }
+
+    /** json: the payload serialized by the script; 1 to 65,536 UTF-8 bytes. */
+    public boolean setDragDropPayload(String type, String json, int condition) {
+        requireOwner();
+        return ImGuiNative.nativeSetDragDropPayload(type, json, condition);
+    }
+
+    public void endDragDropSource() {
+        requireOwner();
+        ImGuiNative.nativeEndDragDropSource();
+    }
+
+    public boolean beginDragDropTarget() {
+        requireOwner();
+        return ImGuiNative.nativeBeginDragDropTarget();
+    }
+
+    /** The payload as {type, JSON data or null, "1" while previewed, "1" when delivered}, null when nothing is accepted. */
+    public String[] acceptDragDropPayload(String type, int flags) {
+        requireOwner();
+        return ImGuiNative.nativeAcceptDragDropPayload(type, flags);
+    }
+
+    public void endDragDropTarget() {
+        requireOwner();
+        ImGuiNative.nativeEndDragDropTarget();
+    }
+
+    /** See {@link #acceptDragDropPayload(String, int)}; null when no drag is in progress. */
+    public String[] getDragDropPayload() {
+        requireOwner();
+        return ImGuiNative.nativeGetDragDropPayload();
     }
 
     // Power-saving frame loop (R2.2). The script starts the monitor per session with a wake listener, reads the

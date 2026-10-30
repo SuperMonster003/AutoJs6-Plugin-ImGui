@@ -149,12 +149,13 @@ imgui.runExample("widget-overview");
 - 컨테이너와 탐색: `withTabBar`, `withTabItem`, `withTreeNode`, `treeNodeEx`, `collapsingHeader`, `withTable` 테이블 계열, `withListBox`, `withCombo`, `selectable`, 긴 목록용 `listClipper`. 표 정렬: `tableGetSortSpecs` / `SortDirection`, `dataTable`의 `sortable: true`.
 - 팝업과 메뉴: `openPopup`, `withPopup`, `withPopupModal`, `beginPopupContextItem`, `beginPopupContextWindow`, `withContextItem`, `withContextWindow`, `closeCurrentPopup`, `withMenuBar`, `withMenu`, `menuItem`, `setTooltip`, `setItemTooltip`, `withItemTooltip`.
 - 스타일과 레이아웃: `styleColorsDark`, `styleColorsLight`, `styleColorsClassic`, `pushStyleColor`, `pushStyleVar`, `setWindowFontScale`, `withGroup`, `withDisabled`, `withId`, `indent`, `sameLine`, `separator`, `spacing` 및 커서와 스크롤 계열.
-- 텍스처와 그리기: `createTexture`, `texture.update`, `destroyTexture`, `image`, `imageButton`, `colorU32` 및 선, 사각형, 원, 삼각형, 텍스트, 폴리라인, 베지어 곡선, 이미지 프리미티브를 제공하는 `getWindowDrawList`, `getForegroundDrawList`, `getBackgroundDrawList`.
-- 조회와 입력: `isItemClicked`, `isItemHovered`, `isItemActive`, `isItemEdited`, `isMouseDown`, `getMousePos`, `calcTextSize`, `framerate` 같은 상태 조회, `setKeyboardFocusHere` 능동 포커스, 입력 프리미티브 `addInputCharacters`, `sendKey`, `addMouseWheel`, `wantTextInput`. 현재 공개된 모든 `InputTextFlags` 값은 Dear ImGui로 전달되며 콜백 의존 플래그는 제외되고 `WordWrap`은 여러 줄 입력에만 적용됩니다.
+- 텍스처와 그리기: `createTexture`, `texture.update`, `destroyTexture`, `image`, `imageButton`, `colorU32` 및 선, 사각형, 원, 삼각형, 텍스트, 폴리라인, 베지어 곡선, 이미지 프리미티브를 제공하는 `getWindowDrawList`, `getForegroundDrawList`, `getBackgroundDrawList`. 경로 그리기: `pathLineTo` / `pathArcTo` / `pathArcToFast` / `pathBezierCubicCurveTo` / `pathBezierQuadraticCurveTo` / `pathRect` / `pathStroke` / `pathFillConvex` / `pathFillConcave`; 드로우 리스트와 창의 `pushClipRect` / `popClipRect`; 추가 도형: `addEllipse` / `addNgon` / `addQuad` / `addBezierQuadratic` / `addRectFilledMultiColor` / `addConvexPolyFilled` / `addConcavePolyFilled` / `addImageQuad` / `addImageRounded`.
+- 조회와 입력: `isItemClicked`, `isItemHovered`, `isItemActive`, `isItemEdited`, `isMouseDown`, `getMousePos`, `calcTextSize`, `framerate` 같은 상태 조회, `setKeyboardFocusHere` 능동 포커스, 입력 프리미티브 `addInputCharacters`, `sendKey`, `addMouseWheel`, `wantTextInput`. 현재 공개된 모든 `InputTextFlags` 값은 Dear ImGui로 전달되며 콜백 의존 플래그는 제외되고 `WordWrap`은 여러 줄 입력에만 적용됩니다. 키 조회와 단축키: `isKeyDown` / `isKeyPressed` / `isKeyReleased` / `getKeyPressedAmount` / `getKeyName` / `isKeyChordPressed` / `shortcut` / `setNextItemShortcut`, 키 조합은 `ui.Mod.Ctrl | ui.Key.S` 처럼 씁니다. 클립보드: `getClipboardText` / `setClipboardText`. UI 자동 테스트용 포인터 주입: `addMousePosEvent` / `addMouseButtonEvent` (`getMousePos` 와 같은 프레임 픽셀).
+- 드래그 앤 드롭: `withDragDropSource` / `withDragDropTarget`, `beginDragDropSource` / `setDragDropPayload` / `endDragDropSource` / `beginDragDropTarget` / `acceptDragDropPayload` / `endDragDropTarget` / `getDragDropPayload`, 그리고 `DragDropFlags`. 페이로드는 문자열, 숫자 또는 JSON 으로 직렬화할 수 있는 객체입니다.
 - 디버그 도구: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide`는 Dear ImGui 내장 도구 창을 표시합니다. 각각 선택적인 가변 boolean 참조를 받으며 닫기 버튼을 누르면 false가 됩니다.
 - 고수준 컴포넌트와 예제: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, 그리고 `listExamples` / `getExampleSource` / `runExample`; 각 세션에도 같은 팩터리가 있습니다.
 - 가변 참조: 가벼운 `imgui.ref`(또는 일반 `{value: x}` 객체)와 호환 Java 배열 헬퍼 `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string`, `imgui.floats`, `imgui.ints`, `imgui.strings`.
-- 상수: `BackendStatus` / `Cond`, `WindowFlags`, `ChildFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags`, `ComboFlags`, `PopupFlags`, `HoveredFlags`, `FocusedFlags`, `ColorEditFlags`, `TableFlags`, `TableColumnFlags`, `TableRowFlags`, `TableBgTarget`, `SortDirection`, `Col`, `StyleVar`, `Themes`, `Appearance`, `Fonts`, `Icons`, `Dir`, `Key`, `MouseButton`, `ButtonFlags`, `TextureFlags`, `DrawListLayer`, `DrawFlags`, `LogLevel`, `ToastPosition`, `Limits`. 값은 같은 이름의 Dear ImGui 열거형 또는 플러그인 표와 일치합니다.
+- 상수: `BackendStatus` / `Cond`, `WindowFlags`, `ChildFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags`, `ComboFlags`, `PopupFlags`, `HoveredFlags`, `FocusedFlags`, `ColorEditFlags`, `TableFlags`, `TableColumnFlags`, `TableRowFlags`, `TableBgTarget`, `SortDirection`, `Col`, `StyleVar`, `Themes`, `Appearance`, `Fonts`, `Icons`, `Dir`, `Key`, `Mod`, `InputFlags`, `DragDropFlags`, `MouseButton`, `ButtonFlags`, `TextureFlags`, `DrawListLayer`, `DrawFlags`, `LogLevel`, `ToastPosition`, `Limits`. 값은 같은 이름의 Dear ImGui 열거형 또는 플러그인 표와 일치합니다.
 
 ******
 
@@ -171,6 +172,16 @@ imgui.runExample("widget-overview");
 ### 릴리스 기록
 
 ******
+
+#### v1.15.0
+
+###### 2026/10/30
+
+* `기능` 키보드 조회: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed 와 단축키 shortcut, setNextItemShortcut 을 추가했습니다. 키 조합은 ui.Mod.Ctrl | ui.Key.S 처럼 씁니다. Key 상수는 이제 키보드 전체를 포함합니다: A 부터 Z, Digit0 부터 Digit9, F1 부터 F24, 숫자 키패드 등
+* `기능` 클립보드: getClipboardText / setClipboardText 는 호스트의 getClip / setClip 과 같은 Android 클립보드를 사용하며, 입력란의 Ctrl+C / Ctrl+V 도 마찬가지입니다. Android 10 부터는 입력 포커스를 가진 앱만 클립보드를 읽을 수 있습니다. 플로팅 창에 미치는 영향은 docs/LIMITS.md 를 참고하세요
+* `기능` 드래그 앤 드롭: beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload 와 도우미 함수 withDragDropSource / withDragDropTarget 으로 항목을 다른 항목으로 끌어다 놓을 수 있습니다 (옵션은 DragDropFlags). 페이로드는 문자열, 숫자 또는 JSON 으로 직렬화할 수 있는 객체이며, 색상 위젯의 색도 끌 수 있습니다. 예제 widget-overview 의 새 섹션을 참고하세요
+* `기능` 사용자 정의 그리기: 경로 함수 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex 등), 드로우 리스트와 창의 pushClipRect / popClipRect, 새 도형 addEllipse, addNgon, addQuad 와 채우기 버전, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded 를 추가했습니다. 예제 widget-overview 를 참고하세요
+* `기능` 터치 시뮬레이션: addMousePosEvent(x, y) 와 addMouseButtonEvent(button, down) 으로 스크립트가 손가락처럼 창을 조작할 수 있어 UI 자동 테스트 등에 쓸 수 있습니다. 좌표는 getMousePos 와 같은 프레임 픽셀이며 createWindow 의 dp 가 아닙니다. 창 아래의 앱에는 영향을 주지 않습니다
 
 #### v1.14.0
 
@@ -193,25 +204,6 @@ imgui.runExample("widget-overview");
 * `기능` createTexture와 texture.update는 PNG 또는 JPEG 데이터를 담은 ArrayBuffer나 형식화 배열(Uint8Array 등)도 받습니다
 * `기능` statsOverlay는 각 프레임의 작업 시간(화면 갱신 대기를 뺀 그리기 시간)을 표시하고, snapshot()은 이를 workTime으로 반환합니다
 * `개선` docs/FRAME-LOOP.md에서 프레임 속도와 절전 방식을, docs/LIMITS.md에서 listClipper의 제한을 설명합니다
-
-#### v1.12.0
-
-###### 2026/10/29
-
-* `힌트` 호환되지 않는 변경: 창의 위치와 크기는 모두 dp로 바뀌었습니다. createWindow의 x / y, Session의 x / y / width / height / displayWidth / displayHeight, setPosition / setSize, 이벤트 데이터, 플로팅 버튼의 x / y는 이전에 px였습니다. 프레임 안의 좌표는 계속 px입니다. 스크립트 수정 방법은 docs/MIGRATION-1.12.md를 참고하세요
-* `힌트` 호환되지 않는 변경: 인자가 잘못되면(잘못된 타입, NaN, 숫자 문자열, 범위를 벗어난 값) 조용히 변환하거나 잘라 내지 않고 메서드 이름과 인자 이름을 담은 TypeError 또는 RangeError를 던집니다. 예: `imgui.sliderFloat: argument "max" must be a finite number`. fps, alpha, fontSize 같은 창 옵션도 같은 방식으로 검사합니다
-* `힌트` 호환되지 않는 변경: Session과 플로팅 버튼의 필드는 읽기 전용이 되었습니다(strict 모드에서 대입하면 예외 발생). 대신 set 메서드를 사용하세요. FloatingButton.setPosition은 더 이상 source 인자를 받지 않으며, 플로팅 버튼 색상에 숫자를 넘기면 Android ARGB가 아니라 다른 imgui 색상과 같은 0xAABBGGRR(colorU32의 반환값)로 해석합니다
-* `힌트` 호환되지 않는 변경: 세션 이벤트, 플로팅 버튼 콜백, 대화상자 결과는 Android UI 스레드가 아니라 렌더 콜백과 같은 스크립트 스레드에서 실행됩니다. 자세한 내용은 docs/THREADING.md를 참고하세요
-* `기능` imgui.dp() / imgui.px()(별칭 Dp / Px)로 dp와 px를 변환하고, imgui.density로 1 dp당 px 수를 얻을 수 있습니다
-* `기능` 색상은 모든 API에서 압축된 정수, [r, g, b, a], {r, g, b, a}, "#rrggbbaa" 중 하나로 지정할 수 있습니다(textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor 포함). r, g, b, a를 따로 넘기는 방식도 계속 쓸 수 있습니다
-* `기능` 예제 background-task: 작업 스레드가 오래 걸리는 일을 하는 동안에도 창은 계속 그려지며, 진행률 표시와 취소를 제공합니다
-* `기능` docs/THREADING.md는 각 콜백이 실행되는 스레드와 오래 걸리는 작업을 백그라운드에서 하는 방법을, docs/MIGRATION-1.12.md는 이 버전에 맞춰 스크립트에서 바꿔야 할 점을 설명합니다
-* `수정` 이벤트 콜백과 플로팅 버튼 콜백이 렌더 콜백과 동시에 실행될 수 있고, 그 안에서 sleep을 호출하면 오류가 나던 문제
-* `수정` imgui.setTheme을 호출해도 Session.theme이 바뀌지 않던 문제
-* `수정` 창을 드래그할 때 moved 이벤트의 source가 drag가 아니라 api로 보고되던 문제
-* `개선` 예제가 window.density를 곱하는 대신 ui.dp()를 사용합니다
-* `개선` TypeScript 선언에 모든 크기, 위치, 옵션의 단위와 허용 범위를 적고 Session과 플로팅 버튼의 필드를 readonly로 표시했습니다
-* `개선` 각 GitHub 릴리스에 내려받은 APK를 검증할 수 있는 SHA256SUMS 파일을 첨부합니다
 
 ##### 더 많은 릴리스 기록
 

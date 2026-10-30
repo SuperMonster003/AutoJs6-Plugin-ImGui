@@ -21,6 +21,10 @@ final class ImGuiInputQueue {
         void key(int key, boolean down);
 
         void wheel(float wheelX, float wheelY);
+
+        void mousePos(float x, float y);
+
+        void mouseButton(int button, boolean down);
     }
 
     private interface InputEvent {
@@ -62,6 +66,14 @@ final class ImGuiInputQueue {
 
     void offerWheel(float wheelX, float wheelY) {
         offer(sink -> sink.wheel(wheelX, wheelY));
+    }
+
+    void offerMousePos(float x, float y) {
+        offer(sink -> sink.mousePos(x, y));
+    }
+
+    void offerMouseButton(int button, boolean down) {
+        offer(sink -> sink.mouseButton(button, down));
     }
 
     int drainTo(Sink sink) {

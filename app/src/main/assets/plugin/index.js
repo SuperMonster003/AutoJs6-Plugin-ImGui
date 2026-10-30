@@ -394,7 +394,8 @@ module.exports = function (bridge) {
     api.Limits = freeze({
         InputTextMaxBytes: 64 * 1024,
         SelectionMaxItems: 512,
-        InputQueueCapacity: 2048
+        InputQueueCapacity: 2048,
+        DragDropPayloadMaxBytes: 64 * 1024
     });
 
     api.BackendStatus = freeze({
@@ -1661,33 +1662,72 @@ module.exports = function (bridge) {
         EnableNav: 1 << 3
     });
 
-    api.Key = freeze({
+    // The keyboard keys of the ImGuiKey enum in order, from ImGuiKey_NamedKey_BEGIN; 0 to 9 are Digit0 to Digit9.
+    var KEY_NAMES = [
+        "Tab", "LeftArrow", "RightArrow", "UpArrow", "DownArrow", "PageUp", "PageDown", "Home", "End", "Insert", "Delete",
+        "Backspace", "Space", "Enter", "Escape", "LeftCtrl", "LeftShift", "LeftAlt", "LeftSuper", "RightCtrl",
+        "RightShift", "RightAlt", "RightSuper", "Menu", "Digit0", "Digit1", "Digit2", "Digit3", "Digit4", "Digit5",
+        "Digit6", "Digit7", "Digit8", "Digit9", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O",
+        "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10",
+        "F11", "F12", "F13", "F14", "F15", "F16", "F17", "F18", "F19", "F20", "F21", "F22", "F23", "F24", "Apostrophe",
+        "Comma", "Minus", "Period", "Slash", "Semicolon", "Equal", "LeftBracket", "Backslash", "RightBracket",
+        "GraveAccent", "CapsLock", "ScrollLock", "NumLock", "PrintScreen", "Pause", "Keypad0", "Keypad1", "Keypad2",
+        "Keypad3", "Keypad4", "Keypad5", "Keypad6", "Keypad7", "Keypad8", "Keypad9", "KeypadDecimal", "KeypadDivide",
+        "KeypadMultiply", "KeypadSubtract", "KeypadAdd", "KeypadEnter", "KeypadEqual", "AppBack", "AppForward", "Oem102"
+    ];
+    var KEY_NAMED_BEGIN = 512;
+    // ImGuiKey_NamedKey_END; the gamepad and mouse keys after Oem102 are valid but have no constant here.
+    var KEY_NAMED_END = 667;
+
+    api.Key = (function () {
+        var keys = {None: 0};
+        KEY_NAMES.forEach(function (name, index) {
+            keys[name] = KEY_NAMED_BEGIN + index;
+        });
+        keys.ModCtrl = 1 << 12;
+        keys.ModShift = 1 << 13;
+        keys.ModAlt = 1 << 14;
+        keys.ModSuper = 1 << 15;
+        return freeze(keys);
+    })();
+
+    api.Mod = freeze({
         None: 0,
-        Tab: 512,
-        LeftArrow: 513,
-        RightArrow: 514,
-        UpArrow: 515,
-        DownArrow: 516,
-        PageUp: 517,
-        PageDown: 518,
-        Home: 519,
-        End: 520,
-        Insert: 521,
-        Delete: 522,
-        Backspace: 523,
-        Space: 524,
-        Enter: 525,
-        Escape: 526,
-        A: 546,
-        C: 548,
-        V: 567,
-        X: 569,
-        Y: 570,
-        Z: 571,
-        ModCtrl: 1 << 12,
-        ModShift: 1 << 13,
-        ModAlt: 1 << 14,
-        ModSuper: 1 << 15
+        Ctrl: 1 << 12,
+        Shift: 1 << 13,
+        Alt: 1 << 14,
+        Super: 1 << 15
+    });
+
+    api.InputFlags = freeze({
+        None: 0,
+        Repeat: 1 << 0,
+        RouteActive: 1 << 10,
+        RouteFocused: 1 << 11,
+        RouteGlobal: 1 << 12,
+        RouteAlways: 1 << 13,
+        RouteOverFocused: 1 << 14,
+        RouteOverActive: 1 << 15,
+        RouteUnlessBgFocused: 1 << 16,
+        RouteFromRootWindow: 1 << 17,
+        Tooltip: 1 << 18
+    });
+
+    api.DragDropFlags = freeze({
+        None: 0,
+        SourceNoPreviewTooltip: 1 << 0,
+        SourceNoDisableHover: 1 << 1,
+        SourceNoHoldToOpenOthers: 1 << 2,
+        SourceAllowNullID: 1 << 3,
+        SourceExtern: 1 << 4,
+        PayloadAutoExpire: 1 << 5,
+        PayloadNoCrossContext: 1 << 6,
+        PayloadNoCrossProcess: 1 << 7,
+        AcceptBeforeDelivery: 1 << 10,
+        AcceptNoDrawDefaultRect: 1 << 11,
+        AcceptNoPreviewTooltip: 1 << 12,
+        AcceptDrawAsHovered: 1 << 13,
+        AcceptPeekOnly: (1 << 10) | (1 << 11)
     });
 
     var MOUSE_BUTTON_MAX = 4;
@@ -1703,6 +1743,36 @@ module.exports = function (bridge) {
 
     function argFlags(fn, value) {
         return argInt(fn, "flags", value, 0);
+    }
+
+    function isNamedKey(value) {
+        return value >= KEY_NAMED_BEGIN && value < KEY_NAMED_END;
+    }
+
+    function isSingleMod(value) {
+        return value === api.Mod.Ctrl || value === api.Mod.Shift || value === api.Mod.Alt || value === api.Mod.Super;
+    }
+
+    // Dear ImGui indexes its key table with these values unchecked; ImGuiBridge.cpp repeats the checks.
+    function argKey(fn, value) {
+        var key = argInt(fn, "key", value);
+        if (!isNamedKey(key) && !isSingleMod(key)) {
+            throw new RangeError(argumentLabel(fn, "key") + " must be a value of imgui.Key or imgui.Mod, got " + key);
+        }
+        return key;
+    }
+
+    function argKeyChord(fn, value) {
+        var chord = argInt(fn, "keyChord", value);
+        var modifiers = chord & 0xF000;
+        var key = chord & ~0xF000;
+        if (!isNamedKey(key) && !(key === 0 && isSingleMod(modifiers))) {
+            throw new RangeError(
+                argumentLabel(fn, "keyChord") + " must be a key of imgui.Key, optionally combined with imgui.Mod " +
+                "values, or one imgui.Mod value, got " + chord
+            );
+        }
+        return chord;
     }
 
     function resolveColorIndex(fn, value) {
@@ -2883,6 +2953,17 @@ module.exports = function (bridge) {
     var WHITE = [1, 1, 1, 1];
     // Native drawing clamps segment counts to 0..512.
     var DRAW_MAX_SEGMENTS = 512;
+    // Arcs are built point by point: the sweep is bounded (16 turns) so a stray angle cannot exhaust the memory.
+    var DRAW_MAX_ARC = 32 * Math.PI;
+    var DRAW_MAX_ARC_STEPS = 16 * 12;
+
+    function polygonPoints(points, fn) {
+        var flattened = flattenPoints(points, fn, "points");
+        if (flattened.length < 6) {
+            throw new RangeError(argumentLabel(fn, "points") + " must have at least three points");
+        }
+        return flattened;
+    }
 
     function createDrawListFacade(layer) {
         var facade = {
@@ -3043,6 +3124,289 @@ module.exports = function (bridge) {
                 return facade;
             },
 
+            addBezierQuadratic: function (first, second, third, color, thickness, segments) {
+                var fn = "DrawList.addBezierQuadratic";
+                var p1 = point(first, fn, "first");
+                var p2 = point(second, fn, "second");
+                var p3 = point(third, fn, "third");
+                bridge.drawBezierQuadratic(
+                    layer,
+                    p1[0], p1[1], p2[0], p2[1], p3[0], p3[1],
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "thickness", thickness, 1, 0),
+                    argInt(fn, "segments", segments, 0, 0, DRAW_MAX_SEGMENTS)
+                );
+                return facade;
+            },
+
+            addQuad: function (first, second, third, fourth, color, thickness) {
+                var fn = "DrawList.addQuad";
+                var p1 = point(first, fn, "first");
+                var p2 = point(second, fn, "second");
+                var p3 = point(third, fn, "third");
+                var p4 = point(fourth, fn, "fourth");
+                bridge.drawQuad(
+                    layer, p1[0], p1[1], p2[0], p2[1], p3[0], p3[1], p4[0], p4[1],
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "thickness", thickness, 1, 0),
+                    false
+                );
+                return facade;
+            },
+
+            addQuadFilled: function (first, second, third, fourth, color) {
+                var fn = "DrawList.addQuadFilled";
+                var p1 = point(first, fn, "first");
+                var p2 = point(second, fn, "second");
+                var p3 = point(third, fn, "third");
+                var p4 = point(fourth, fn, "fourth");
+                bridge.drawQuad(
+                    layer, p1[0], p1[1], p2[0], p2[1], p3[0], p3[1], p4[0], p4[1],
+                    packColor(color, WHITE, fn, "color"),
+                    1,
+                    true
+                );
+                return facade;
+            },
+
+            addNgon: function (center, radius, color, segments, thickness) {
+                var fn = "DrawList.addNgon";
+                var resolvedCenter = point(center, fn, "center");
+                bridge.drawNgon(
+                    layer, resolvedCenter[0], resolvedCenter[1],
+                    argNumber(fn, "radius", radius, undefined, 0),
+                    packColor(color, WHITE, fn, "color"),
+                    argInt(fn, "segments", segments, undefined, 3, DRAW_MAX_SEGMENTS),
+                    argNumber(fn, "thickness", thickness, 1, 0),
+                    false
+                );
+                return facade;
+            },
+
+            addNgonFilled: function (center, radius, color, segments) {
+                var fn = "DrawList.addNgonFilled";
+                var resolvedCenter = point(center, fn, "center");
+                bridge.drawNgon(
+                    layer, resolvedCenter[0], resolvedCenter[1],
+                    argNumber(fn, "radius", radius, undefined, 0),
+                    packColor(color, WHITE, fn, "color"),
+                    argInt(fn, "segments", segments, undefined, 3, DRAW_MAX_SEGMENTS),
+                    1,
+                    true
+                );
+                return facade;
+            },
+
+            addEllipse: function (center, radius, color, rotation, segments, thickness) {
+                var fn = "DrawList.addEllipse";
+                var resolvedCenter = point(center, fn, "center");
+                var resolvedRadius = point(radius, fn, "radius");
+                bridge.drawEllipse(
+                    layer, resolvedCenter[0], resolvedCenter[1], resolvedRadius[0], resolvedRadius[1],
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "rotation", rotation, 0),
+                    argInt(fn, "segments", segments, 0, 0, DRAW_MAX_SEGMENTS),
+                    argNumber(fn, "thickness", thickness, 1, 0),
+                    false
+                );
+                return facade;
+            },
+
+            addEllipseFilled: function (center, radius, color, rotation, segments) {
+                var fn = "DrawList.addEllipseFilled";
+                var resolvedCenter = point(center, fn, "center");
+                var resolvedRadius = point(radius, fn, "radius");
+                bridge.drawEllipse(
+                    layer, resolvedCenter[0], resolvedCenter[1], resolvedRadius[0], resolvedRadius[1],
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "rotation", rotation, 0),
+                    argInt(fn, "segments", segments, 0, 0, DRAW_MAX_SEGMENTS),
+                    1,
+                    true
+                );
+                return facade;
+            },
+
+            addRectFilledMultiColor: function (
+                minimum,
+                maximum,
+                colorUpperLeft,
+                colorUpperRight,
+                colorBottomRight,
+                colorBottomLeft
+            ) {
+                var fn = "DrawList.addRectFilledMultiColor";
+                var pMin = point(minimum, fn, "minimum");
+                var pMax = point(maximum, fn, "maximum");
+                bridge.drawRectFilledMultiColor(
+                    layer, pMin[0], pMin[1], pMax[0], pMax[1],
+                    packColor(colorUpperLeft, null, fn, "colorUpperLeft"),
+                    packColor(colorUpperRight, null, fn, "colorUpperRight"),
+                    packColor(colorBottomRight, null, fn, "colorBottomRight"),
+                    packColor(colorBottomLeft, null, fn, "colorBottomLeft")
+                );
+                return facade;
+            },
+
+            addConvexPolyFilled: function (points, color) {
+                var fn = "DrawList.addConvexPolyFilled";
+                bridge.drawPolyFilled(layer, polygonPoints(points, fn), packColor(color, WHITE, fn, "color"), false);
+                return facade;
+            },
+
+            addConcavePolyFilled: function (points, color) {
+                var fn = "DrawList.addConcavePolyFilled";
+                bridge.drawPolyFilled(layer, polygonPoints(points, fn), packColor(color, WHITE, fn, "color"), true);
+                return facade;
+            },
+
+            addImageQuad: function (texture, first, second, third, fourth, options) {
+                var fn = "DrawList.addImageQuad";
+                var resolvedTexture = resolveTexture(fn, texture);
+                var p1 = point(first, fn, "first");
+                var p2 = point(second, fn, "second");
+                var p3 = point(third, fn, "third");
+                var p4 = point(fourth, fn, "fourth");
+                options = options || {};
+                var uv1 = point(options.uv1 || [0, 0], fn, "options.uv1");
+                var uv2 = point(options.uv2 || [1, 0], fn, "options.uv2");
+                var uv3 = point(options.uv3 || [1, 1], fn, "options.uv3");
+                var uv4 = point(options.uv4 || [0, 1], fn, "options.uv4");
+                bridge.drawImageQuad(
+                    layer, resolvedTexture._nativeHandle,
+                    floatArray([p1[0], p1[1], p2[0], p2[1], p3[0], p3[1], p4[0], p4[1]]),
+                    floatArray([uv1[0], uv1[1], uv2[0], uv2[1], uv3[0], uv3[1], uv4[0], uv4[1]]),
+                    packColor(options.tint, WHITE, fn, "options.tint")
+                );
+                return facade;
+            },
+
+            addImageRounded: function (texture, minimum, maximum, rounding, options) {
+                var fn = "DrawList.addImageRounded";
+                var resolvedTexture = resolveTexture(fn, texture);
+                var pMin = point(minimum, fn, "minimum");
+                var pMax = point(maximum, fn, "maximum");
+                options = options || {};
+                var uv0 = point(options.uv0 || [0, 0], fn, "options.uv0");
+                var uv1 = point(options.uv1 || [1, 1], fn, "options.uv1");
+                bridge.drawImageRounded(
+                    layer, resolvedTexture._nativeHandle,
+                    pMin[0], pMin[1], pMax[0], pMax[1],
+                    uv0[0], uv0[1], uv1[0], uv1[1],
+                    packColor(options.tint, WHITE, fn, "options.tint"),
+                    argNumber(fn, "rounding", rounding, undefined, 0),
+                    argInt(fn, "options.flags", options.flags, 0)
+                );
+                return facade;
+            },
+
+            pathClear: function () {
+                bridge.drawPathClear(layer);
+                return facade;
+            },
+
+            pathLineTo: function (position) {
+                var resolved = point(position, "DrawList.pathLineTo", "position");
+                bridge.drawPathLineTo(layer, resolved[0], resolved[1]);
+                return facade;
+            },
+
+            pathArcTo: function (center, radius, angleMin, angleMax, segments) {
+                var fn = "DrawList.pathArcTo";
+                var resolvedCenter = point(center, fn, "center");
+                var start = argNumber(fn, "angleMin", angleMin);
+                bridge.drawPathArcTo(
+                    layer, resolvedCenter[0], resolvedCenter[1],
+                    argNumber(fn, "radius", radius, undefined, 0),
+                    start,
+                    argNumber(fn, "angleMax", angleMax, undefined, start - DRAW_MAX_ARC, start + DRAW_MAX_ARC),
+                    argInt(fn, "segments", segments, 0, 0, DRAW_MAX_SEGMENTS)
+                );
+                return facade;
+            },
+
+            pathArcToFast: function (center, radius, minOf12, maxOf12) {
+                var fn = "DrawList.pathArcToFast";
+                var resolvedCenter = point(center, fn, "center");
+                var start = argInt(fn, "minOf12", minOf12);
+                bridge.drawPathArcToFast(
+                    layer, resolvedCenter[0], resolvedCenter[1],
+                    argNumber(fn, "radius", radius, undefined, 0),
+                    start,
+                    argInt(fn, "maxOf12", maxOf12, undefined, start, start + DRAW_MAX_ARC_STEPS)
+                );
+                return facade;
+            },
+
+            pathBezierCubicCurveTo: function (second, third, fourth, segments) {
+                var fn = "DrawList.pathBezierCubicCurveTo";
+                var p2 = point(second, fn, "second");
+                var p3 = point(third, fn, "third");
+                var p4 = point(fourth, fn, "fourth");
+                bridge.drawPathBezierCubicCurveTo(
+                    layer, p2[0], p2[1], p3[0], p3[1], p4[0], p4[1],
+                    argInt(fn, "segments", segments, 0, 0, DRAW_MAX_SEGMENTS)
+                );
+                return facade;
+            },
+
+            pathBezierQuadraticCurveTo: function (second, third, segments) {
+                var fn = "DrawList.pathBezierQuadraticCurveTo";
+                var p2 = point(second, fn, "second");
+                var p3 = point(third, fn, "third");
+                bridge.drawPathBezierQuadraticCurveTo(
+                    layer, p2[0], p2[1], p3[0], p3[1],
+                    argInt(fn, "segments", segments, 0, 0, DRAW_MAX_SEGMENTS)
+                );
+                return facade;
+            },
+
+            pathRect: function (minimum, maximum, rounding, flags) {
+                var fn = "DrawList.pathRect";
+                var pMin = point(minimum, fn, "minimum");
+                var pMax = point(maximum, fn, "maximum");
+                bridge.drawPathRect(
+                    layer, pMin[0], pMin[1], pMax[0], pMax[1],
+                    argNumber(fn, "rounding", rounding, 0, 0),
+                    argFlags(fn, flags)
+                );
+                return facade;
+            },
+
+            pathStroke: function (color, thickness, flags) {
+                var fn = "DrawList.pathStroke";
+                bridge.drawPathStroke(
+                    layer,
+                    packColor(color, WHITE, fn, "color"),
+                    argNumber(fn, "thickness", thickness, 1, 0),
+                    argFlags(fn, flags)
+                );
+                return facade;
+            },
+
+            pathFillConvex: function (color) {
+                bridge.drawPathFill(layer, packColor(color, WHITE, "DrawList.pathFillConvex", "color"), false);
+                return facade;
+            },
+
+            pathFillConcave: function (color) {
+                bridge.drawPathFill(layer, packColor(color, WHITE, "DrawList.pathFillConcave", "color"), true);
+                return facade;
+            },
+
+            pushClipRect: function (minimum, maximum, intersectWithCurrent) {
+                var fn = "DrawList.pushClipRect";
+                var pMin = point(minimum, fn, "minimum");
+                var pMax = point(maximum, fn, "maximum");
+                bridge.drawPushClipRect(layer, pMin[0], pMin[1], pMax[0], pMax[1], Boolean(intersectWithCurrent));
+                return facade;
+            },
+
+            popClipRect: function () {
+                bridge.drawPopClipRect(layer);
+                return facade;
+            },
+
             addImage: function (texture, minimum, maximum, options) {
                 var fn = "DrawList.addImage";
                 var resolvedTexture = resolveTexture(fn, texture);
@@ -3071,6 +3435,30 @@ module.exports = function (bridge) {
         facade.AddPolyline = facade.addPolyline;
         facade.AddBezierCubic = facade.addBezierCubic;
         facade.AddImage = facade.addImage;
+        facade.AddBezierQuadratic = facade.addBezierQuadratic;
+        facade.AddQuad = facade.addQuad;
+        facade.AddQuadFilled = facade.addQuadFilled;
+        facade.AddNgon = facade.addNgon;
+        facade.AddNgonFilled = facade.addNgonFilled;
+        facade.AddEllipse = facade.addEllipse;
+        facade.AddEllipseFilled = facade.addEllipseFilled;
+        facade.AddRectFilledMultiColor = facade.addRectFilledMultiColor;
+        facade.AddConvexPolyFilled = facade.addConvexPolyFilled;
+        facade.AddConcavePolyFilled = facade.addConcavePolyFilled;
+        facade.AddImageQuad = facade.addImageQuad;
+        facade.AddImageRounded = facade.addImageRounded;
+        facade.PathClear = facade.pathClear;
+        facade.PathLineTo = facade.pathLineTo;
+        facade.PathArcTo = facade.pathArcTo;
+        facade.PathArcToFast = facade.pathArcToFast;
+        facade.PathBezierCubicCurveTo = facade.pathBezierCubicCurveTo;
+        facade.PathBezierQuadraticCurveTo = facade.pathBezierQuadraticCurveTo;
+        facade.PathRect = facade.pathRect;
+        facade.PathStroke = facade.pathStroke;
+        facade.PathFillConvex = facade.pathFillConvex;
+        facade.PathFillConcave = facade.pathFillConcave;
+        facade.PushClipRect = facade.pushClipRect;
+        facade.PopClipRect = facade.popClipRect;
         return freeze(facade);
     }
 
@@ -3080,6 +3468,14 @@ module.exports = function (bridge) {
     api.getWindowDrawList = function () { return WINDOW_DRAW_LIST; };
     api.getForegroundDrawList = function () { return FOREGROUND_DRAW_LIST; };
     api.getBackgroundDrawList = function () { return BACKGROUND_DRAW_LIST; };
+
+    // The window-level form also clips hit testing and widget culling; unlike the DrawList form it intersects by default.
+    api.pushClipRect = function (minimum, maximum, intersectWithCurrent) {
+        var pMin = point(minimum, "pushClipRect", "minimum");
+        var pMax = point(maximum, "pushClipRect", "maximum");
+        bridge.pushClipRect(pMin[0], pMin[1], pMax[0], pMax[1], intersectWithCurrent !== false);
+    };
+    api.popClipRect = function () { bridge.popClipRect(); };
 
     api.pushId = function (id) {
         if (isNumberLike(id)) {
@@ -3183,7 +3579,125 @@ module.exports = function (bridge) {
             argNumber("addMouseWheel", "wheelY", wheelY, 0)
         );
     };
+    api.addMousePosEvent = function (x, y) {
+        bridge.addMousePosEvent(argNumber("addMousePosEvent", "x", x), argNumber("addMousePosEvent", "y", y));
+    };
+    api.addMouseButtonEvent = function (button, down) {
+        bridge.addMouseButtonEvent(mouseButton("addMouseButtonEvent", button), Boolean(down));
+    };
     api.wantTextInput = function () { return Boolean(bridge.wantTextInput()); };
+
+    api.isKeyDown = function (key) { return Boolean(bridge.isKeyDown(argKey("isKeyDown", key))); };
+    api.isKeyPressed = function (key, repeat) {
+        return Boolean(bridge.isKeyPressed(argKey("isKeyPressed", key), repeat !== false));
+    };
+    api.isKeyReleased = function (key) { return Boolean(bridge.isKeyReleased(argKey("isKeyReleased", key))); };
+    api.getKeyPressedAmount = function (key, repeatDelay, rate) {
+        return Number(bridge.getKeyPressedAmount(
+            argKey("getKeyPressedAmount", key),
+            argNumber("getKeyPressedAmount", "repeatDelay", repeatDelay),
+            argNumber("getKeyPressedAmount", "rate", rate)
+        ));
+    };
+    api.getKeyName = function (key) {
+        var resolved = argInt("getKeyName", "key", key);
+        return String(bridge.getKeyName(resolved === api.Key.None ? resolved : argKey("getKeyName", resolved)));
+    };
+    api.isKeyChordPressed = function (keyChord) {
+        return Boolean(bridge.isKeyChordPressed(argKeyChord("isKeyChordPressed", keyChord)));
+    };
+    api.shortcut = function (keyChord, flags) {
+        return Boolean(bridge.shortcut(argKeyChord("shortcut", keyChord), argFlags("shortcut", flags)));
+    };
+    api.setNextItemShortcut = function (keyChord, flags) {
+        bridge.setNextItemShortcut(
+            argKeyChord("setNextItemShortcut", keyChord),
+            argFlags("setNextItemShortcut", flags)
+        );
+    };
+
+    api.getClipboardText = function () { return String(bridge.getClipboardText()); };
+    api.setClipboardText = function (text) { bridge.setClipboardText(String(text)); };
+
+    var DRAG_DROP_TYPE_MAX_BYTES = 32;
+
+    function utf8Length(text) {
+        return new java.lang.String(text).getBytes("UTF-8").length;
+    }
+
+    function dragDropType(fn, value) {
+        if (!isStringLike(value)) {
+            throw new TypeError(argumentLabel(fn, "type") + " must be a string, got " + typeof value);
+        }
+        var type = String(value);
+        var bytes = utf8Length(type);
+        if (bytes < 1 || bytes > DRAG_DROP_TYPE_MAX_BYTES) {
+            throw new RangeError(
+                argumentLabel(fn, "type") + " must have 1 to " + DRAG_DROP_TYPE_MAX_BYTES + " UTF-8 bytes, got " + bytes
+            );
+        }
+        return type;
+    }
+
+    function dragDropJson(fn, data) {
+        var json;
+        try {
+            json = JSON.stringify(isStringLike(data) ? String(data) : data);
+        } catch (error) {
+            throw new TypeError(argumentLabel(fn, "data") + " must be JSON serializable: " + error.message);
+        }
+        if (json === undefined) {
+            throw new TypeError(argumentLabel(fn, "data") + " must be JSON serializable, got " + typeof data);
+        }
+        var bytes = utf8Length(json);
+        if (bytes > api.Limits.DragDropPayloadMaxBytes) {
+            throw new RangeError(
+                argumentLabel(fn, "data") + " must have at most " + api.Limits.DragDropPayloadMaxBytes +
+                " UTF-8 bytes as JSON, got " + bytes
+            );
+        }
+        return json;
+    }
+
+    // raw: {type, JSON data or null, "1" while previewed, "1" when delivered}, or null.
+    function dragDropPayload(raw) {
+        if (raw == null) {
+            return null;
+        }
+        return {
+            type: String(raw[0]),
+            data: raw[1] == null ? null : JSON.parse(String(raw[1])),
+            preview: String(raw[2]) === "1",
+            delivery: String(raw[3]) === "1"
+        };
+    }
+
+    api.beginDragDropSource = function (flags) {
+        return Boolean(bridge.beginDragDropSource(argFlags("beginDragDropSource", flags)));
+    };
+    api.setDragDropPayload = function (type, data, condition) {
+        var resolvedType = dragDropType("setDragDropPayload", type);
+        if (resolvedType.charAt(0) === "_") {
+            throw new RangeError(
+                argumentLabel("setDragDropPayload", "type") + " must not start with '_': those types are Dear ImGui's"
+            );
+        }
+        return Boolean(bridge.setDragDropPayload(
+            resolvedType,
+            dragDropJson("setDragDropPayload", data),
+            argInt("setDragDropPayload", "condition", condition, api.Cond.Always, api.Cond.Always, api.Cond.Once)
+        ));
+    };
+    api.endDragDropSource = function () { bridge.endDragDropSource(); };
+    api.beginDragDropTarget = function () { return Boolean(bridge.beginDragDropTarget()); };
+    api.acceptDragDropPayload = function (type, flags) {
+        return dragDropPayload(bridge.acceptDragDropPayload(
+            dragDropType("acceptDragDropPayload", type),
+            argFlags("acceptDragDropPayload", flags)
+        ));
+    };
+    api.endDragDropTarget = function () { bridge.endDragDropTarget(); };
+    api.getDragDropPayload = function () { return dragDropPayload(bridge.getDragDropPayload()); };
 
     api.withWindow = function (name, open, flags, body) {
         var visible = api.begin(name, open, flags);
@@ -3417,6 +3931,38 @@ module.exports = function (bridge) {
         } finally {
             if (open) {
                 api.endCombo();
+            }
+        }
+    };
+
+    api.withDragDropSource = function (flags, body) {
+        if (typeof flags === "function") {
+            body = flags;
+            flags = undefined;
+        }
+        var open = api.beginDragDropSource(flags);
+        try {
+            if (open && body) {
+                body();
+            }
+            return open;
+        } finally {
+            if (open) {
+                api.endDragDropSource();
+            }
+        }
+    };
+
+    api.withDragDropTarget = function (body) {
+        var open = api.beginDragDropTarget();
+        try {
+            if (open && body) {
+                body();
+            }
+            return open;
+        } finally {
+            if (open) {
+                api.endDragDropTarget();
             }
         }
     };
@@ -7563,7 +8109,30 @@ module.exports = function (bridge) {
         GetFrameHeight: "getFrameHeight",
         GetFrameHeightWithSpacing: "getFrameHeightWithSpacing",
         GetTextLineHeight: "getTextLineHeight",
-        GetTextLineHeightWithSpacing: "getTextLineHeightWithSpacing"
+        GetTextLineHeightWithSpacing: "getTextLineHeightWithSpacing",
+        IsKeyDown: "isKeyDown",
+        IsKeyPressed: "isKeyPressed",
+        IsKeyReleased: "isKeyReleased",
+        GetKeyPressedAmount: "getKeyPressedAmount",
+        GetKeyName: "getKeyName",
+        IsKeyChordPressed: "isKeyChordPressed",
+        Shortcut: "shortcut",
+        SetNextItemShortcut: "setNextItemShortcut",
+        GetClipboardText: "getClipboardText",
+        SetClipboardText: "setClipboardText",
+        BeginDragDropSource: "beginDragDropSource",
+        SetDragDropPayload: "setDragDropPayload",
+        EndDragDropSource: "endDragDropSource",
+        BeginDragDropTarget: "beginDragDropTarget",
+        AcceptDragDropPayload: "acceptDragDropPayload",
+        EndDragDropTarget: "endDragDropTarget",
+        GetDragDropPayload: "getDragDropPayload",
+        WithDragDropSource: "withDragDropSource",
+        WithDragDropTarget: "withDragDropTarget",
+        PushClipRect: "pushClipRect",
+        PopClipRect: "popClipRect",
+        AddMousePosEvent: "addMousePosEvent",
+        AddMouseButtonEvent: "addMouseButtonEvent"
     };
     for (var alias in aliases) {
         if (aliases.hasOwnProperty(alias)) {

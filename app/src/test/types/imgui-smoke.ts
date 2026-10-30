@@ -81,3 +81,31 @@ const privilegedSession: ImGui.Session = plugin.LaunchPrivileged(() => {
 const activeBackend: ImGui.ActivePrivilegedBackend | null = privilegedSession.privilegedBackend;
 plugin.text(`${activeBackend}:${privilegedSession.getBackendInfo()}`);
 privilegedSession.close("type-smoke-complete");
+
+plugin.isKeyPressed(plugin.Key.F1, false);
+plugin.Shortcut(plugin.Mod.Ctrl | plugin.Key.S, plugin.InputFlags.RouteGlobal);
+const clipboardText: string = plugin.getClipboardText();
+plugin.setClipboardText(clipboardText);
+plugin.addMousePosEvent(10, 20);
+plugin.addMouseButtonEvent(plugin.MouseButton.Left, true);
+plugin.withDragDropSource(plugin.DragDropFlags.SourceAllowNullID, () => {
+    plugin.setDragDropPayload("ROW", {id: 1});
+});
+plugin.withDragDropSource(() => {
+    plugin.setDragDropPayload("ROW", 1, plugin.Cond.Once);
+});
+plugin.withDragDropTarget(() => {
+    const payload = plugin.acceptDragDropPayload<{ id: number }>("ROW");
+    if (payload !== null && payload.delivery) {
+        plugin.text(payload.data.id);
+    }
+});
+plugin.getWindowDrawList()
+    .pathClear()
+    .pathArcTo([10, 10], 5, 0, 1)
+    .pathStroke([1, 1, 1, 1], 2, plugin.DrawFlags.Closed)
+    .pushClipRect([0, 0], [10, 10], true)
+    .addNgon([5, 5], 4, 0xFFFFFFFF, 6)
+    .popClipRect();
+plugin.pushClipRect([0, 0], [10, 10]);
+plugin.PopClipRect();

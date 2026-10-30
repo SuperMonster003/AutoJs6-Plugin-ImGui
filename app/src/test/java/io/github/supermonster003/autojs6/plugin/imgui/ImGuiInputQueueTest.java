@@ -22,15 +22,19 @@ public final class ImGuiInputQueueTest {
         queue.offerCharacters("AutoJs6");
         queue.offerKey(513, true);
         queue.offerWheel(-1.0F, 2.0F);
+        queue.offerMousePos(3.5F, 4.5F);
+        queue.offerMouseButton(0, true);
 
-        assertEquals(4, queue.pendingCount());
-        assertEquals(4, queue.drainTo(sink));
+        assertEquals(6, queue.pendingCount());
+        assertEquals(6, queue.drainTo(sink));
         assertEquals(
             List.of(
                 "touch:2:12.5:24.5:1",
                 "characters:AutoJs6",
                 "key:513:true",
-                "wheel:-1.0:2.0"
+                "wheel:-1.0:2.0",
+                "mousePos:3.5:4.5",
+                "mouseButton:0:true"
             ),
             sink.events
         );
@@ -134,6 +138,16 @@ public final class ImGuiInputQueueTest {
         @Override
         public void wheel(float wheelX, float wheelY) {
             events.add("wheel:" + wheelX + ":" + wheelY);
+        }
+
+        @Override
+        public void mousePos(float x, float y) {
+            events.add("mousePos:" + x + ":" + y);
+        }
+
+        @Override
+        public void mouseButton(int button, boolean down) {
+            events.add("mouseButton:" + button + ":" + down);
         }
     }
 }

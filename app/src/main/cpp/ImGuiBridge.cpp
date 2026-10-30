@@ -13,6 +13,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -33,6 +34,7 @@ constexpr int kInputTextMaxBytes = 64 * 1024;
 constexpr int kComboMaxItems = 512;
 constexpr int kMaxAdditionalFonts = 16;
 constexpr int kMaxDrawPoints = 4096;
+constexpr int kMaxDragDropPayloadBytes = 65536;
 constexpr int kTextureFlagNearest = 1 << 0;
 constexpr int kTextureFlagRepeat = 1 << 1;
 constexpr int kTextureFlagMipmaps = 1 << 2;
@@ -79,10 +81,19 @@ struct RendererState {
     std::vector<std::string> debugMessagesInPreviousFrame;
     // Open listClipper scopes, innermost last. The script facade ends each one in a finally block.
     std::vector<std::unique_ptr<ImGuiListClipper>> clippers;
+    // PushClipRect calls without a PopClipRect yet, per draw list and frame: a pop never reaches the clip rectangles
+    // Dear ImGui pushed itself, which would leave the list with an empty stack.
+    std::unordered_map<ImDrawList*, int> clipRectDepths;
+    // The text returned to Dear ImGui by the clipboard callback, which stays valid until the next call.
+    std::string clipboardText;
 };
 
 RendererState gState;
 uint64_t gNextTextureHandle = 1U;
+JavaVM* gJavaVm = nullptr;
+jclass gNativeClass = nullptr;
+jmethodID gReadClipboardMethod = nullptr;
+jmethodID gWriteClipboardMethod = nullptr;
 
 void ThrowJavaException(JNIEnv* env, const char* className, const char* message) {
     jclass exceptionClass = env->FindClass(className);
@@ -794,6 +805,16 @@ ImDrawList* ResolveDrawList(JNIEnv* env, jint layer) {
     }
 }
 
+bool ConsumeClipRectDepth(JNIEnv* env, ImDrawList* drawList) {
+    const auto found = gState.clipRectDepths.find(drawList);
+    if (found == gState.clipRectDepths.end() || found->second <= 0) {
+        ThrowIllegalState(env, "popClipRect called without a matching pushClipRect in this frame");
+        return false;
+    }
+    found->second -= 1;
+    return true;
+}
+
 bool ReadDrawPoints(JNIEnv* env, jfloatArray points, std::vector<ImVec2>& output) {
     if (points == nullptr) {
         ThrowIllegalArgument(env, "Draw-list points must not be null");
@@ -1362,6 +1383,7 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeNewFrame(
         return JNI_FALSE;
     }
     DiscardOpenClippers();
+    gState.clipRectDepths.clear();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplAndroid_NewFrame();
     ImGui::NewFrame();
@@ -2081,6 +2103,472 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawImage(
         ImVec2(uv1X, uv1Y),
         static_cast<ImU32>(tintColor)
     );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawImageQuad(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jlong handle,
+    jfloatArray corners,
+    jfloatArray uvs,
+    jint tintColor
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    TextureRecord* texture = ResolveTexture(env, handle);
+    if (texture == nullptr) return;
+    if (corners == nullptr || uvs == nullptr ||
+        env->GetArrayLength(corners) != 8 || env->GetArrayLength(uvs) != 8
+    ) {
+        ThrowIllegalArgument(env, "Draw-list image quad requires four corners and four UV points");
+        return;
+    }
+    std::array<jfloat, 8> p{};
+    std::array<jfloat, 8> uv{};
+    env->GetFloatArrayRegion(corners, 0, 8, p.data());
+    env->GetFloatArrayRegion(uvs, 0, 8, uv.data());
+    drawList->AddImageQuad(
+        ImTextureRef(static_cast<ImTextureID>(texture->glId)),
+        ImVec2(p[0], p[1]),
+        ImVec2(p[2], p[3]),
+        ImVec2(p[4], p[5]),
+        ImVec2(p[6], p[7]),
+        ImVec2(uv[0], uv[1]),
+        ImVec2(uv[2], uv[3]),
+        ImVec2(uv[4], uv[5]),
+        ImVec2(uv[6], uv[7]),
+        static_cast<ImU32>(tintColor)
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawImageRounded(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jlong handle,
+    jfloat minX,
+    jfloat minY,
+    jfloat maxX,
+    jfloat maxY,
+    jfloat uv0X,
+    jfloat uv0Y,
+    jfloat uv1X,
+    jfloat uv1Y,
+    jint tintColor,
+    jfloat rounding,
+    jint flags
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    TextureRecord* texture = ResolveTexture(env, handle);
+    if (texture == nullptr) return;
+    drawList->AddImageRounded(
+        ImTextureRef(static_cast<ImTextureID>(texture->glId)),
+        ImVec2(minX, minY),
+        ImVec2(maxX, maxY),
+        ImVec2(uv0X, uv0Y),
+        ImVec2(uv1X, uv1Y),
+        static_cast<ImU32>(tintColor),
+        std::max(0.0F, static_cast<float>(rounding)),
+        static_cast<ImDrawFlags>(flags)
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawRectFilledMultiColor(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat minX,
+    jfloat minY,
+    jfloat maxX,
+    jfloat maxY,
+    jint colorUpperLeft,
+    jint colorUpperRight,
+    jint colorBottomRight,
+    jint colorBottomLeft
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->AddRectFilledMultiColor(
+        ImVec2(minX, minY),
+        ImVec2(maxX, maxY),
+        static_cast<ImU32>(colorUpperLeft),
+        static_cast<ImU32>(colorUpperRight),
+        static_cast<ImU32>(colorBottomRight),
+        static_cast<ImU32>(colorBottomLeft)
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawQuad(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat x1,
+    jfloat y1,
+    jfloat x2,
+    jfloat y2,
+    jfloat x3,
+    jfloat y3,
+    jfloat x4,
+    jfloat y4,
+    jint color,
+    jfloat thickness,
+    jboolean filled
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    if (filled == JNI_TRUE) {
+        drawList->AddQuadFilled(
+            ImVec2(x1, y1),
+            ImVec2(x2, y2),
+            ImVec2(x3, y3),
+            ImVec2(x4, y4),
+            static_cast<ImU32>(color)
+        );
+    } else {
+        drawList->AddQuad(
+            ImVec2(x1, y1),
+            ImVec2(x2, y2),
+            ImVec2(x3, y3),
+            ImVec2(x4, y4),
+            static_cast<ImU32>(color),
+            std::max(0.1F, static_cast<float>(thickness))
+        );
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawNgon(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat x,
+    jfloat y,
+    jfloat radius,
+    jint color,
+    jint segments,
+    jfloat thickness,
+    jboolean filled
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    const float safeRadius = std::max(0.0F, static_cast<float>(radius));
+    const int safeSegments = std::clamp(static_cast<int>(segments), 3, 512);
+    if (filled == JNI_TRUE) {
+        drawList->AddNgonFilled(ImVec2(x, y), safeRadius, static_cast<ImU32>(color), safeSegments);
+    } else {
+        drawList->AddNgon(
+            ImVec2(x, y),
+            safeRadius,
+            static_cast<ImU32>(color),
+            safeSegments,
+            std::max(0.1F, static_cast<float>(thickness))
+        );
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawEllipse(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat x,
+    jfloat y,
+    jfloat radiusX,
+    jfloat radiusY,
+    jint color,
+    jfloat rotation,
+    jint segments,
+    jfloat thickness,
+    jboolean filled
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    const ImVec2 radius(std::max(0.0F, static_cast<float>(radiusX)), std::max(0.0F, static_cast<float>(radiusY)));
+    const int safeSegments = std::clamp(static_cast<int>(segments), 0, 512);
+    if (filled == JNI_TRUE) {
+        drawList->AddEllipseFilled(ImVec2(x, y), radius, static_cast<ImU32>(color), rotation, safeSegments);
+    } else {
+        drawList->AddEllipse(
+            ImVec2(x, y),
+            radius,
+            static_cast<ImU32>(color),
+            rotation,
+            safeSegments,
+            std::max(0.1F, static_cast<float>(thickness))
+        );
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawBezierQuadratic(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat x1,
+    jfloat y1,
+    jfloat x2,
+    jfloat y2,
+    jfloat x3,
+    jfloat y3,
+    jint color,
+    jfloat thickness,
+    jint segments
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->AddBezierQuadratic(
+        ImVec2(x1, y1),
+        ImVec2(x2, y2),
+        ImVec2(x3, y3),
+        static_cast<ImU32>(color),
+        std::max(0.1F, static_cast<float>(thickness)),
+        std::clamp(static_cast<int>(segments), 0, 512)
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPolyFilled(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloatArray points,
+    jint color,
+    jboolean concave
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    std::vector<ImVec2> values;
+    if (!ReadDrawPoints(env, points, values)) return;
+    if (values.size() < 3U) {
+        ThrowIllegalArgument(env, "Draw-list filled polygons require at least three points");
+        return;
+    }
+    if (concave == JNI_TRUE) {
+        drawList->AddConcavePolyFilled(values.data(), static_cast<int>(values.size()), static_cast<ImU32>(color));
+    } else {
+        drawList->AddConvexPolyFilled(values.data(), static_cast<int>(values.size()), static_cast<ImU32>(color));
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPathClear(
+    JNIEnv* env,
+    jclass,
+    jint layer
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->PathClear();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPathLineTo(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat x,
+    jfloat y
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->PathLineTo(ImVec2(x, y));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPathArcTo(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat x,
+    jfloat y,
+    jfloat radius,
+    jfloat angleMin,
+    jfloat angleMax,
+    jint segments
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->PathArcTo(
+        ImVec2(x, y),
+        std::max(0.0F, static_cast<float>(radius)),
+        angleMin,
+        angleMax,
+        std::clamp(static_cast<int>(segments), 0, 512)
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPathArcToFast(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat x,
+    jfloat y,
+    jfloat radius,
+    jint minOf12,
+    jint maxOf12
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->PathArcToFast(ImVec2(x, y), std::max(0.0F, static_cast<float>(radius)), minOf12, maxOf12);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPathBezierCubicCurveTo(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat x2,
+    jfloat y2,
+    jfloat x3,
+    jfloat y3,
+    jfloat x4,
+    jfloat y4,
+    jint segments
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->PathBezierCubicCurveTo(
+        ImVec2(x2, y2),
+        ImVec2(x3, y3),
+        ImVec2(x4, y4),
+        std::clamp(static_cast<int>(segments), 0, 512)
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPathBezierQuadraticCurveTo(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat x2,
+    jfloat y2,
+    jfloat x3,
+    jfloat y3,
+    jint segments
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->PathBezierQuadraticCurveTo(
+        ImVec2(x2, y2),
+        ImVec2(x3, y3),
+        std::clamp(static_cast<int>(segments), 0, 512)
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPathRect(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat minX,
+    jfloat minY,
+    jfloat maxX,
+    jfloat maxY,
+    jfloat rounding,
+    jint flags
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->PathRect(
+        ImVec2(minX, minY),
+        ImVec2(maxX, maxY),
+        std::max(0.0F, static_cast<float>(rounding)),
+        static_cast<ImDrawFlags>(flags)
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPathStroke(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jint color,
+    jfloat thickness,
+    jint flags
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->PathStroke(
+        static_cast<ImU32>(color),
+        std::max(0.1F, static_cast<float>(thickness)),
+        static_cast<ImDrawFlags>(flags)
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPathFill(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jint color,
+    jboolean concave
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    if (concave == JNI_TRUE) {
+        drawList->PathFillConcave(static_cast<ImU32>(color));
+    } else {
+        drawList->PathFillConvex(static_cast<ImU32>(color));
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPushClipRect(
+    JNIEnv* env,
+    jclass,
+    jint layer,
+    jfloat minX,
+    jfloat minY,
+    jfloat maxX,
+    jfloat maxY,
+    jboolean intersectWithCurrent
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr) return;
+    drawList->PushClipRect(ImVec2(minX, minY), ImVec2(maxX, maxY), intersectWithCurrent == JNI_TRUE);
+    gState.clipRectDepths[drawList] += 1;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeDrawPopClipRect(
+    JNIEnv* env,
+    jclass,
+    jint layer
+) {
+    ImDrawList* drawList = ResolveDrawList(env, layer);
+    if (drawList == nullptr || !ConsumeClipRectDepth(env, drawList)) return;
+    drawList->PopClipRect();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativePushClipRect(
+    JNIEnv* env,
+    jclass,
+    jfloat minX,
+    jfloat minY,
+    jfloat maxX,
+    jfloat maxY,
+    jboolean intersectWithCurrent
+) {
+    if (!RequireFrame(env)) return;
+    ImGui::PushClipRect(ImVec2(minX, minY), ImVec2(maxX, maxY), intersectWithCurrent == JNI_TRUE);
+    gState.clipRectDepths[ImGui::GetWindowDrawList()] += 1;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativePopClipRect(
+    JNIEnv* env,
+    jclass
+) {
+    if (!RequireFrame(env) || !ConsumeClipRectDepth(env, ImGui::GetWindowDrawList())) return;
+    ImGui::PopClipRect();
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -4976,6 +5464,384 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeAddMouseWh
         return;
     }
     ImGui::GetIO().AddMouseWheelEvent(wheelX, wheelY);
+}
+
+// Injected pointer events count as touch input, like the finger events of nativeTouchEvent.
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeAddMousePosEvent(
+    JNIEnv*,
+    jclass,
+    jfloat x,
+    jfloat y
+) {
+    if (!gState.ready || ImGui::GetCurrentContext() == nullptr) {
+        return;
+    }
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
+    io.AddMousePosEvent(x, y);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeAddMouseButtonEvent(
+    JNIEnv*,
+    jclass,
+    jint button,
+    jboolean down
+) {
+    if (!gState.ready || ImGui::GetCurrentContext() == nullptr ||
+        button < 0 || button >= ImGuiMouseButton_COUNT
+    ) {
+        return;
+    }
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
+    io.AddMouseButtonEvent(static_cast<int>(button), down == JNI_TRUE);
+}
+
+namespace {
+
+// index.js checks keys against the same end value.
+static_assert(ImGuiKey_NamedKey_END == 667);
+
+// A named key or one of ImGuiMod_Ctrl / Shift / Alt / Super. Dear ImGui indexes its key table with the value unchecked.
+bool RequireKey(JNIEnv* env, jint key) {
+    const int value = static_cast<int>(key);
+    const bool named = value >= ImGuiKey_NamedKey_BEGIN && value < ImGuiKey_NamedKey_END;
+    const bool modifier = value == ImGuiMod_Ctrl ||
+        value == ImGuiMod_Shift ||
+        value == ImGuiMod_Alt ||
+        value == ImGuiMod_Super;
+    if (!named && !modifier) {
+        ThrowIllegalArgument(env, "Key must be a value of imgui.Key or imgui.Mod");
+        return false;
+    }
+    return true;
+}
+
+// A named key with optional modifiers, or a single modifier.
+bool RequireKeyChord(JNIEnv* env, jint keyChord) {
+    const int value = static_cast<int>(keyChord);
+    const int key = value & ~ImGuiMod_Mask_;
+    const int modifiers = value & ImGuiMod_Mask_;
+    const bool named = key >= ImGuiKey_NamedKey_BEGIN && key < ImGuiKey_NamedKey_END;
+    if (!named && !(key == 0 && modifiers != 0 && ImIsPowerOfTwo(modifiers))) {
+        ThrowIllegalArgument(env, "Key chord must be a value of imgui.Key, optionally combined with imgui.Mod values");
+        return false;
+    }
+    return true;
+}
+
+}  // namespace
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeIsKeyDown(
+    JNIEnv* env,
+    jclass,
+    jint key
+) {
+    if (!RequireContext(env) || !RequireKey(env, key)) return JNI_FALSE;
+    return ImGui::IsKeyDown(static_cast<ImGuiKey>(key)) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeIsKeyPressed(
+    JNIEnv* env,
+    jclass,
+    jint key,
+    jboolean repeat
+) {
+    if (!RequireContext(env) || !RequireKey(env, key)) return JNI_FALSE;
+    return ImGui::IsKeyPressed(static_cast<ImGuiKey>(key), repeat == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeIsKeyReleased(
+    JNIEnv* env,
+    jclass,
+    jint key
+) {
+    if (!RequireContext(env) || !RequireKey(env, key)) return JNI_FALSE;
+    return ImGui::IsKeyReleased(static_cast<ImGuiKey>(key)) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeGetKeyPressedAmount(
+    JNIEnv* env,
+    jclass,
+    jint key,
+    jfloat repeatDelay,
+    jfloat rate
+) {
+    if (!RequireContext(env) || !RequireKey(env, key)) return 0;
+    return ImGui::GetKeyPressedAmount(static_cast<ImGuiKey>(key), repeatDelay, rate);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeGetKeyName(
+    JNIEnv* env,
+    jclass,
+    jint key
+) {
+    if (!RequireContext(env) || (key != ImGuiKey_None && !RequireKey(env, key))) return nullptr;
+    return Utf8ToJString(env, ImGui::GetKeyName(static_cast<ImGuiKey>(key)));
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeIsKeyChordPressed(
+    JNIEnv* env,
+    jclass,
+    jint keyChord
+) {
+    if (!RequireContext(env) || !RequireKeyChord(env, keyChord)) return JNI_FALSE;
+    return ImGui::IsKeyChordPressed(static_cast<ImGuiKeyChord>(keyChord)) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeShortcut(
+    JNIEnv* env,
+    jclass,
+    jint keyChord,
+    jint flags
+) {
+    if (!RequireFrame(env) || !RequireKeyChord(env, keyChord)) return JNI_FALSE;
+    return ImGui::Shortcut(static_cast<ImGuiKeyChord>(keyChord), static_cast<ImGuiInputFlags>(flags))
+        ? JNI_TRUE
+        : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetNextItemShortcut(
+    JNIEnv* env,
+    jclass,
+    jint keyChord,
+    jint flags
+) {
+    if (!RequireFrame(env) || !RequireKeyChord(env, keyChord)) return;
+    ImGui::SetNextItemShortcut(static_cast<ImGuiKeyChord>(keyChord), static_cast<ImGuiInputFlags>(flags));
+}
+
+namespace {
+
+// Platform_GetClipboardTextFn / Platform_SetClipboardTextFn: Dear ImGui calls them on the render thread, inside a
+// frame, so the thread is attached and no Java exception is pending. ImGuiNative catches what the clipboard throws.
+const char* ReadPlatformClipboard(ImGuiContext*) {
+    JNIEnv* env = nullptr;
+    if (gJavaVm == nullptr || gJavaVm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        return "";
+    }
+    auto text = static_cast<jstring>(env->CallStaticObjectMethod(gNativeClass, gReadClipboardMethod));
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return "";
+    }
+    gState.clipboardText = text == nullptr ? std::string() : JStringToUtf8(env, text);
+    if (text != nullptr) {
+        env->DeleteLocalRef(text);
+    }
+    return gState.clipboardText.c_str();
+}
+
+void WritePlatformClipboard(ImGuiContext*, const char* text) {
+    JNIEnv* env = nullptr;
+    if (gJavaVm == nullptr || gJavaVm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        return;
+    }
+    jstring value = Utf8ToJString(env, text == nullptr ? "" : text);
+    if (value == nullptr) {
+        env->ExceptionClear();
+        return;
+    }
+    env->CallStaticVoidMethod(gNativeClass, gWriteClipboardMethod, value);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+    }
+    env->DeleteLocalRef(value);
+}
+
+}  // namespace
+
+// Routes the clipboard of Dear ImGui to the Android clipboard. The privileged renderer process does not call this and
+// keeps the local clipboard of Dear ImGui.
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeUsePlatformClipboard(
+    JNIEnv* env,
+    jclass nativeClass
+) {
+    if (!RequireContext(env)) return;
+    if (gNativeClass == nullptr) {
+        env->GetJavaVM(&gJavaVm);
+        gReadClipboardMethod = env->GetStaticMethodID(nativeClass, "readClipboardForNative", "()Ljava/lang/String;");
+        gWriteClipboardMethod = env->GetStaticMethodID(nativeClass, "writeClipboardForNative", "(Ljava/lang/String;)V");
+        if (gReadClipboardMethod == nullptr || gWriteClipboardMethod == nullptr) return;
+        gNativeClass = static_cast<jclass>(env->NewGlobalRef(nativeClass));
+    }
+    ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
+    platformIo.Platform_GetClipboardTextFn = ReadPlatformClipboard;
+    platformIo.Platform_SetClipboardTextFn = WritePlatformClipboard;
+}
+
+namespace {
+
+bool RequireDragDropRoot(JNIEnv* env) {
+    if (GImGui->DragDropWithinSource || GImGui->DragDropWithinTarget) {
+        ThrowIllegalState(env, "Drag-and-drop sources and targets cannot be nested");
+        return false;
+    }
+    return true;
+}
+
+// {type, data as JSON or null, "1" while the target previews it, "1" when it is delivered}. The data of the payloads
+// Dear ImGui makes itself is known only for the color types; the plugin's own payloads are JSON.
+jobjectArray DragDropPayloadToJava(JNIEnv* env, const ImGuiPayload* payload) {
+    if (payload == nullptr) return nullptr;
+    std::string data;
+    bool hasData = true;
+    if (payload->DataType[0] != '_') {
+        data.assign(static_cast<const char*>(payload->Data), static_cast<size_t>(payload->DataSize));
+    } else if (payload->IsDataType(IMGUI_PAYLOAD_TYPE_COLOR_3F) || payload->IsDataType(IMGUI_PAYLOAD_TYPE_COLOR_4F)) {
+        const auto* values = static_cast<const float*>(payload->Data);
+        const int count = payload->DataSize / static_cast<int>(sizeof(float));
+        data = "[";
+        for (int index = 0; index < count; ++index) {
+            std::array<char, 32> number{};
+            snprintf(number.data(), number.size(), index == 0 ? "%g" : ",%g", values[index]);
+            data += number.data();
+        }
+        data += "]";
+    } else {
+        hasData = false;
+    }
+    jclass stringClass = env->FindClass("java/lang/String");
+    if (stringClass == nullptr) return nullptr;
+    jobjectArray result = env->NewObjectArray(4, stringClass, nullptr);
+    env->DeleteLocalRef(stringClass);
+    if (result == nullptr) return nullptr;
+    const std::array<std::string, 3> fields = {
+        std::string(payload->DataType),
+        payload->Preview ? "1" : "0",
+        payload->Delivery ? "1" : "0",
+    };
+    const std::array<int, 3> indices = {0, 2, 3};
+    for (size_t index = 0; index < fields.size(); ++index) {
+        jstring field = Utf8ToJString(env, fields[index]);
+        if (field == nullptr) return nullptr;
+        env->SetObjectArrayElement(result, indices[index], field);
+        env->DeleteLocalRef(field);
+    }
+    if (hasData) {
+        jstring field = Utf8ToJString(env, data);
+        if (field == nullptr) return nullptr;
+        env->SetObjectArrayElement(result, 1, field);
+        env->DeleteLocalRef(field);
+    }
+    return result;
+}
+
+}  // namespace
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeBeginDragDropSource(
+    JNIEnv* env,
+    jclass,
+    jint flags
+) {
+    if (!RequireFrame(env) || !RequireDragDropRoot(env)) return JNI_FALSE;
+    return ImGui::BeginDragDropSource(static_cast<ImGuiDragDropFlags>(flags)) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetDragDropPayload(
+    JNIEnv* env,
+    jclass,
+    jstring type,
+    jstring json,
+    jint condition
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    if (!GImGui->DragDropWithinSource) {
+        ThrowIllegalState(env, "setDragDropPayload called outside a drag-and-drop source");
+        return JNI_FALSE;
+    }
+    const std::string typeValue = JStringToUtf8(env, type);
+    const std::string data = JStringToUtf8(env, json);
+    if (typeValue.empty() || typeValue.size() >= sizeof(ImGuiPayload::DataType) || typeValue[0] == '_') {
+        ThrowIllegalArgument(env, "Drag-and-drop type must have 1 to 32 UTF-8 bytes and must not start with '_'");
+        return JNI_FALSE;
+    }
+    if (data.empty() || data.size() > static_cast<size_t>(kMaxDragDropPayloadBytes)) {
+        ThrowIllegalArgument(env, "Drag-and-drop payload must have 1 to 65536 UTF-8 bytes");
+        return JNI_FALSE;
+    }
+    return ImGui::SetDragDropPayload(
+        typeValue.c_str(),
+        data.data(),
+        data.size(),
+        static_cast<ImGuiCond>(condition)
+    ) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeEndDragDropSource(
+    JNIEnv* env,
+    jclass
+) {
+    if (!RequireFrame(env)) return;
+    if (!GImGui->DragDropWithinSource) {
+        ThrowIllegalState(env, "endDragDropSource called without a matching beginDragDropSource");
+        return;
+    }
+    ImGui::EndDragDropSource();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeBeginDragDropTarget(
+    JNIEnv* env,
+    jclass
+) {
+    if (!RequireFrame(env) || !RequireDragDropRoot(env)) return JNI_FALSE;
+    return ImGui::BeginDragDropTarget() ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeAcceptDragDropPayload(
+    JNIEnv* env,
+    jclass,
+    jstring type,
+    jint flags
+) {
+    if (!RequireFrame(env)) return nullptr;
+    if (!GImGui->DragDropWithinTarget) {
+        ThrowIllegalState(env, "acceptDragDropPayload called outside a drag-and-drop target");
+        return nullptr;
+    }
+    const std::string typeValue = JStringToUtf8(env, type);
+    return DragDropPayloadToJava(
+        env,
+        ImGui::AcceptDragDropPayload(typeValue.c_str(), static_cast<ImGuiDragDropFlags>(flags))
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeEndDragDropTarget(
+    JNIEnv* env,
+    jclass
+) {
+    if (!RequireFrame(env)) return;
+    if (!GImGui->DragDropWithinTarget) {
+        ThrowIllegalState(env, "endDragDropTarget called without a matching beginDragDropTarget");
+        return;
+    }
+    ImGui::EndDragDropTarget();
+}
+
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeGetDragDropPayload(
+    JNIEnv* env,
+    jclass
+) {
+    if (!RequireContext(env)) return nullptr;
+    return DragDropPayloadToJava(env, ImGui::GetDragDropPayload());
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

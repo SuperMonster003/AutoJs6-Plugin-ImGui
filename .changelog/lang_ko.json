@@ -5,6 +5,16 @@
   "changelog_label_improvement": "개선",
   "changelog_label_dependency": "의존성",
   "$data": {
+    "v1.15.0": {
+      "released_date": "2026/10/30",
+      "feature": [
+        "키보드 조회: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed 와 단축키 shortcut, setNextItemShortcut 을 추가했습니다. 키 조합은 ui.Mod.Ctrl | ui.Key.S 처럼 씁니다. Key 상수는 이제 키보드 전체를 포함합니다: A 부터 Z, Digit0 부터 Digit9, F1 부터 F24, 숫자 키패드 등",
+        "클립보드: getClipboardText / setClipboardText 는 호스트의 getClip / setClip 과 같은 Android 클립보드를 사용하며, 입력란의 Ctrl+C / Ctrl+V 도 마찬가지입니다. Android 10 부터는 입력 포커스를 가진 앱만 클립보드를 읽을 수 있습니다. 플로팅 창에 미치는 영향은 docs/LIMITS.md 를 참고하세요",
+        "드래그 앤 드롭: beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload 와 도우미 함수 withDragDropSource / withDragDropTarget 으로 항목을 다른 항목으로 끌어다 놓을 수 있습니다 (옵션은 DragDropFlags). 페이로드는 문자열, 숫자 또는 JSON 으로 직렬화할 수 있는 객체이며, 색상 위젯의 색도 끌 수 있습니다. 예제 widget-overview 의 새 섹션을 참고하세요",
+        "사용자 정의 그리기: 경로 함수 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex 등), 드로우 리스트와 창의 pushClipRect / popClipRect, 새 도형 addEllipse, addNgon, addQuad 와 채우기 버전, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded 를 추가했습니다. 예제 widget-overview 를 참고하세요",
+        "터치 시뮬레이션: addMousePosEvent(x, y) 와 addMouseButtonEvent(button, down) 으로 스크립트가 손가락처럼 창을 조작할 수 있어 UI 자동 테스트 등에 쓸 수 있습니다. 좌표는 getMousePos 와 같은 프레임 픽셀이며 createWindow 의 dp 가 아닙니다. 창 아래의 앱에는 영향을 주지 않습니다"
+      ]
+    },
     "v1.14.0": {
       "released_date": "2026/10/30",
       "hint": [

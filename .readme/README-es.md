@@ -149,12 +149,13 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 - Contenedores y navegación: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / la familia de tablas `withTable` / `withListBox` / `withCombo` / `selectable`, además de `listClipper` para listas largas. Ordenación de tablas: `tableGetSortSpecs` / `SortDirection` y `dataTable` con `sortable: true`.
 - Ventanas emergentes y menús: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
 - Estilo y diseño: `styleColorsDark` / `styleColorsLight` / `styleColorsClassic` / `pushStyleColor` / `pushStyleVar` / `setWindowFontScale` / `withGroup` / `withDisabled` / `withId` / `indent` / `sameLine` / `separator` / `spacing`, además de las familias de cursor y desplazamiento.
-- Texturas y dibujo: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, además de `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` con primitivas de línea, rectángulo, círculo, triángulo, texto, polilínea, Bézier e imagen.
-- Consultas y entrada: consultas de estado como `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate`, enfoque activo con `setKeyboardFocusHere` y primitivas `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput`. Todos los valores de `InputTextFlags` expuestos se pasan a Dear ImGui; se omiten los que dependen de callbacks y `WordWrap` solo se aplica a la entrada multilínea.
+- Texturas y dibujo: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`, además de `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList` con primitivas de línea, rectángulo, círculo, triángulo, texto, polilínea, Bézier e imagen. Dibujo de trazados: `pathLineTo` / `pathArcTo` / `pathArcToFast` / `pathBezierCubicCurveTo` / `pathBezierQuadraticCurveTo` / `pathRect` / `pathStroke` / `pathFillConvex` / `pathFillConcave`; `pushClipRect` / `popClipRect` en listas de dibujo y ventanas; más formas: `addEllipse` / `addNgon` / `addQuad` / `addBezierQuadratic` / `addRectFilledMultiColor` / `addConvexPolyFilled` / `addConcavePolyFilled` / `addImageQuad` / `addImageRounded`.
+- Consultas y entrada: consultas de estado como `isItemClicked` / `isItemHovered` / `isItemActive` / `isItemEdited` / `isMouseDown` / `getMousePos` / `calcTextSize` / `framerate`, enfoque activo con `setKeyboardFocusHere` y primitivas `addInputCharacters` / `sendKey` / `addMouseWheel` / `wantTextInput`. Todos los valores de `InputTextFlags` expuestos se pasan a Dear ImGui; se omiten los que dependen de callbacks y `WordWrap` solo se aplica a la entrada multilínea. Consultas de teclas y atajos: `isKeyDown` / `isKeyPressed` / `isKeyReleased` / `getKeyPressedAmount` / `getKeyName` / `isKeyChordPressed` / `shortcut` / `setNextItemShortcut`, con combinaciones como `ui.Mod.Ctrl | ui.Key.S`. Portapapeles: `getClipboardText` / `setClipboardText`. Inyección de puntero para pruebas automáticas de la interfaz: `addMousePosEvent` / `addMouseButtonEvent` (píxeles del fotograma, como `getMousePos`).
+- Arrastrar y soltar: `withDragDropSource` / `withDragDropTarget`, `beginDragDropSource` / `setDragDropPayload` / `endDragDropSource` / `beginDragDropTarget` / `acceptDragDropPayload` / `endDragDropTarget` / `getDragDropPayload`, con `DragDropFlags`; la carga es una cadena, un número o cualquier objeto serializable a JSON.
 - Herramientas de depuración: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide` muestran las ventanas de herramientas integradas de Dear ImGui; cada una acepta una referencia booleana mutable opcional que el botón de cierre pone a false.
 - Componentes de alto nivel y ejemplos: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, además de `listExamples` / `getExampleSource` / `runExample`; cada sesión ofrece las mismas fábricas.
 - Referencias mutables: `imgui.ref` ligero (o un objeto `{value: x}`), además de los helpers compatibles de arrays Java `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.ints` / `imgui.strings`.
-- Constantes: `BackendStatus` / `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `SortDirection` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, que coinciden con las enumeraciones de Dear ImGui o tablas del plugin del mismo nombre.
+- Constantes: `BackendStatus` / `Cond` / `WindowFlags` / `ChildFlags` / `InputTextFlags` / `SliderFlags` / `TreeNodeFlags` / `SelectableFlags` / `TabBarFlags` / `TabItemFlags` / `ComboFlags` / `PopupFlags` / `HoveredFlags` / `FocusedFlags` / `ColorEditFlags` / `TableFlags` / `TableColumnFlags` / `TableRowFlags` / `TableBgTarget` / `SortDirection` / `Col` / `StyleVar` / `Themes` / `Appearance` / `Fonts` / `Icons` / `Dir` / `Key` / `Mod` / `InputFlags` / `DragDropFlags` / `MouseButton` / `ButtonFlags` / `TextureFlags` / `DrawListLayer` / `DrawFlags` / `LogLevel` / `ToastPosition` / `Limits`, que coinciden con las enumeraciones de Dear ImGui o tablas del plugin del mismo nombre.
 
 ******
 
@@ -171,6 +172,16 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 ### Historial de versiones
 
 ******
+
+#### v1.15.0
+
+###### 2026/10/30
+
+* `Función` Consultas de teclado: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, y atajos de teclado con shortcut y setNextItemShortcut. Las combinaciones se escriben ui.Mod.Ctrl | ui.Key.S. Las constantes Key cubren ahora todo el teclado: A a Z, Digit0 a Digit9, F1 a F24, el teclado numérico y más
+* `Función` Portapapeles: getClipboardText / setClipboardText usan el mismo portapapeles de Android que getClip / setClip del host, igual que Ctrl+C / Ctrl+V en los campos de texto. Desde Android 10 el sistema solo deja leer el portapapeles a la app con el foco de entrada; docs/LIMITS.md explica cómo afecta a las ventanas flotantes
+* `Función` Arrastrar y soltar: arrastra un elemento sobre otro con beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload y los auxiliares withDragDropSource / withDragDropTarget (DragDropFlags define las opciones). La carga puede ser una cadena, un número o cualquier objeto serializable a JSON, y también se pueden arrastrar colores desde los controles de color; consulta la nueva sección del ejemplo widget-overview
+* `Función` Dibujo personalizado: funciones de trazado (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex y más), pushClipRect / popClipRect en listas de dibujo y ventanas, y formas nuevas: addEllipse, addNgon, addQuad y sus versiones rellenas, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded; consulta el ejemplo widget-overview
+* `Función` Toque simulado: addMousePosEvent(x, y) y addMouseButtonEvent(button, down) permiten que un script actúe como un dedo sobre la ventana, por ejemplo para probar una interfaz automáticamente. Las coordenadas son píxeles del fotograma, como en getMousePos, no los dp de createWindow; las apps bajo la ventana no se ven afectadas
 
 #### v1.14.0
 
@@ -193,25 +204,6 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 * `Función` createTexture y texture.update también aceptan un ArrayBuffer o un arreglo tipado (como Uint8Array) con datos PNG o JPEG
 * `Función` statsOverlay muestra el tiempo de trabajo de cada fotograma (el tiempo de dibujo, sin esperar a la pantalla) y snapshot() lo devuelve como workTime
 * `Mejora` docs/FRAME-LOOP.md explica las frecuencias de fotogramas y el ahorro de energía, y docs/LIMITS.md los límites de listClipper
-
-#### v1.12.0
-
-###### 2026/10/29
-
-* `Aviso` Cambio incompatible: las posiciones y tamaños de la ventana están ahora en dp en todas partes. Antes estaban en px los x / y de createWindow, los x / y / width / height / displayWidth / displayHeight de Session, setPosition / setSize, los datos de los eventos y los x / y de los botones flotantes; las coordenadas dentro de un fotograma siguen en px. Cómo actualizar los scripts se explica en docs/MIGRATION-1.12.md
-* `Aviso` Cambio incompatible: un argumento incorrecto (tipo erróneo, NaN, número como cadena o valor fuera de rango) ahora lanza TypeError o RangeError con el nombre del método y del argumento, por ejemplo `imgui.sliderFloat: argument "max" must be a finite number`, en lugar de convertirse o limitarse en silencio; las opciones de ventana como fps, alpha y fontSize se comprueban igual
-* `Aviso` Cambio incompatible: los campos de Session y de los botones flotantes son de solo lectura (asignar uno lanza una excepción en modo estricto); use los métodos set. FloatingButton.setPosition ya no acepta el argumento source, y un número como color de un botón flotante se interpreta como cualquier otro color de imgui (0xAABBGGRR, como devuelve colorU32) y no como un color ARGB de Android
-* `Aviso` Cambio incompatible: los eventos de sesión, las devoluciones de llamada de los botones flotantes y los resultados de los diálogos se ejecutan en el hilo del script, donde se ejecuta la función de renderizado, y no en el hilo de interfaz de Android; consulte docs/THREADING.md
-* `Función` imgui.dp() / imgui.px() (alias Dp / Px) convierten entre dp y px, e imgui.density da el número de px por dp
-* `Función` Los colores aceptan en todas partes un número empaquetado, [r, g, b, a], {r, g, b, a} o "#rrggbbaa", incluidos textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; los argumentos r, g, b, a por separado siguen funcionando
-* `Función` Ejemplo background-task: un hilo de trabajo realiza una tarea lenta mientras la ventana sigue dibujándose, con progreso y cancelación
-* `Función` docs/THREADING.md explica en qué hilo se ejecuta cada devolución de llamada y cómo hacer trabajo lento en segundo plano, y docs/MIGRATION-1.12.md enumera los cambios en los scripts necesarios para esta versión
-* `Corrección` Las devoluciones de llamada de eventos y de botones flotantes podían ejecutarse a la vez que la función de renderizado, y llamar a sleep en ellas producía un error
-* `Corrección` Session.theme no cambiaba después de imgui.setTheme
-* `Corrección` Al arrastrar la ventana, el evento moved informaba la fuente api en lugar de drag
-* `Mejora` Los ejemplos usan ui.dp() en lugar de multiplicar por window.density
-* `Mejora` Las declaraciones TypeScript indican la unidad y el rango permitido de cada tamaño, posición y opción, y marcan como readonly los campos de Session y de los botones flotantes
-* `Mejora` Cada versión de GitHub incluye un archivo SHA256SUMS para comprobar los APK descargados
 
 ##### Para consultar más versiones
 

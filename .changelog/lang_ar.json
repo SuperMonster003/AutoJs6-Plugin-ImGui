@@ -5,6 +5,16 @@
   "changelog_label_improvement": "تحسين",
   "changelog_label_dependency": "تبعية",
   "$data": {
+    "v1.15.0": {
+      "released_date": "2026/10/30",
+      "feature": [
+        "استعلامات لوحة المفاتيح: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, واختصارات لوحة المفاتيح عبر shortcut و setNextItemShortcut. تكتب التركيبات هكذا: ui.Mod.Ctrl | ui.Key.S. تغطي ثوابت Key الآن لوحة المفاتيح كاملة: من A إلى Z, ومن Digit0 إلى Digit9, ومن F1 إلى F24, ولوحة الأرقام وغيرها",
+        "الحافظة: يستخدم getClipboardText / setClipboardText حافظة Android نفسها التي يستخدمها getClip / setClip في المضيف, وكذلك Ctrl+C / Ctrl+V في حقول النص. منذ Android 10 لا يسمح النظام بقراءة الحافظة إلا للتطبيق الذي يملك تركيز الإدخال; يشرح docs/LIMITS.md تأثير ذلك على النوافذ العائمة",
+        "السحب والإفلات: اسحب عنصرا إلى عنصر آخر باستخدام beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload والدالتين المساعدتين withDragDropSource / withDragDropTarget (تضبط DragDropFlags الخيارات). يمكن أن تكون الحمولة سلسلة نصية أو رقما أو أي كائن يمكن تحويله إلى JSON, ويمكن سحب الألوان من عناصر الألوان; راجع القسم الجديد في المثال widget-overview",
+        "الرسم المخصص: دوال المسارات (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex وغيرها), و pushClipRect / popClipRect لقوائم الرسم والنوافذ, وأشكال جديدة: addEllipse و addNgon و addQuad ونسخها المعبأة, و addBezierQuadratic و addRectFilledMultiColor و addConvexPolyFilled و addConcavePolyFilled و addImageQuad و addImageRounded; راجع المثال widget-overview",
+        "محاكاة اللمس: يتيح addMousePosEvent(x, y) و addMouseButtonEvent(button, down) للسكربت التصرف كإصبع على النافذة, مثلا لاختبار الواجهة آليا. الإحداثيات بكسلات الإطار مثل getMousePos, وليست dp الخاصة بـ createWindow; ولا تتأثر التطبيقات أسفل النافذة"
+      ]
+    },
     "v1.14.0": {
       "released_date": "2026/10/30",
       "hint": [

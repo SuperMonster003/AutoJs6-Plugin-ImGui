@@ -149,12 +149,13 @@ imgui.runExample("widget-overview");
 - الحاويات والتنقل: `withTabBar` و `withTabItem` و `withTreeNode` و `treeNodeEx` و `collapsingHeader` وعائلة الجداول `withTable` و `withListBox` و `withCombo` و `selectable`, إضافة إلى `listClipper` للقوائم الطويلة. فرز الجداول: `tableGetSortSpecs` / `SortDirection` و `dataTable` مع `sortable: true`.
 - النوافذ المنبثقة والقوائم: `openPopup` و `withPopup` و `withPopupModal` و `beginPopupContextItem` و `beginPopupContextWindow` و `withContextItem` و `withContextWindow` و `closeCurrentPopup` و `withMenuBar` و `withMenu` و `menuItem` و `setTooltip` و `setItemTooltip` و `withItemTooltip`.
 - الأنماط والتخطيط: `styleColorsDark` و `styleColorsLight` و `styleColorsClassic` و `pushStyleColor` و `pushStyleVar` و `setWindowFontScale` و `withGroup` و `withDisabled` و `withId` و `indent` و `sameLine` و `separator` و `spacing` إضافة إلى عائلتي المؤشر والتمرير.
-- الأنسجة والرسم: `createTexture` و`texture.update` و`destroyTexture` و`image` و`imageButton` و`colorU32`، إضافة إلى `getWindowDrawList` و`getForegroundDrawList` و`getBackgroundDrawList` مع بدائيات الخط والمستطيل والدائرة والمثلث والنص والخط المتعدد ومنحنى Bézier والصورة.
-- الاستعلامات والإدخال: استعلامات الحالة مثل `isItemClicked` و `isItemHovered` و `isItemActive` و `isItemEdited` و `isMouseDown` و `getMousePos` و `calcTextSize` و `framerate`، والتركيز النشط عبر `setKeyboardFocusHere`، وأوليات `addInputCharacters` و `sendKey` و `addMouseWheel` و `wantTextInput`. تُمرر كل قيم `InputTextFlags` المكشوفة حاليًا إلى Dear ImGui؛ أما العلامات المعتمدة على callbacks فغير مكشوفة و `WordWrap` للإدخال متعدد الأسطر فقط.
+- الأنسجة والرسم: `createTexture` و`texture.update` و`destroyTexture` و`image` و`imageButton` و`colorU32`، إضافة إلى `getWindowDrawList` و`getForegroundDrawList` و`getBackgroundDrawList` مع بدائيات الخط والمستطيل والدائرة والمثلث والنص والخط المتعدد ومنحنى Bézier والصورة. رسم المسارات: `pathLineTo` / `pathArcTo` / `pathArcToFast` / `pathBezierCubicCurveTo` / `pathBezierQuadraticCurveTo` / `pathRect` / `pathStroke` / `pathFillConvex` / `pathFillConcave`; و `pushClipRect` / `popClipRect` لقوائم الرسم والنوافذ; وأشكال إضافية: `addEllipse` / `addNgon` / `addQuad` / `addBezierQuadratic` / `addRectFilledMultiColor` / `addConvexPolyFilled` / `addConcavePolyFilled` / `addImageQuad` / `addImageRounded`.
+- الاستعلامات والإدخال: استعلامات الحالة مثل `isItemClicked` و `isItemHovered` و `isItemActive` و `isItemEdited` و `isMouseDown` و `getMousePos` و `calcTextSize` و `framerate`، والتركيز النشط عبر `setKeyboardFocusHere`، وأوليات `addInputCharacters` و `sendKey` و `addMouseWheel` و `wantTextInput`. تُمرر كل قيم `InputTextFlags` المكشوفة حاليًا إلى Dear ImGui؛ أما العلامات المعتمدة على callbacks فغير مكشوفة و `WordWrap` للإدخال متعدد الأسطر فقط. استعلامات المفاتيح والاختصارات: `isKeyDown` / `isKeyPressed` / `isKeyReleased` / `getKeyPressedAmount` / `getKeyName` / `isKeyChordPressed` / `shortcut` / `setNextItemShortcut`, مع تركيبات مثل `ui.Mod.Ctrl | ui.Key.S`. الحافظة: `getClipboardText` / `setClipboardText`. حقن المؤشر للاختبار الآلي للواجهة: `addMousePosEvent` / `addMouseButtonEvent` (بكسلات الإطار, مثل `getMousePos`).
+- السحب والإفلات: `withDragDropSource` / `withDragDropTarget`, `beginDragDropSource` / `setDragDropPayload` / `endDragDropSource` / `beginDragDropTarget` / `acceptDragDropPayload` / `endDragDropTarget` / `getDragDropPayload`, مع `DragDropFlags`; الحمولة سلسلة نصية أو رقم أو أي كائن يمكن تحويله إلى JSON.
 - أدوات التصحيح: تعرض `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide` نوافذ الأدوات المدمجة في Dear ImGui; وتقبل كل منها مرجعًا منطقيًا قابلًا للتغيير اختياريًا يضبطه زر الإغلاق على false.
 - المكونات عالية المستوى والأمثلة: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`، إضافة إلى `listExamples` / `getExampleSource` / `runExample`؛ وتتوفر المصانع نفسها في كل جلسة.
 - المراجع القابلة للتغيير: `imgui.ref` الخفيف (أو كائن `{value: x}` عادي)، ومساعدات مصفوفات Java المتوافقة `imgui.bool` و `imgui.int` و `imgui.float` و `imgui.string` و `imgui.floats` و `imgui.ints` و `imgui.strings`.
-- الثوابت: `BackendStatus` / `Cond` و `WindowFlags` و `ChildFlags` و `InputTextFlags` و `SliderFlags` و `TreeNodeFlags` و `SelectableFlags` و `TabBarFlags` و `TabItemFlags` و `ComboFlags` و `PopupFlags` و `HoveredFlags` و `FocusedFlags` و `ColorEditFlags` و `TableFlags` و `TableColumnFlags` و `TableRowFlags` و `TableBgTarget` و `SortDirection` و `Col` و `StyleVar` و `Themes` و `Appearance` و `Fonts` و `Icons` و `Dir` و `Key` و `MouseButton` و `ButtonFlags` و `TextureFlags` و `DrawListLayer` و `DrawFlags` و `LogLevel` و `ToastPosition` و `Limits` بما يطابق تعدادات Dear ImGui أو جداول الإضافة التي تحمل الأسماء نفسها.
+- الثوابت: `BackendStatus` / `Cond` و `WindowFlags` و `ChildFlags` و `InputTextFlags` و `SliderFlags` و `TreeNodeFlags` و `SelectableFlags` و `TabBarFlags` و `TabItemFlags` و `ComboFlags` و `PopupFlags` و `HoveredFlags` و `FocusedFlags` و `ColorEditFlags` و `TableFlags` و `TableColumnFlags` و `TableRowFlags` و `TableBgTarget` و `SortDirection` و `Col` و `StyleVar` و `Themes` و `Appearance` و `Fonts` و `Icons` و `Dir` و `Key` و `Mod` و `InputFlags` و `DragDropFlags` و `MouseButton` و `ButtonFlags` و `TextureFlags` و `DrawListLayer` و `DrawFlags` و `LogLevel` و `ToastPosition` و `Limits` بما يطابق تعدادات Dear ImGui أو جداول الإضافة التي تحمل الأسماء نفسها.
 
 ******
 
@@ -171,6 +172,16 @@ imgui.runExample("widget-overview");
 ### سجل الإصدارات
 
 ******
+
+#### v1.15.0
+
+###### 2026/10/30
+
+* `ميزة` استعلامات لوحة المفاتيح: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, واختصارات لوحة المفاتيح عبر shortcut و setNextItemShortcut. تكتب التركيبات هكذا: ui.Mod.Ctrl | ui.Key.S. تغطي ثوابت Key الآن لوحة المفاتيح كاملة: من A إلى Z, ومن Digit0 إلى Digit9, ومن F1 إلى F24, ولوحة الأرقام وغيرها
+* `ميزة` الحافظة: يستخدم getClipboardText / setClipboardText حافظة Android نفسها التي يستخدمها getClip / setClip في المضيف, وكذلك Ctrl+C / Ctrl+V في حقول النص. منذ Android 10 لا يسمح النظام بقراءة الحافظة إلا للتطبيق الذي يملك تركيز الإدخال; يشرح docs/LIMITS.md تأثير ذلك على النوافذ العائمة
+* `ميزة` السحب والإفلات: اسحب عنصرا إلى عنصر آخر باستخدام beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload والدالتين المساعدتين withDragDropSource / withDragDropTarget (تضبط DragDropFlags الخيارات). يمكن أن تكون الحمولة سلسلة نصية أو رقما أو أي كائن يمكن تحويله إلى JSON, ويمكن سحب الألوان من عناصر الألوان; راجع القسم الجديد في المثال widget-overview
+* `ميزة` الرسم المخصص: دوال المسارات (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex وغيرها), و pushClipRect / popClipRect لقوائم الرسم والنوافذ, وأشكال جديدة: addEllipse و addNgon و addQuad ونسخها المعبأة, و addBezierQuadratic و addRectFilledMultiColor و addConvexPolyFilled و addConcavePolyFilled و addImageQuad و addImageRounded; راجع المثال widget-overview
+* `ميزة` محاكاة اللمس: يتيح addMousePosEvent(x, y) و addMouseButtonEvent(button, down) للسكربت التصرف كإصبع على النافذة, مثلا لاختبار الواجهة آليا. الإحداثيات بكسلات الإطار مثل getMousePos, وليست dp الخاصة بـ createWindow; ولا تتأثر التطبيقات أسفل النافذة
 
 #### v1.14.0
 
@@ -193,25 +204,6 @@ imgui.runExample("widget-overview");
 * `ميزة` تقبل createTexture و texture.update أيضًا ArrayBuffer أو مصفوفة typed (مثل Uint8Array) تحتوي بيانات PNG أو JPEG
 * `ميزة` يعرض statsOverlay زمن عمل كل إطار (وقت الرسم دون انتظار تحديث الشاشة), وتعيده snapshot() باسم workTime
 * `تحسين` يشرح docs/FRAME-LOOP.md معدلات الإطارات وتوفير الطاقة, ويوضح docs/LIMITS.md حدود listClipper
-
-#### v1.12.0
-
-###### 2026/10/29
-
-* `تلميح` تغيير غير متوافق: أصبحت مواضع النافذة وأحجامها بوحدة dp في كل مكان. كانت x / y في createWindow و x / y / width / height / displayWidth / displayHeight في Session و setPosition / setSize وبيانات الأحداث و x / y للأزرار العائمة بوحدة px; وتبقى الإحداثيات داخل الإطار بوحدة px. راجع docs/MIGRATION-1.12.md لمعرفة طريقة تحديث السكربتات
-* `تلميح` تغيير غير متوافق: الوسيط الخاطئ (نوع خاطئ أو NaN أو رقم في سلسلة نصية أو قيمة خارج النطاق) يرمي الآن TypeError أو RangeError يذكر اسم الأسلوب واسم الوسيط, مثل `imgui.sliderFloat: argument "max" must be a finite number`, بدلًا من تحويله أو قصّه بصمت; وتُفحص خيارات النافذة مثل fps و alpha و fontSize بالطريقة نفسها
-* `تلميح` تغيير غير متوافق: أصبحت حقول Session والأزرار العائمة للقراءة فقط (يرمي الإسناد استثناءً في الوضع الصارم); استخدم أساليب set بدلًا منها. لم يعد FloatingButton.setPosition يقبل الوسيط source, والرقم الممرر لونًا لزر عائم يُقرأ مثل أي لون آخر في imgui (0xAABBGGRR كما يعيده colorU32) وليس لون Android بصيغة ARGB
-* `تلميح` تغيير غير متوافق: تعمل أحداث الجلسة ودوال الأزرار العائمة ونتائج الحوارات على خيط السكربت, وهو خيط دالة الرسم, بدلًا من خيط واجهة Android; راجع docs/THREADING.md
-* `ميزة` تحوّل imgui.dp() / imgui.px() (الاسمان البديلان Dp / Px) بين dp و px, ويعطي imgui.density عدد px في كل dp
-* `ميزة` تقبل الألوان في كل مكان رقمًا مضغوطًا أو [r, g, b, a] أو {r, g, b, a} أو "#rrggbbaa", بما في ذلك textColored / pushStyleColor / setStyleColor / colorButton / tableSetBgColor; وما زال تمرير r, g, b, a وسائط منفصلة يعمل
-* `ميزة` المثال background-task: خيط عامل ينفذ مهمة بطيئة بينما تواصل النافذة الرسم, مع عرض التقدم والإلغاء
-* `ميزة` يشرح docs/THREADING.md الخيط الذي تعمل عليه كل دالة وكيفية تنفيذ العمل البطيء في الخلفية, ويسرد docs/MIGRATION-1.12.md تعديلات السكربتات اللازمة لهذا الإصدار
-* `إصلاح` قد تعمل دوال الأحداث والأزرار العائمة في الوقت نفسه مع دالة الرسم, وكان استدعاء sleep فيها يسبب خطأ
-* `إصلاح` لم يتغير Session.theme بعد imgui.setTheme
-* `إصلاح` كان سحب النافذة يبلّغ عن الحدث moved بالمصدر api بدلًا من drag
-* `تحسين` تستخدم الأمثلة ui.dp() بدلًا من الضرب في window.density
-* `تحسين` تذكر تصريحات TypeScript وحدة كل حجم وموضع وخيار ونطاقه المسموح, وتعلّم حقول Session والأزرار العائمة بأنها readonly
-* `تحسين` يتضمن كل إصدار على GitHub ملف SHA256SUMS للتحقق من ملفات APK المنزّلة
 
 ##### لمزيد من سجل الإصدارات
 

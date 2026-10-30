@@ -209,6 +209,32 @@ declare namespace ImGui {
         tint?: Color;
     }
 
+    /** Texture coordinates of the four corners, in the order of the corner arguments of addImageQuad. */
+    interface DrawImageQuadOptions {
+        uv1?: Point;
+        uv2?: Point;
+        uv3?: Point;
+        uv4?: Point;
+        tint?: Color;
+    }
+
+    interface DrawImageRoundedOptions extends DrawImageOptions {
+        /** Which corners are rounded: DrawFlags.RoundCorners*; all by default. */
+        flags?: number;
+    }
+
+    /** What acceptDragDropPayload and getDragDropPayload return. */
+    interface DragDropPayload<Data = unknown> {
+        /** The type given to setDragDropPayload, or a Dear ImGui type such as "_COL4F". */
+        readonly type: string;
+        /** A copy of the data, as JSON.parse(JSON.stringify(data)). A color from a color widget is [r, g, b] or [r, g, b, a]; null for other Dear ImGui types. */
+        readonly data: Data;
+        /** The target is hovered (only seen with DragDropFlags.AcceptBeforeDelivery). */
+        readonly preview: boolean;
+        /** The pointer was released over the target. */
+        readonly delivery: boolean;
+    }
+
     interface Texture {
         readonly handle: number;
         /** Width in px; changes when update() loads an image of another size. */
@@ -277,6 +303,92 @@ declare namespace ImGui {
             segments?: number,
         ): DrawList;
         addImage(texture: Texture, minimum: Point, maximum: Point, options?: DrawImageOptions): DrawList;
+        addBezierQuadratic(
+            first: Point,
+            second: Point,
+            third: Point,
+            color: Color,
+            thickness?: number,
+            segments?: number,
+        ): DrawList;
+        addQuad(first: Point, second: Point, third: Point, fourth: Point, color: Color, thickness?: number): DrawList;
+        addQuadFilled(first: Point, second: Point, third: Point, fourth: Point, color: Color): DrawList;
+        /** @param segments The number of sides, 3 to 512. */
+        addNgon(center: Point, radius: number, color: Color, segments: number, thickness?: number): DrawList;
+        /** @param segments The number of sides, 3 to 512. */
+        addNgonFilled(center: Point, radius: number, color: Color, segments: number): DrawList;
+        /**
+         * @param radius The radii along the two axes, in px.
+         * @param rotation Radians.
+         * @param segments 0 to 512; 0 picks a count from the radius.
+         */
+        addEllipse(
+            center: Point,
+            radius: Point,
+            color: Color,
+            rotation?: number,
+            segments?: number,
+            thickness?: number,
+        ): DrawList;
+        addEllipseFilled(center: Point, radius: Point, color: Color, rotation?: number, segments?: number): DrawList;
+        addRectFilledMultiColor(
+            minimum: Point,
+            maximum: Point,
+            colorUpperLeft: Color,
+            colorUpperRight: Color,
+            colorBottomRight: Color,
+            colorBottomLeft: Color,
+        ): DrawList;
+        /** @param points 3 to 4096 points of a convex polygon, in clockwise order for anti-aliasing. */
+        addConvexPolyFilled(points: readonly Point[], color: Color): DrawList;
+        /** @param points 3 to 4096 points of a simple polygon; slower than addConvexPolyFilled. */
+        addConcavePolyFilled(points: readonly Point[], color: Color): DrawList;
+        addImageQuad(
+            texture: Texture,
+            first: Point,
+            second: Point,
+            third: Point,
+            fourth: Point,
+            options?: DrawImageQuadOptions,
+        ): DrawList;
+        addImageRounded(
+            texture: Texture,
+            minimum: Point,
+            maximum: Point,
+            rounding: number,
+            options?: DrawImageRoundedOptions,
+        ): DrawList;
+
+        // Path: add points, then finish with pathStroke, pathFillConvex or pathFillConcave, which clear the path.
+        pathClear(): DrawList;
+        pathLineTo(position: Point): DrawList;
+        /**
+         * @param angleMin Radians; 0 points right, angles grow clockwise.
+         * @param angleMax Radians, at most 16 turns away from angleMin.
+         * @param segments 0 to 512; 0 picks a count from the radius.
+         */
+        pathArcTo(center: Point, radius: number, angleMin: number, angleMax: number, segments?: number): DrawList;
+        /**
+         * An arc on the 12 steps of a clock, faster than pathArcTo: 0 points right, 3 down, 6 left, 9 up.
+         * @param maxOf12 From minOf12 to minOf12 + 192.
+         */
+        pathArcToFast(center: Point, radius: number, minOf12: number, maxOf12: number): DrawList;
+        pathBezierCubicCurveTo(second: Point, third: Point, fourth: Point, segments?: number): DrawList;
+        pathBezierQuadraticCurveTo(second: Point, third: Point, segments?: number): DrawList;
+        pathRect(minimum: Point, maximum: Point, rounding?: number, flags?: number): DrawList;
+        /** @param flags DrawFlags.Closed joins the last point to the first. */
+        pathStroke(color: Color, thickness?: number, flags?: number): DrawList;
+        pathFillConvex(color: Color): DrawList;
+        pathFillConcave(color: Color): DrawList;
+
+        /**
+         * Clips what this draw list draws until popClipRect, in the same frame. It does not affect widgets and their
+         * hit testing: use ui.pushClipRect for that.
+         * @param intersectWithCurrent Also apply the current clip rectangle; false by default.
+         */
+        pushClipRect(minimum: Point, maximum: Point, intersectWithCurrent?: boolean): DrawList;
+        /** Throws an Error without a matching pushClipRect in this frame. */
+        popClipRect(): DrawList;
 
         readonly AddLine: DrawList["addLine"];
         readonly AddRect: DrawList["addRect"];
@@ -289,6 +401,30 @@ declare namespace ImGui {
         readonly AddPolyline: DrawList["addPolyline"];
         readonly AddBezierCubic: DrawList["addBezierCubic"];
         readonly AddImage: DrawList["addImage"];
+        readonly AddBezierQuadratic: DrawList["addBezierQuadratic"];
+        readonly AddQuad: DrawList["addQuad"];
+        readonly AddQuadFilled: DrawList["addQuadFilled"];
+        readonly AddNgon: DrawList["addNgon"];
+        readonly AddNgonFilled: DrawList["addNgonFilled"];
+        readonly AddEllipse: DrawList["addEllipse"];
+        readonly AddEllipseFilled: DrawList["addEllipseFilled"];
+        readonly AddRectFilledMultiColor: DrawList["addRectFilledMultiColor"];
+        readonly AddConvexPolyFilled: DrawList["addConvexPolyFilled"];
+        readonly AddConcavePolyFilled: DrawList["addConcavePolyFilled"];
+        readonly AddImageQuad: DrawList["addImageQuad"];
+        readonly AddImageRounded: DrawList["addImageRounded"];
+        readonly PathClear: DrawList["pathClear"];
+        readonly PathLineTo: DrawList["pathLineTo"];
+        readonly PathArcTo: DrawList["pathArcTo"];
+        readonly PathArcToFast: DrawList["pathArcToFast"];
+        readonly PathBezierCubicCurveTo: DrawList["pathBezierCubicCurveTo"];
+        readonly PathBezierQuadraticCurveTo: DrawList["pathBezierQuadraticCurveTo"];
+        readonly PathRect: DrawList["pathRect"];
+        readonly PathStroke: DrawList["pathStroke"];
+        readonly PathFillConvex: DrawList["pathFillConvex"];
+        readonly PathFillConcave: DrawList["pathFillConcave"];
+        readonly PushClipRect: DrawList["pushClipRect"];
+        readonly PopClipRect: DrawList["popClipRect"];
     }
 
     interface FontDefinition {
@@ -909,6 +1045,7 @@ declare namespace ImGui {
             InputTextMaxBytes: 65536;
             SelectionMaxItems: 512;
             InputQueueCapacity: 2048;
+            DragDropPayloadMaxBytes: 65536;
         }>;
         readonly BackendStatus: Readonly<{
             Available: "available";
@@ -952,7 +1089,12 @@ declare namespace ImGui {
         readonly Icons: StringConstants<"Error" | "Warning" | "Pause" | "Play" | "Stop" | "Add" | "Copy" | "Save" | "Download" | "Upload" | "Edit" | "ArrowBack" | "ArrowForward" | "Check" | "ChevronLeft" | "ChevronRight" | "Close" | "ExpandLess" | "ExpandMore" | "Menu" | "MoreHoriz" | "MoreVert" | "Refresh" | "Person" | "Star" | "BugReport" | "Code" | "Delete" | "DoneAll" | "Favorite" | "Home" | "Info" | "Lock" | "LockOpen" | "Search" | "Settings" | "Visibility" | "VisibilityOff">;
         readonly Dir: NumericConstants<"None" | "Left" | "Right" | "Up" | "Down">;
         readonly ButtonFlags: NumericConstants<"None" | "MouseButtonLeft" | "MouseButtonRight" | "MouseButtonMiddle" | "EnableNav">;
-        readonly Key: NumericConstants<"None" | "Tab" | "LeftArrow" | "RightArrow" | "UpArrow" | "DownArrow" | "PageUp" | "PageDown" | "Home" | "End" | "Insert" | "Delete" | "Backspace" | "Space" | "Enter" | "Escape" | "A" | "C" | "V" | "X" | "Y" | "Z" | "ModCtrl" | "ModShift" | "ModAlt" | "ModSuper">;
+        /** Keyboard keys; the keys 0 to 9 are Digit0 to Digit9. ModCtrl and so on equal Mod.Ctrl and so on. */
+        readonly Key: NumericConstants<"None" | "Tab" | "LeftArrow" | "RightArrow" | "UpArrow" | "DownArrow" | "PageUp" | "PageDown" | "Home" | "End" | "Insert" | "Delete" | "Backspace" | "Space" | "Enter" | "Escape" | "LeftCtrl" | "LeftShift" | "LeftAlt" | "LeftSuper" | "RightCtrl" | "RightShift" | "RightAlt" | "RightSuper" | "Menu" | "Digit0" | "Digit1" | "Digit2" | "Digit3" | "Digit4" | "Digit5" | "Digit6" | "Digit7" | "Digit8" | "Digit9" | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" | "F1" | "F2" | "F3" | "F4" | "F5" | "F6" | "F7" | "F8" | "F9" | "F10" | "F11" | "F12" | "F13" | "F14" | "F15" | "F16" | "F17" | "F18" | "F19" | "F20" | "F21" | "F22" | "F23" | "F24" | "Apostrophe" | "Comma" | "Minus" | "Period" | "Slash" | "Semicolon" | "Equal" | "LeftBracket" | "Backslash" | "RightBracket" | "GraveAccent" | "CapsLock" | "ScrollLock" | "NumLock" | "PrintScreen" | "Pause" | "Keypad0" | "Keypad1" | "Keypad2" | "Keypad3" | "Keypad4" | "Keypad5" | "Keypad6" | "Keypad7" | "Keypad8" | "Keypad9" | "KeypadDecimal" | "KeypadDivide" | "KeypadMultiply" | "KeypadSubtract" | "KeypadAdd" | "KeypadEnter" | "KeypadEqual" | "AppBack" | "AppForward" | "Oem102" | "ModCtrl" | "ModShift" | "ModAlt" | "ModSuper">;
+        /** Modifier bits, combined with a key by | in a key chord: ui.Mod.Ctrl | ui.Key.S. */
+        readonly Mod: NumericConstants<"None" | "Ctrl" | "Shift" | "Alt" | "Super">;
+        readonly InputFlags: NumericConstants<"None" | "Repeat" | "RouteActive" | "RouteFocused" | "RouteGlobal" | "RouteAlways" | "RouteOverFocused" | "RouteOverActive" | "RouteUnlessBgFocused" | "RouteFromRootWindow" | "Tooltip">;
+        readonly DragDropFlags: NumericConstants<"None" | "SourceNoPreviewTooltip" | "SourceNoDisableHover" | "SourceNoHoldToOpenOthers" | "SourceAllowNullID" | "SourceExtern" | "PayloadAutoExpire" | "PayloadNoCrossContext" | "PayloadNoCrossProcess" | "AcceptBeforeDelivery" | "AcceptNoDrawDefaultRect" | "AcceptNoPreviewTooltip" | "AcceptDrawAsHovered" | "AcceptPeekOnly">;
 
         getBackendCapabilities(): BackendCapabilities;
         listExamples(): string[];
@@ -1149,6 +1291,14 @@ declare namespace ImGui {
         getWindowDrawList(): DrawList;
         getForegroundDrawList(): DrawList;
         getBackgroundDrawList(): DrawList;
+        /**
+         * Clips the current window's drawing, hit testing and widget culling until popClipRect, in the same frame.
+         * Coordinates are frame px, like the draw lists.
+         * @param intersectWithCurrent Also apply the current clip rectangle; true by default (the DrawList form: false).
+         */
+        pushClipRect(minimum: Point, maximum: Point, intersectWithCurrent?: boolean): void;
+        /** Throws an Error without a matching pushClipRect on the current window in this frame. */
+        popClipRect(): void;
         pushId(id: string | number): void;
         popId(): void;
         beginGroup(): void;
@@ -1195,7 +1345,72 @@ declare namespace ImGui {
         addKeyEvent(key: number, down: boolean): void;
         sendKey(key: number): void;
         addMouseWheel(wheelX?: number, wheelY?: number): void;
+        /**
+         * Injects a pointer position, in frame px like getMousePos (not dp), for the next frame. It counts as touch
+         * input. A position and a button change apart take effect in separate frames, in the order of the calls.
+         */
+        addMousePosEvent(x: number, y: number): void;
+        /**
+         * Injects a pointer button change for the next frame; see addMousePosEvent.
+         * @param button MouseButton: 0 left, 1 right, 2 middle, up to 4.
+         */
+        addMouseButtonEvent(button: number, down: boolean): void;
         wantTextInput(): boolean;
+
+        // Key queries: key is a Key or Mod value, keyChord a Key value combined with Mod values, such as Mod.Ctrl | Key.S.
+        // A value that is neither throws a RangeError.
+        isKeyDown(key: number): boolean;
+        /** @param repeat Also true on the repeats while the key stays down (io.KeyRepeatDelay, io.KeyRepeatRate); true by default. */
+        isKeyPressed(key: number, repeat?: boolean): boolean;
+        isKeyReleased(key: number): boolean;
+        /** How many times a key held down would have repeated in this frame, for the given delay and rate in seconds. */
+        getKeyPressedAmount(key: number, repeatDelay: number, rate: number): number;
+        /** English name of a key, "None" for Key.None. For display and debugging: do not save it. */
+        getKeyName(key: number): string;
+        /** Whether the chord was pressed, without any focus check; prefer shortcut. */
+        isKeyChordPressed(keyChord: number): boolean;
+        /**
+         * Whether the chord was pressed and this code may act on it: by default the key goes to the focused window.
+         * @param flags InputFlags: Repeat, and one route such as RouteGlobal.
+         */
+        shortcut(keyChord: number, flags?: number): boolean;
+        /** Makes the next item react to a chord as if it were activated. @param flags InputFlags, also Tooltip. */
+        setNextItemShortcut(keyChord: number, flags?: number): void;
+
+        /**
+         * The text of the Android clipboard, the one the host's getClip reads, also outside a window session. Empty when
+         * there is no text. From Android 10 the system gives an empty or old value unless the host or a plugin window
+         * has the input focus; see docs/LIMITS.md.
+         */
+        getClipboardText(): string;
+        /** Sets the Android clipboard, the one the host's setClip writes. */
+        setClipboardText(text: unknown): void;
+
+        /**
+         * Call after an item: true while it is dragged. Then call setDragDropPayload and endDragDropSource (or use
+         * withDragDropSource); what you draw in between shows in the preview tooltip.
+         * @param flags DragDropFlags; items without an id, such as text, need SourceAllowNullID.
+         */
+        beginDragDropSource(flags?: number): boolean;
+        /**
+         * @param type Identifies the kind of data for the target: 1 to 32 UTF-8 bytes, not starting with "_".
+         * @param data A string, a number or anything JSON.stringify accepts: at most Limits.DragDropPayloadMaxBytes as JSON.
+         * @param condition Cond.Always (default, updates the data each frame) or Cond.Once.
+         * @returns Whether a target accepted the payload in the previous frame.
+         */
+        setDragDropPayload(type: string, data: unknown, condition?: number): boolean;
+        endDragDropSource(): void;
+        /** Call after an item: true while a payload hovers it. Then call acceptDragDropPayload and endDragDropTarget. */
+        beginDragDropTarget(): boolean;
+        /**
+         * The payload when one of this type was dropped here, otherwise null. "_COL3F" and "_COL4F" accept colors dragged
+         * from color widgets.
+         * @param flags DragDropFlags; AcceptBeforeDelivery also returns it before the release (see `delivery`).
+         */
+        acceptDragDropPayload<Data = unknown>(type: string, flags?: number): DragDropPayload<Data> | null;
+        endDragDropTarget(): void;
+        /** The payload of the drag in progress, or null. */
+        getDragDropPayload<Data = unknown>(): DragDropPayload<Data> | null;
         withWindow(name: string, open: MutableValue<boolean> | null | undefined, flags: number | undefined, body: FrameBody): boolean;
         withChild(id: string, width: number | undefined, height: number | undefined, borders: boolean | number | undefined, flags: number | undefined, body: FrameBody): boolean;
         withTreeNode(label: string, body: FrameBody): boolean;
@@ -1212,6 +1427,11 @@ declare namespace ImGui {
         withMenu(label: string, enabled: boolean | undefined, body: FrameBody): boolean;
         withListBox(label: string, width: number | undefined, height: number | undefined, body: FrameBody): boolean;
         withCombo(label: string, preview: unknown, flags: number | undefined, body: FrameBody): boolean;
+        /** Calls body while the last item is dragged, inside beginDragDropSource / endDragDropSource. */
+        withDragDropSource(flags: number | undefined, body: FrameBody): boolean;
+        withDragDropSource(body: FrameBody): boolean;
+        /** Calls body while a payload hovers the last item, inside beginDragDropTarget / endDragDropTarget. */
+        withDragDropTarget(body: FrameBody): boolean;
         withGroup(body: FrameBody): void;
         withDisabled(disabled: boolean, body: FrameBody): void;
         withId(id: string | number, body: FrameBody): void;
@@ -1477,6 +1697,29 @@ declare namespace ImGui {
         readonly GetFrameHeightWithSpacing: ApiCore["getFrameHeightWithSpacing"];
         readonly GetTextLineHeight: ApiCore["getTextLineHeight"];
         readonly GetTextLineHeightWithSpacing: ApiCore["getTextLineHeightWithSpacing"];
+        readonly IsKeyDown: ApiCore["isKeyDown"];
+        readonly IsKeyPressed: ApiCore["isKeyPressed"];
+        readonly IsKeyReleased: ApiCore["isKeyReleased"];
+        readonly GetKeyPressedAmount: ApiCore["getKeyPressedAmount"];
+        readonly GetKeyName: ApiCore["getKeyName"];
+        readonly IsKeyChordPressed: ApiCore["isKeyChordPressed"];
+        readonly Shortcut: ApiCore["shortcut"];
+        readonly SetNextItemShortcut: ApiCore["setNextItemShortcut"];
+        readonly GetClipboardText: ApiCore["getClipboardText"];
+        readonly SetClipboardText: ApiCore["setClipboardText"];
+        readonly BeginDragDropSource: ApiCore["beginDragDropSource"];
+        readonly SetDragDropPayload: ApiCore["setDragDropPayload"];
+        readonly EndDragDropSource: ApiCore["endDragDropSource"];
+        readonly BeginDragDropTarget: ApiCore["beginDragDropTarget"];
+        readonly AcceptDragDropPayload: ApiCore["acceptDragDropPayload"];
+        readonly EndDragDropTarget: ApiCore["endDragDropTarget"];
+        readonly GetDragDropPayload: ApiCore["getDragDropPayload"];
+        readonly WithDragDropSource: ApiCore["withDragDropSource"];
+        readonly WithDragDropTarget: ApiCore["withDragDropTarget"];
+        readonly PushClipRect: ApiCore["pushClipRect"];
+        readonly PopClipRect: ApiCore["popClipRect"];
+        readonly AddMousePosEvent: ApiCore["addMousePosEvent"];
+        readonly AddMouseButtonEvent: ApiCore["addMouseButtonEvent"];
     }
 
     type Api = ApiCore & ApiAliases;

@@ -2,12 +2,16 @@ package io.github.supermonster003.autojs6.plugin.imgui;
 
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
+import android.util.Log;
 import android.view.Surface;
 
 final class ImGuiNative {
 
     private static final String LIBRARY_NAME = "autojs6_imgui";
+    private static final String LOG_TAG = "AutoJs6-ImGui";
     private static boolean loaded;
+    /** The clipboard of the session that owns the native renderer, for the two callbacks of ImGuiBridge.cpp. */
+    private static volatile ImGuiClipboard clipboard;
 
     private ImGuiNative() {
         throw new AssertionError("No instances");
@@ -32,7 +36,37 @@ final class ImGuiNative {
         loaded = true;
     }
 
+    /** The clipboard behind the Ctrl+C / Ctrl+V of Dear ImGui once nativeUsePlatformClipboard has run. */
+    static void setClipboard(ImGuiClipboard value) {
+        clipboard = value;
+    }
+
+    /** Called from native code on the render thread. A failure must not reach the frame: Dear ImGui only sees no text. */
+    private static String readClipboardForNative() {
+        ImGuiClipboard current = clipboard;
+        try {
+            return current == null ? "" : current.getText();
+        } catch (RuntimeException e) {
+            Log.w(LOG_TAG, "Unable to read the clipboard", e);
+            return "";
+        }
+    }
+
+    /** Called from native code on the render thread. */
+    private static void writeClipboardForNative(String text) {
+        ImGuiClipboard current = clipboard;
+        try {
+            if (current != null) {
+                current.setText(text);
+            }
+        } catch (RuntimeException e) {
+            Log.w(LOG_TAG, "Unable to write the clipboard", e);
+        }
+    }
+
     static native String nativeVersion();
+
+    static native void nativeUsePlatformClipboard();
 
     static native boolean nativeInit(
         AssetManager assetManager,
@@ -218,6 +252,161 @@ final class ImGuiNative {
         float uv1Y,
         int tintColor
     );
+
+    static native void nativeDrawImageQuad(int layer, long handle, float[] corners, float[] uvs, int tintColor);
+
+    static native void nativeDrawImageRounded(
+        int layer,
+        long handle,
+        float minX,
+        float minY,
+        float maxX,
+        float maxY,
+        float uv0X,
+        float uv0Y,
+        float uv1X,
+        float uv1Y,
+        int tintColor,
+        float rounding,
+        int flags
+    );
+
+    static native void nativeDrawRectFilledMultiColor(
+        int layer,
+        float minX,
+        float minY,
+        float maxX,
+        float maxY,
+        int colorUpperLeft,
+        int colorUpperRight,
+        int colorBottomRight,
+        int colorBottomLeft
+    );
+
+    static native void nativeDrawQuad(
+        int layer,
+        float x1,
+        float y1,
+        float x2,
+        float y2,
+        float x3,
+        float y3,
+        float x4,
+        float y4,
+        int color,
+        float thickness,
+        boolean filled
+    );
+
+    static native void nativeDrawNgon(
+        int layer,
+        float x,
+        float y,
+        float radius,
+        int color,
+        int segments,
+        float thickness,
+        boolean filled
+    );
+
+    static native void nativeDrawEllipse(
+        int layer,
+        float x,
+        float y,
+        float radiusX,
+        float radiusY,
+        int color,
+        float rotation,
+        int segments,
+        float thickness,
+        boolean filled
+    );
+
+    static native void nativeDrawBezierQuadratic(
+        int layer,
+        float x1,
+        float y1,
+        float x2,
+        float y2,
+        float x3,
+        float y3,
+        int color,
+        float thickness,
+        int segments
+    );
+
+    static native void nativeDrawPolyFilled(int layer, float[] points, int color, boolean concave);
+
+    static native void nativeDrawPathClear(int layer);
+
+    static native void nativeDrawPathLineTo(int layer, float x, float y);
+
+    static native void nativeDrawPathArcTo(
+        int layer,
+        float x,
+        float y,
+        float radius,
+        float angleMin,
+        float angleMax,
+        int segments
+    );
+
+    static native void nativeDrawPathArcToFast(int layer, float x, float y, float radius, int minOf12, int maxOf12);
+
+    static native void nativeDrawPathBezierCubicCurveTo(
+        int layer,
+        float x2,
+        float y2,
+        float x3,
+        float y3,
+        float x4,
+        float y4,
+        int segments
+    );
+
+    static native void nativeDrawPathBezierQuadraticCurveTo(
+        int layer,
+        float x2,
+        float y2,
+        float x3,
+        float y3,
+        int segments
+    );
+
+    static native void nativeDrawPathRect(
+        int layer,
+        float minX,
+        float minY,
+        float maxX,
+        float maxY,
+        float rounding,
+        int flags
+    );
+
+    static native void nativeDrawPathStroke(int layer, int color, float thickness, int flags);
+
+    static native void nativeDrawPathFill(int layer, int color, boolean concave);
+
+    static native void nativeDrawPushClipRect(
+        int layer,
+        float minX,
+        float minY,
+        float maxX,
+        float maxY,
+        boolean intersectWithCurrent
+    );
+
+    static native void nativeDrawPopClipRect(int layer);
+
+    static native void nativePushClipRect(
+        float minX,
+        float minY,
+        float maxX,
+        float maxY,
+        boolean intersectWithCurrent
+    );
+
+    static native void nativePopClipRect();
 
     static native void nativeSetNextWindowPos(
         float x,
@@ -798,6 +987,40 @@ final class ImGuiNative {
     static native void nativeAddKeyEvent(int key, boolean down);
 
     static native void nativeAddMouseWheelEvent(float wheelX, float wheelY);
+
+    static native void nativeAddMousePosEvent(float x, float y);
+
+    static native void nativeAddMouseButtonEvent(int button, boolean down);
+
+    static native boolean nativeIsKeyDown(int key);
+
+    static native boolean nativeIsKeyPressed(int key, boolean repeat);
+
+    static native boolean nativeIsKeyReleased(int key);
+
+    static native int nativeGetKeyPressedAmount(int key, float repeatDelay, float rate);
+
+    static native String nativeGetKeyName(int key);
+
+    static native boolean nativeIsKeyChordPressed(int keyChord);
+
+    static native boolean nativeShortcut(int keyChord, int flags);
+
+    static native void nativeSetNextItemShortcut(int keyChord, int flags);
+
+    static native boolean nativeBeginDragDropSource(int flags);
+
+    static native boolean nativeSetDragDropPayload(String type, String json, int condition);
+
+    static native void nativeEndDragDropSource();
+
+    static native boolean nativeBeginDragDropTarget();
+
+    static native String[] nativeAcceptDragDropPayload(String type, int flags);
+
+    static native void nativeEndDragDropTarget();
+
+    static native String[] nativeGetDragDropPayload();
 
     static native boolean nativeWantTextInput();
 }

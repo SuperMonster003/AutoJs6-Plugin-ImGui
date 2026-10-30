@@ -5,6 +5,16 @@
   "changelog_label_improvement": "改善",
   "changelog_label_dependency": "依存関係",
   "$data": {
+    "v1.15.0": {
+      "released_date": "2026/10/30",
+      "feature": [
+        "キーボード照会: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed と, ショートカットの shortcut / setNextItemShortcut を追加. キーの組み合わせは ui.Mod.Ctrl | ui.Key.S と書きます. Key 定数はキーボード全体に対応しました: A から Z, Digit0 から Digit9, F1 から F24, テンキーなど",
+        "クリップボード: getClipboardText / setClipboardText はホストの getClip / setClip と同じ Android クリップボードを使い, 入力欄の Ctrl+C / Ctrl+V も同様です. Android 10 以降, クリップボードを読み取れるのは入力フォーカスを持つアプリだけです. フローティング ウィンドウへの影響は docs/LIMITS.md を参照してください",
+        "ドラッグ アンド ドロップ: beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload とヘルパー withDragDropSource / withDragDropTarget で, 項目を別の項目へドラッグできます (オプションは DragDropFlags). ペイロードは文字列, 数値, または JSON に変換できる任意のオブジェクトで, カラー ウィジェットの色もドラッグできます. サンプル widget-overview の新しいセクションを参照してください",
+        "カスタム描画: パス関数 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex など), 描画リストとウィンドウの pushClipRect / popClipRect, 新しい図形 addEllipse, addNgon, addQuad とその塗りつぶし版, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded を追加. サンプル widget-overview を参照してください",
+        "タッチのシミュレーション: addMousePosEvent(x, y) と addMouseButtonEvent(button, down) で, スクリプトが指のようにウィンドウを操作できます. UI の自動テストなどに使えます. 座標は getMousePos と同じフレーム内ピクセルで, createWindow の dp ではありません. ウィンドウの下のアプリには影響しません"
+      ]
+    },
     "v1.14.0": {
       "released_date": "2026/10/30",
       "hint": [

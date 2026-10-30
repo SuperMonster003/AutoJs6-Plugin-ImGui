@@ -4,6 +4,16 @@
 
 ******
 
+# v1.15.0
+
+###### 2026/10/30
+
+* `Función` Consultas de teclado: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, y atajos de teclado con shortcut y setNextItemShortcut. Las combinaciones se escriben ui.Mod.Ctrl | ui.Key.S. Las constantes Key cubren ahora todo el teclado: A a Z, Digit0 a Digit9, F1 a F24, el teclado numérico y más
+* `Función` Portapapeles: getClipboardText / setClipboardText usan el mismo portapapeles de Android que getClip / setClip del host, igual que Ctrl+C / Ctrl+V en los campos de texto. Desde Android 10 el sistema solo deja leer el portapapeles a la app con el foco de entrada; docs/LIMITS.md explica cómo afecta a las ventanas flotantes
+* `Función` Arrastrar y soltar: arrastra un elemento sobre otro con beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload y los auxiliares withDragDropSource / withDragDropTarget (DragDropFlags define las opciones). La carga puede ser una cadena, un número o cualquier objeto serializable a JSON, y también se pueden arrastrar colores desde los controles de color; consulta la nueva sección del ejemplo widget-overview
+* `Función` Dibujo personalizado: funciones de trazado (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex y más), pushClipRect / popClipRect en listas de dibujo y ventanas, y formas nuevas: addEllipse, addNgon, addQuad y sus versiones rellenas, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded; consulta el ejemplo widget-overview
+* `Función` Toque simulado: addMousePosEvent(x, y) y addMouseButtonEvent(button, down) permiten que un script actúe como un dedo sobre la ventana, por ejemplo para probar una interfaz automáticamente. Las coordenadas son píxeles del fotograma, como en getMousePos, no los dp de createWindow; las apps bajo la ventana no se ven afectadas
+
 # v1.14.0
 
 ###### 2026/10/30

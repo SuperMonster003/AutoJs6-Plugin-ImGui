@@ -199,6 +199,39 @@ public class ImGuiScriptFacadeTest {
             {"api.dragFloatRange2('r', {value: 0}, 1)", "TypeError", "dragFloatRange2", "currentMax"},
             {"api.sliderAngle('a', {value: 0}, 'x')", "TypeError", "sliderAngle", "degreesMin"},
             {"api.ints([1, NaN])", "TypeError", "ints", "values[1]"},
+            {"api.addMousePosEvent(NaN, 1)", "TypeError", "addMousePosEvent", "x"},
+            {"api.addMousePosEvent(1)", "TypeError", "addMousePosEvent", "y"},
+            {"api.addMouseButtonEvent(5, true)", "RangeError", "addMouseButtonEvent", "button"},
+            {"api.isKeyDown()", "TypeError", "isKeyDown", "key"},
+            {"api.isKeyDown(0)", "RangeError", "isKeyDown", "key"},
+            {"api.isKeyPressed(100)", "RangeError", "isKeyPressed", "key"},
+            {"api.isKeyReleased(667)", "RangeError", "isKeyReleased", "key"},
+            {"api.isKeyReleased(api.Mod.Ctrl | api.Mod.Shift)", "RangeError", "isKeyReleased", "key"},
+            {"api.getKeyPressedAmount(api.Key.A, 'x', 1)", "TypeError", "getKeyPressedAmount", "repeatDelay"},
+            {"api.getKeyName(1)", "RangeError", "getKeyName", "key"},
+            {"api.isKeyChordPressed(0)", "RangeError", "isKeyChordPressed", "keyChord"},
+            {"api.shortcut(api.Mod.Ctrl | api.Mod.Shift)", "RangeError", "shortcut", "keyChord"},
+            {"api.shortcut(api.Mod.Ctrl | 5)", "RangeError", "shortcut", "keyChord"},
+            {"api.setNextItemShortcut(api.Key.A, 'x')", "TypeError", "setNextItemShortcut", "flags"},
+            {"api.setDragDropPayload(1, 2)", "TypeError", "setDragDropPayload", "type"},
+            {"api.setDragDropPayload('', 2)", "RangeError", "setDragDropPayload", "type"},
+            {"api.setDragDropPayload('_COL4F', 2)", "RangeError", "setDragDropPayload", "type"},
+            {"api.setDragDropPayload(new Array(34).join('x'), 2)", "RangeError", "setDragDropPayload", "type"},
+            {"api.setDragDropPayload('T', undefined)", "TypeError", "setDragDropPayload", "data"},
+            {"var o = {}; o.o = o; api.setDragDropPayload('T', o)", "TypeError", "setDragDropPayload", "data"},
+            {"api.setDragDropPayload('T', new Array(65537).join('x'))", "RangeError", "setDragDropPayload", "data"},
+            {"api.setDragDropPayload('T', 1, api.Cond.Appearing)", "RangeError", "setDragDropPayload", "condition"},
+            {"api.acceptDragDropPayload(null)", "TypeError", "acceptDragDropPayload", "type"},
+            {"api.pushClipRect([0], [1, 1])", "TypeError", "pushClipRect", "minimum"},
+            {"api.getWindowDrawList().addNgon([0, 0], 1, 0, 2)", "RangeError", "DrawList.addNgon", "segments"},
+            {"api.getWindowDrawList().addEllipse([0, 0], 1, 0)", "TypeError", "DrawList.addEllipse", "radius"},
+            {"api.getWindowDrawList().addConvexPolyFilled([[0, 0], [1, 1]], 0)",
+                "RangeError", "DrawList.addConvexPolyFilled", "points"},
+            {"api.getWindowDrawList().addRectFilledMultiColor([0, 0], [1, 1], 0, 0, 0)",
+                "TypeError", "DrawList.addRectFilledMultiColor", "colorBottomLeft"},
+            {"api.getWindowDrawList().pathArcTo([0, 0], 1, 0, 1000)", "RangeError", "DrawList.pathArcTo", "angleMax"},
+            {"api.getWindowDrawList().pathArcToFast([0, 0], 1, 5, 4)", "RangeError", "DrawList.pathArcToFast", "maxOf12"},
+            {"api.getWindowDrawList().pathArcToFast([0, 0], 1, 0, 193)", "RangeError", "DrawList.pathArcToFast", "maxOf12"},
         };
         for (String[] c : cases) {
             String expected = c[1] + ":imgui." + c[2] + ": argument " + '"' + c[3] + '"' + " ";
@@ -444,6 +477,173 @@ public class ImGuiScriptFacadeTest {
             {"api.createWindow(function () {}, {idleFps: 200})", "RangeError", "createWindow", "options.idleFps"},
             {"api.createWindow(function () {}, {idleDelay: 'a'})", "TypeError", "createWindow", "options.idleDelay"},
         });
+    }
+
+    @Test
+    public void keyConstantsMatchTheImGuiKeyEnum() {
+        assertEquals(
+            "512,526,527,535,536,545,546,571,572,595,596,606,631,4096,4096",
+            String.valueOf(eval(
+                "var K = api.Key; [K.Tab, K.Escape, K.LeftCtrl, K.Menu, K.Digit0, K.Digit9, K.A, K.Z, K.F1, K.F24,"
+                    + " K.Apostrophe, K.GraveAccent, K.Oem102, K.ModCtrl, api.Mod.Ctrl].join(',')"
+            ))
+        );
+        assertEquals("548,567,1024,4096", String.valueOf(eval(
+            "[api.Key.C, api.Key.V, api.DragDropFlags.AcceptBeforeDelivery, api.InputFlags.RouteGlobal].join(',')"
+        )));
+    }
+
+    @Test
+    public void keyQueriesMapTheirArguments() {
+        eval(
+            "['isKeyDown', 'isKeyPressed', 'isKeyReleased', 'getKeyPressedAmount', 'getKeyName', 'isKeyChordPressed',"
+                + "    'shortcut', 'setNextItemShortcut', 'addMousePosEvent', 'addMouseButtonEvent'"
+                + "].forEach(function (name) { bridge[name] = record(name); });"
+        );
+        String[][] cases = {
+            {"api.isKeyPressed(api.Key.A)", "546,true"},
+            {"api.IsKeyPressed(api.Key.A, false)", "546,false"},
+            {"api.isKeyDown(api.Mod.Shift)", "8192"},
+            {"api.getKeyPressedAmount(api.Key.A, 0.5, 0.1)", "546,0.5,0.1"},
+            {"api.getKeyName(api.Key.None)", "0"},
+            {"api.isKeyChordPressed(api.Mod.Ctrl | api.Key.S)", "4660"},
+            {"api.isKeyChordPressed(api.Mod.Alt)", "16384"},
+            {"api.shortcut(api.Mod.Ctrl | api.Mod.Shift | api.Key.S, api.InputFlags.Repeat)", "12852,1"},
+            {"api.SetNextItemShortcut(api.Key.F1)", "572,0"},
+            {"api.addMousePosEvent(10.5, 20)", "10.5,20"},
+            {"api.AddMouseButtonEvent(1, 1)", "1,true"},
+            {"api.addMouseButtonEvent(undefined, false)", "0,false"},
+        };
+        for (String[] c : cases) {
+            assertEquals(c[0], c[1], lastCall(c[0]));
+        }
+    }
+
+    @Test
+    public void clipboardConvertsTextBothWays() {
+        assertEquals(
+            "12|string|text|string",
+            String.valueOf(eval(
+                "bridge.setClipboardText = record('set');"
+                    + "bridge.getClipboardText = function () { return new java.lang.String('text'); };"
+                    + "calls.length = 0; api.SetClipboardText(12); var value = api.getClipboardText();"
+                    + "[calls[0].args[0], typeof calls[0].args[0], value, typeof value].join('|')"
+            ))
+        );
+    }
+
+    @Test
+    public void dragDropPayloadsAreSerializedAndParsed() {
+        eval(
+            "['beginDragDropSource', 'setDragDropPayload', 'endDragDropSource', 'beginDragDropTarget',"
+                + "    'endDragDropTarget'].forEach(function (name) { bridge[name] = record(name); });"
+        );
+        String[][] cases = {
+            {"api.setDragDropPayload('ROW', 'a\"b')", "ROW,\"a\\\"b\",1"},
+            {"api.SetDragDropPayload('ROW', 3, api.Cond.Once)", "ROW,3,2"},
+            {"api.setDragDropPayload('ROW', {id: 1, tags: ['x']})", "ROW,{\"id\":1,\"tags\":[\"x\"]},1"},
+            {"api.setDragDropPayload('ROW', null)", "ROW,null,1"},
+            {"api.setDragDropPayload('ROW', new java.lang.String('s'))", "ROW,\"s\",1"},
+        };
+        for (String[] c : cases) {
+            assertEquals(c[0], c[1], lastCall(c[0]));
+        }
+        assertEquals(
+            "null|ROW:7:true:false|ROW:{\"id\":1}:false:true|_IMG:null:false:false|_COL4F:[1,0.5,0,1]:false:true",
+            String.valueOf(eval(
+                "var raw = null; bridge.acceptDragDropPayload = function () { return raw; };"
+                    + "bridge.getDragDropPayload = function () { return raw; };"
+                    + "function show(p) {"
+                    + "    return p == null ? 'null'"
+                    + "        : [p.type, JSON.stringify(p.data), p.preview, p.delivery].join(':');"
+                    + "}"
+                    + "var out = [show(api.acceptDragDropPayload('ROW'))];"
+                    + "raw = ['ROW', '7', '1', '0']; out.push(show(api.AcceptDragDropPayload('ROW')));"
+                    + "raw = ['ROW', '{\"id\":1}', '0', '1']; out.push(show(api.getDragDropPayload()));"
+                    + "raw = ['_IMG', null, '0', '0']; out.push(show(api.getDragDropPayload()));"
+                    + "raw = ['_COL4F', '[1,0.5,0,1]', '0', '1']; out.push(show(api.acceptDragDropPayload('_COL4F')));"
+                    + "out.join('|')"
+            ))
+        );
+    }
+
+    @Test
+    public void dragDropHelpersEndWhatTheyBegan() {
+        assertEquals(
+            "4,body,end|2,body,end|target,body,end|",
+            String.valueOf(eval(
+                "var log; var open = true;"
+                    + "bridge.beginDragDropSource = function (flags) { log.push(flags); return open; };"
+                    + "bridge.endDragDropSource = function () { log.push('end'); };"
+                    + "bridge.beginDragDropTarget = function () { log.push('target'); return open; };"
+                    + "bridge.endDragDropTarget = function () { log.push('end'); };"
+                    + "function body() { log.push('body'); throw new Error('stop'); }"
+                    + "function run(f) { log = []; try { f(); } catch (e) {} return log.join(','); }"
+                    + "var out = [run(function () { api.withDragDropSource(4, body); })];"
+                    + "out.push(run(function () { api.withDragDropSource(2, body); }));"
+                    + "out.push(run(function () { api.withDragDropTarget(body); }));"
+                    + "open = false; log = []; api.withDragDropTarget(body);"
+                    + "out.push(log.slice(1).join(','));"
+                    + "out.join('|')"
+            ))
+        );
+        assertEquals("0,body", String.valueOf(eval(
+            "open = true; log = [];"
+                + "api.WithDragDropSource(function () { log.push('body'); });"
+                + "log.slice(0, 2).join(',')"
+        )));
+    }
+
+    @Test
+    public void drawListPrimitivesMapTheirArguments() {
+        eval(
+            "['drawBezierQuadratic', 'drawQuad', 'drawNgon', 'drawEllipse', 'drawRectFilledMultiColor',"
+                + "    'drawImageRounded', 'drawPathClear', 'drawPathLineTo', 'drawPathArcTo', 'drawPathArcToFast',"
+                + "    'drawPathBezierCubicCurveTo', 'drawPathBezierQuadraticCurveTo', 'drawPathRect', 'drawPathStroke',"
+                + "    'drawPathFill', 'drawPushClipRect', 'drawPopClipRect', 'pushClipRect', 'popClipRect'"
+                + "].forEach(function (name) { bridge[name] = record(name); });"
+                + "function floats(a) { var o = []; for (var i = 0; i < a.length; i += 1) o.push(a[i]); return o.join(' '); }"
+                + "bridge.drawPolyFilled = function (layer, points, color, concave) {"
+                + "    calls.push({args: [layer, floats(points), color, concave]});"
+                + "};"
+                + "bridge.drawImageQuad = function (layer, handle, corners, uvs, tint) {"
+                + "    calls.push({args: [layer, handle, floats(corners), floats(uvs), tint]});"
+                + "};"
+                + "var draw = api.getForegroundDrawList();"
+        );
+        String[][] cases = {
+            {"draw.addBezierQuadratic([0, 1], [2, 3], [4, 5], 7)", "1,0,1,2,3,4,5,7,1,0"},
+            {"draw.AddQuad([0, 1], [2, 3], [4, 5], [6, 7], 9, 2)", "1,0,1,2,3,4,5,6,7,9,2,false"},
+            {"draw.addQuadFilled([0, 1], [2, 3], [4, 5], [6, 7], 9)", "1,0,1,2,3,4,5,6,7,9,1,true"},
+            {"draw.addNgon([1, 2], 3, 9, 6)", "1,1,2,3,9,6,1,false"},
+            {"draw.addNgonFilled([1, 2], 3, 9, 6)", "1,1,2,3,9,6,1,true"},
+            {"draw.addEllipse([1, 2], [3, 4], 9, 0.5, 8, 2)", "1,1,2,3,4,9,0.5,8,2,false"},
+            {"draw.addEllipseFilled([1, 2], {x: 3, y: 4}, 9)", "1,1,2,3,4,9,0,0,1,true"},
+            {"draw.addRectFilledMultiColor([0, 1], [2, 3], 4, 5, 6, 7)", "1,0,1,2,3,4,5,6,7"},
+            {"draw.addConvexPolyFilled([[0, 1], [2, 3], [4, 5]], 9)", "1,0 1 2 3 4 5,9,false"},
+            {"draw.AddConcavePolyFilled([[0, 1], [2, 3], [4, 5]], 9)", "1,0 1 2 3 4 5,9,true"},
+            {"draw.pathClear()", "1"},
+            {"draw.pathLineTo([1, 2])", "1,1,2"},
+            {"draw.pathArcTo([1, 2], 3, 0, 1.5)", "1,1,2,3,0,1.5,0"},
+            {"draw.pathArcToFast([1, 2], 3, 0, 6)", "1,1,2,3,0,6"},
+            {"draw.pathBezierCubicCurveTo([1, 2], [3, 4], [5, 6])", "1,1,2,3,4,5,6,0"},
+            {"draw.pathBezierQuadraticCurveTo([1, 2], [3, 4], 12)", "1,1,2,3,4,12"},
+            {"draw.pathRect([1, 2], [3, 4], 5, api.DrawFlags.RoundCornersTopLeft)", "1,1,2,3,4,5,16"},
+            {"draw.pathStroke(9, 2, api.DrawFlags.Closed)", "1,9,2,512"},
+            {"draw.PathStroke(9)", "1,9,1,0"},
+            {"draw.pathFillConvex(9)", "1,9,false"},
+            {"draw.pathFillConcave(9)", "1,9,true"},
+            {"draw.pushClipRect([1, 2], [3, 4])", "1,1,2,3,4,false"},
+            {"draw.PushClipRect([1, 2], [3, 4], true)", "1,1,2,3,4,true"},
+            {"api.pushClipRect([1, 2], [3, 4])", "1,2,3,4,true"},
+            {"api.PushClipRect([1, 2], [3, 4], false)", "1,2,3,4,false"},
+        };
+        for (String[] c : cases) {
+            assertEquals(c[0], c[1], lastCall(c[0]));
+        }
+        assertEquals("true", String.valueOf(eval(
+            "draw.pathClear().pathLineTo([0, 0]).popClipRect() === draw && draw.PathClear === draw.pathClear"
+        )));
     }
 
     @Test
