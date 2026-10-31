@@ -4,6 +4,14 @@
 
 ******
 
+# v1.17.0
+
+###### 2026/11/01
+
+* `Función` Listas de selección múltiple: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection seleccionan varias filas con un toque, Ctrl+toque, Shift+toque, Ctrl+A y Escape (MultiSelectFlags define las opciones). imgui.selectionStorage() guarda las filas seleccionadas por usted. Funciona con listClipper: un rango con Shift puede abarcar 100000 filas, incluso filas que nunca se dibujaron. Un teléfono no tiene teclas Ctrl ni Shift, por eso el ejemplo large-list muestra dos casillas que las mantienen pulsadas; docs/LIMITS.md explica el resto.
+* `Función` Nuevo ejemplo multi-window y nueva guía docs/MULTI-WINDOW.md: varios paneles en una sesión, cada uno con su posición, flecha de plegado y botón de cierre, y la ventana que toca pasa al frente. Solo puede existir una sesión (una Surface) a la vez, así que "varias ventanas" siempre significa ventanas dentro de una sesión, no varias ventanas flotantes.
+* `Corrección` Ventanas flotantes en el modo predeterminado TouchMode.Auto: un toque llegaba a la altura de una barra de estado por debajo del dedo, por lo que los controles cercanos a la parte superior podían no responder y las barras de título no se podían arrastrar
+
 # v1.16.0
 
 ###### 2026/10/31

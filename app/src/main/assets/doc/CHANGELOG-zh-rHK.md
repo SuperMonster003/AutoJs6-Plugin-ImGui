@@ -4,6 +4,14 @@
 
 ******
 
+# v1.17.0
+
+###### 2026/11/01
+
+* `新增` 多選清單: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection 支援用點按, Ctrl+點按, Shift+點按, Ctrl+A 和 Escape 選取多行 (選項見 MultiSelectFlags). imgui.selectionStorage() 替你儲存選取的行. 可以和 listClipper 一起用: Shift 範圍可以跨 100000 行, 沒有繪製過的行也會選取. 手機沒有 Ctrl 和 Shift 鍵, large-list 範例用兩個核取方塊按住它們; 其餘說明見 docs/LIMITS.md.
+* `新增` 新增範例 multi-window 和說明文件 docs/MULTI-WINDOW.md: 在一個會話內顯示多個面板, 各有自己的位置, 摺疊箭頭和關閉按鈕, 點按哪個視窗它就到最前面. 同一時間只能有一個會話 (一個 Surface), 所以 "多視窗" 指一個會話內的多個視窗, 不是多個懸浮窗.
+* `修復` 懸浮視窗在預設的 TouchMode.Auto 下, 觸控位置比手指低一個狀態列的高度, 視窗頂部的控制項可能點不中, 標題列也拖不動
+
 # v1.16.0
 
 ###### 2026/10/31

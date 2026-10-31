@@ -4,6 +4,14 @@
 
 ******
 
+# v1.17.0
+
+###### 2026/11/01
+
+* `기능` 다중 선택 목록: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection로 탭, Ctrl+탭, Shift+탭, Ctrl+A, Escape를 사용해 여러 행을 선택할 수 있습니다 (옵션은 MultiSelectFlags). imgui.selectionStorage()가 선택된 행을 보관합니다. listClipper와 함께 쓸 수 있어 Shift 범위가 100000행에 걸칠 수 있고, 한 번도 그려지지 않은 행도 선택됩니다. 휴대폰에는 Ctrl과 Shift 키가 없으므로 large-list 예제는 이 키를 누른 상태로 유지하는 체크박스 두 개를 보여 줍니다. 자세한 내용은 docs/LIMITS.md를 참고하세요.
+* `기능` 새 예제 multi-window와 새 안내서 docs/MULTI-WINDOW.md: 한 세션에 여러 패널을 표시하고, 각 패널은 자체 위치, 접기 화살표, 닫기 버튼을 가지며, 탭한 창이 맨 앞으로 옵니다. 세션은 한 번에 하나(Surface 하나)만 있을 수 있으므로 "다중 창"은 항상 한 세션 안의 창을 뜻하며 여러 개의 플로팅 창이 아닙니다.
+* `수정` 기본 TouchMode.Auto 오버레이 창에서 터치가 손가락보다 상태 표시줄 높이만큼 아래에 전달되어, 창 위쪽의 컨트롤이 반응하지 않을 수 있었고 제목 표시줄을 끌 수 없었습니다
+
 # v1.16.0
 
 ###### 2026/10/31

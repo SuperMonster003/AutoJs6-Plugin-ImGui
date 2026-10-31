@@ -41,6 +41,7 @@ public final class ImGuiPluginContract {
         "background-task",
         "large-list",
         "texture-refresh",
+        "multi-window",
     };
 
     private ImGuiPluginContract() {

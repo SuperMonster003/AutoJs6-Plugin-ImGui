@@ -635,7 +635,7 @@ steps.push(function () {
     section('examples');
     var names = imgui.listExamples().map(function (e) { return String(e && e.name !== undefined ? e.name : e); });
     var total = names.length;
-    report('example-list', total === 9 && names.indexOf('large-list') >= 0 && names.indexOf('texture-refresh') >= 0,
+    report('example-list', total === 10 && names.indexOf('large-list') >= 0 && names.indexOf('texture-refresh') >= 0,
         'length=' + total);
     var results = [];
     function runNext() {

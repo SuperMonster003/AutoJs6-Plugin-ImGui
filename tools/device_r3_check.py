@@ -567,7 +567,7 @@ steps.push(function () {
     var total = names.length;
     var overview = String(imgui.getExampleSource('widget-overview'));
     var dataTable = String(imgui.getExampleSource('data-table-demo'));
-    report('example-list', total === 9 && overview.indexOf('withMenu("Debug"') >= 0 && dataTable.indexOf('sortable: true') >= 0,
+    report('example-list', total === 10 && overview.indexOf('withMenu("Debug"') >= 0 && dataTable.indexOf('sortable: true') >= 0,
         'length=' + total + ' debugMenu=' + (overview.indexOf('withMenu("Debug"') >= 0) +
         ' sortable=' + (dataTable.indexOf('sortable: true') >= 0));
     var results = [];

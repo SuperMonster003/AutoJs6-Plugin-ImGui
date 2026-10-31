@@ -1730,6 +1730,28 @@ module.exports = function (bridge) {
         AcceptPeekOnly: (1 << 10) | (1 << 11)
     });
 
+    api.MultiSelectFlags = freeze({
+        None: 0,
+        SingleSelect: 1 << 0,
+        NoSelectAll: 1 << 1,
+        NoRangeSelect: 1 << 2,
+        NoAutoSelect: 1 << 3,
+        NoAutoClear: 1 << 4,
+        NoAutoClearOnReselect: 1 << 5,
+        BoxSelect1d: 1 << 6,
+        BoxSelect2d: 1 << 7,
+        BoxSelectNoScroll: 1 << 8,
+        ClearOnEscape: 1 << 9,
+        ClearOnClickVoid: 1 << 10,
+        ScopeWindow: 1 << 11,
+        ScopeRect: 1 << 12,
+        SelectOnAuto: 1 << 13,
+        SelectOnClickAlways: 1 << 14,
+        SelectOnClickRelease: 1 << 15,
+        NavWrapX: 1 << 16,
+        NoSelectOnRightClick: 1 << 17
+    });
+
     var MOUSE_BUTTON_MAX = 4;
     var TABLE_MAX_COLUMNS = 512;
     // Debug mode (R3.5, Q7): a render callback slower than this gets a console.warn, at most one per interval.
@@ -2462,6 +2484,133 @@ module.exports = function (bridge) {
         } finally {
             bridge.listClipperEnd();
         }
+    };
+
+    var SELECTION_REQUEST_SET_ALL = 1;
+    var SELECTION_ID_MAX = 9007199254740991;
+
+    // Item ids are the numbers a script can keep exactly; -1 stands for "no item" in what Dear ImGui returns.
+    function selectionId(fn, value) {
+        return checkRange(fn, "id", Math.round(argNumber(fn, "id", value)), 0, SELECTION_ID_MAX);
+    }
+
+    // raw: see MultiSelectIoToJava in ImGuiBridge.cpp.
+    function multiSelectIO(raw) {
+        var requests = [];
+        var count = Number(raw[4]);
+        for (var i = 0; i < count; i += 1) {
+            var offset = 5 + i * 5;
+            requests.push({
+                type: Number(raw[offset]) === SELECTION_REQUEST_SET_ALL ? "setAll" : "setRange",
+                selected: Number(raw[offset + 1]) !== 0,
+                rangeFirstItem: Number(raw[offset + 3]),
+                rangeLastItem: Number(raw[offset + 4]),
+                rangeDirection: Number(raw[offset + 2])
+            });
+        }
+        return {
+            requests: requests,
+            rangeSrcItem: Number(raw[0]),
+            navIdItem: Number(raw[1]),
+            navIdSelected: Number(raw[2]) !== 0,
+            itemsCount: Number(raw[3])
+        };
+    }
+
+    // beginMultiSelect(flags, selectionSize, itemsCount) ... endMultiSelect() (R6.1): Dear ImGui never stores the
+    // selection, it reports changes as requests. Both calls return {requests, rangeSrcItem, navIdItem, navIdSelected,
+    // itemsCount}; apply both to the selection, the first before submitting the rows.
+    api.beginMultiSelect = function (flags, selectionSize, itemsCount) {
+        return multiSelectIO(bridge.beginMultiSelect(
+            argFlags("beginMultiSelect", flags),
+            argInt("beginMultiSelect", "selectionSize", selectionSize, -1, -1),
+            argInt("beginMultiSelect", "itemsCount", itemsCount, -1, -1)
+        ));
+    };
+    api.endMultiSelect = function (rangeSrcReset) {
+        return multiSelectIO(bridge.endMultiSelect(Boolean(rangeSrcReset)));
+    };
+    api.setNextItemSelectionUserData = function (id) {
+        bridge.setNextItemSelectionUserData(selectionId("setNextItemSelectionUserData", id));
+    };
+    api.isItemToggledSelection = function () { return Boolean(bridge.isItemToggledSelection()); };
+
+    // selectionStorage() (R6.1): the selected item ids of one list, as ImGuiSelectionBasicStorage in C++. It needs no
+    // session. apply takes what beginMultiSelect / endMultiSelect return, or a requests array and the number of items.
+    api.selectionStorage = function () {
+        var selected = new Set();
+
+        function applyRequest(request, itemsCount) {
+            var type = request == null ? undefined : request.type;
+            if (type === "setAll") {
+                selected.clear();
+                if (request.selected) {
+                    if (!(itemsCount >= 0)) {
+                        throw new RangeError(
+                            argumentLabel("selectionStorage.apply", "itemsCount") +
+                            " is needed to select all items: give it to beginMultiSelect or to apply"
+                        );
+                    }
+                    for (var index = 0; index < itemsCount; index += 1) {
+                        selected.add(index);
+                    }
+                }
+            } else if (type === "setRange") {
+                var last = Number(request.rangeLastItem);
+                for (var id = Number(request.rangeFirstItem); id <= last; id += 1) {
+                    if (request.selected) {
+                        selected.add(id);
+                    } else {
+                        selected.delete(id);
+                    }
+                }
+            } else {
+                throw new TypeError(
+                    argumentLabel("selectionStorage.apply", "requests") + " has an unknown request type: " + type
+                );
+            }
+        }
+
+        var storage = {
+            apply: function (requests, itemsCount) {
+                if (requests != null && typeof requests === "object" && requests.requests !== undefined) {
+                    itemsCount = itemsCount == null ? requests.itemsCount : itemsCount;
+                    requests = requests.requests;
+                }
+                if (requests == null || typeof requests !== "object" || typeof requests.length !== "number") {
+                    throw new TypeError(
+                        argumentLabel("selectionStorage.apply", "requests") +
+                        " must be what beginMultiSelect or endMultiSelect returned, or its requests array"
+                    );
+                }
+                var count = argInt("selectionStorage.apply", "itemsCount", itemsCount, -1, -1);
+                for (var i = 0; i < requests.length; i += 1) {
+                    applyRequest(requests[i], count);
+                }
+                return storage;
+            },
+            has: function (id) { return selected.has(Number(id)); },
+            setItemSelected: function (id, value) {
+                var resolved = selectionId("selectionStorage.setItemSelected", id);
+                if (value) {
+                    selected.add(resolved);
+                } else {
+                    selected.delete(resolved);
+                }
+                return storage;
+            },
+            clear: function () {
+                selected.clear();
+                return storage;
+            },
+            toArray: function () {
+                var ids = [];
+                selected.forEach(function (id) { ids.push(id); });
+                return ids.sort(function (a, b) { return a - b; });
+            }
+        };
+        Object.defineProperty(storage, "size", {get: function () { return selected.size; }, enumerable: true});
+        return storage;
     };
 
     api.openPopup = function (id, flags) { bridge.openPopup(String(id), argFlags("openPopup", flags)); };
@@ -8402,6 +8551,11 @@ module.exports = function (bridge) {
         BeginCombo: "beginCombo",
         EndCombo: "endCombo",
         ListClipper: "listClipper",
+        BeginMultiSelect: "beginMultiSelect",
+        EndMultiSelect: "endMultiSelect",
+        SetNextItemSelectionUserData: "setNextItemSelectionUserData",
+        IsItemToggledSelection: "isItemToggledSelection",
+        SelectionStorage: "selectionStorage",
         OpenPopup: "openPopup",
         BeginPopup: "beginPopup",
         BeginPopupModal: "beginPopupModal",

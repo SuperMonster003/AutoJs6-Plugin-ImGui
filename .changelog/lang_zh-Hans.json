@@ -5,6 +5,16 @@
   "changelog_label_improvement": "优化",
   "changelog_label_dependency": "依赖",
   "$data": {
+    "v1.17.0": {
+      "released_date": "2026/11/01",
+      "feature": [
+        "多选列表: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection 支持用点按, Ctrl+点按, Shift+点按, Ctrl+A 和 Escape 选择多行 (选项见 MultiSelectFlags). imgui.selectionStorage() 替你保存选中的行. 可以和 listClipper 一起用: Shift 范围可以跨 100000 行, 没有绘制过的行也会选中. 手机没有 Ctrl 和 Shift 键, large-list 示例用两个复选框按住它们; 其余说明见 docs/LIMITS.md.",
+        "新增示例 multi-window 和说明文档 docs/MULTI-WINDOW.md: 在一个会话里显示多个面板, 各有自己的位置, 折叠箭头和关闭按钮, 点按哪个窗口它就到最前面. 同一时间只能有一个会话 (一个 Surface), 所以 \"多窗口\" 指一个会话里的多个窗口, 不是多个悬浮窗."
+      ],
+      "fix": [
+        "悬浮窗在默认的 TouchMode.Auto 下, 触摸位置比手指低一个状态栏的高度, 窗口顶部的控件可能点不中, 标题栏也拖不动"
+      ]
+    },
     "v1.16.0": {
       "released_date": "2026/10/31",
       "feature": [

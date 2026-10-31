@@ -55,6 +55,12 @@
       "title": "Texture Refresh",
       "asset": "examples/texture-refresh.js",
       "runner": "imgui.runExample"
+    },
+    {
+      "id": "multi-window",
+      "title": "Multi Window",
+      "asset": "examples/multi-window.js",
+      "runner": "imgui.runExample"
     }
   ]
 }

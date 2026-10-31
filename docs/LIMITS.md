@@ -148,9 +148,57 @@ if (ui.beginCombo("Row", "Row " + selected)) {
 
 `options.itemHeight` (px) skips measuring the first row when every row has the same known height, and indices in
 `options.includeItems` outside the list are ignored. The bundled example `examples/large-list.js` draws 100,000
-rows this way. Filtering before calling `combo` remains a good fit for searchable data:
+rows this way. Multiple selection in such a list is described under [Multi-select](#multi-select). Filtering before
+calling `combo` remains a good fit for searchable data:
 
 ```javascript
 var visible = allItems.filter(matchesQuery).slice(0, imgui.Limits.SelectionMaxItems);
 imgui.combo("Result", selectedIndex, visible);
 ```
+
+## Multi-select
+
+`beginMultiSelect` / `endMultiSelect` give a list the usual selection gestures: a tap selects one row, Ctrl+tap toggles a
+row and keeps the others, Shift+tap selects from the anchor to that row, Ctrl+A selects all and, with `ClearOnEscape`, Escape
+clears. Dear ImGui does not store the selection. It reports each change as requests, which the script applies to its own
+data; `imgui.selectionStorage()` does that with a JavaScript `Set` of row indices. It needs no session, so it can
+outlive a window.
+
+```javascript
+var selection = imgui.selectionStorage();
+// In the render callback, inside a child window:
+var scope = ui.beginMultiSelect(ui.MultiSelectFlags.ClearOnEscape, selection.size, allItems.length);
+selection.apply(scope);
+ui.listClipper(allItems.length, {includeItems: [scope.rangeSrcItem, scope.navIdItem]}, function (start, end) {
+    for (var i = start; i < end; i += 1) {
+        ui.setNextItemSelectionUserData(i);
+        ui.selectable(allItems[i] + "##" + i, selection.has(i));
+    }
+});
+selection.apply(ui.endMultiSelect());
+```
+
+- Apply both results. `beginMultiSelect` carries "select all" and "clear", and a clipper only submits the visible rows, so
+  Dear ImGui cannot apply them row by row; `endMultiSelect` carries what the rows reported.
+- `rangeSrcItem` is the anchor of a Shift range and `navIdItem` the focused row. A row that is not submitted cannot take
+  part, so keep both in `includeItems` (-1 means none, and `listClipper` ignores it). The rows between the two ends of a
+  range need not be submitted: the request only names the ends.
+- `requests` come as `{type, selected, rangeFirstItem, rangeLastItem, rangeDirection}`: `type` is `"setAll"` (the range is
+  -1 and the direction 0) or `"setRange"`, and `rangeLastItem` is inclusive. `rangeDirection` is -1 for a range selected
+  backwards, and `rangeFirstItem` stays the smaller end. Handle them yourself if the selection lives in your own data, for
+  example a field of each row.
+- `setNextItemSelectionUserData(id)` takes an integer from 0 to 2^53 - 1. `selectionStorage` walks ranges by adding 1, so
+  ids must be consecutive indices of the rows as shown. After sorting or filtering, translate indices to your own keys
+  before keeping a selection across the change, and after deleting rows pass `true` to `endMultiSelect`, which forgets
+  the anchor.
+- `itemsCount` is needed for `selectionStorage` to select all; without it `apply` throws `RangeError`. With
+  `selectionSize` at 0, `ClearOnEscape` leaves the Escape key to the rest of the UI.
+- A range costs `selectionStorage` one `Set` entry per row, in the frame that applies it: selecting 50000 rows took about
+  150 ms and all 100000 rows about 180 ms on a Snapdragon 8+ Gen 1 tablet with a debug host. Drawing the visible rows does
+  not depend on how many are selected.
+- Two scopes in one window need different ids: wrap each in `pushId` / `popId`, and pass `ScopeRect` if they use
+  `ClearOnClickVoid` or a box selection. `endMultiSelect` must run in the window of its `beginMultiSelect`, otherwise it
+  throws; a window that ends with an open scope closes the scope for you.
+- A phone has neither Ctrl nor Shift. Two ways to offer the same selections with a touch screen: hold the keys from the
+  script with `addKeyEvent(ui.Key.ModCtrl, true)`, as the checkboxes of `examples/large-list.js` do, or use `checkbox`
+  rows with `NoAutoSelect | NoAutoClear`, where a tap toggles one row and keeps the others.

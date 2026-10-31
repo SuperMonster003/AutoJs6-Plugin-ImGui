@@ -129,7 +129,7 @@ imgui.createWindow(function (ui, overlay) {
 
 ウィンドウセッション: オーバーレイは既定で `TouchMode.Auto` を使い、ImGui ルートウィンドウを操作可能に保ちながら Surface の空白領域を背後のアプリへ渡します。固定する場合は `Touchable` または `Passthrough` を選択します。セッションは透明度/セキュリティ/タッチモードの変更、低 FPS ミニバブルへの折りたたみ、独立した `addButtonEx`、`AlwaysAutoResize` 追従、`iniPath` による配置保存、`on` / `once` / `off` またはオプションのコールバックによるイベント購読に対応します。`imgui.launch(...)` は現在 resumed の AutoJs6 Activity に全画面 Surface を作り、`launchFloaty(...)` はオーバーレイを明示します。スクリプトエンジンごとのネイティブレンダーセッションは 1 つですが、同じコールバックで任意の数の `begin` / `withWindow` ImGui ルートを作成できます。新しいセッションは以前のセッションを閉じます。 描画コールバックやイベントコールバックが例外を投げると, `console.error` にエラーとスタックを出力し (同じエラーが続く場合は 1 回だけ), `error` イベント (`error` / `phase` / `frame`) を発行します. `error` リスナーがない場合, 描画エラーはセッションを閉じます (`closeReason` は `render-error`). リスナーがある場合はそのフレームの残りを飛ばして描画を続けます. オプション `debug: true` は `begin` に対応する `end` がないなどの使い方の誤りを `console.warn` と logcat に報告し, Metrics と Debug Log ウィンドウを表示します. `setTouchable` / `setGlobalAlpha` / `getComponent` などのグローバルメソッドは現在のセッションに作用し, アクティブなセッションがない場合は `imgui.<name>: no active session` を投げます. `imgui.launch` のセッションでは, `back` リスナーが `event.preventDefault()` を呼ばない限り, 戻るキーでセッションが閉じます (`closeReason` は `back`). ソフトキーボードが表示中なら, 戻るキーはまずキーボードを閉じます. オーバーレイは文字入力にフォーカスがある間だけ戻るキーを受け取り, そのときはキーボードを閉じるだけです. `debug: true` では, 描画コールバックが 250 ms を超えると `threads.start` の利用を勧める `console.warn` も出力します (10 秒に最大 1 回).
 
-高レベルコンポーネントはアクティブなセッションに接続され, ユーザーの描画コールバック後に描画されます. `logWindow` はレベル色分け, 消去, エクスポート, オートスクロール, `toast` は位置指定付き時間通知, `alert` / `confirm` / `singleChoice` / `multiChoice` は Promise, `statsOverlay` はフレーム時間グラフと各フレームの処理時間, `dataTable` は選択と CRUD を提供します. 9 つの内蔵例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling` / `background-task` / `large-list` / `texture-refresh`) は `listExamples` / `getExampleSource` で確認し, `runExample` で実行できます. AutoJs6 6.8 のプラグインセンターは汎用サンプルメタデータをまだ利用しないため, ホスト対応までは次の呼び出しを直接実行してください:
+高レベルコンポーネントはアクティブなセッションに接続され, ユーザーの描画コールバック後に描画されます. `logWindow` はレベル色分け, 消去, エクスポート, オートスクロール, `toast` は位置指定付き時間通知, `alert` / `confirm` / `singleChoice` / `multiChoice` は Promise, `statsOverlay` はフレーム時間グラフと各フレームの処理時間, `dataTable` は選択と CRUD を提供します. 10 個の内蔵例 (`widget-overview` / `parameter-panel` / `log-hud` / `data-table-demo` / `theme-gallery` / `error-handling` / `background-task` / `large-list` / `texture-refresh` / `multi-window`) は `listExamples` / `getExampleSource` で確認し, `runExample` で実行できます. AutoJs6 6.8 のプラグインセンターは汎用サンプルメタデータをまだ利用しないため, ホスト対応までは次の呼び出しを直接実行してください:
 
 ```js
 imgui.runExample("widget-overview");
@@ -147,7 +147,7 @@ imgui.runExample("widget-overview");
 - バックエンドの検出: `getBackendCapabilities` / `BackendStatus` は, ウィンドウ, split-touch, 特権プロセス, direct input, Docking, Multi-Viewport の利用可否と本番運用への対応状況を報告します. 権限昇格は行いません.
 - セッションとウィンドウ: `createWindow`/`closeWindow`/`withWindow`/`withChild`/`setNextWindowPos`/`setNextWindowSize`/`setNextWindowBgAlpha` に加え, `isWindowHovered` などのウィンドウ状態クエリ.
 - テキストとコントロール: `text`/`textColored`/`textWrapped`/`separatorText`/`bulletText`/`labelText`/`button`/`arrowButton`/`invisibleButton`/`checkbox`/`toggle`/`radioButton`/`sliderFloat`/`sliderInt`/`vSliderFloat`/`dragFloat`/`dragInt`/`inputText`/`inputInt`/`inputFloat`/`inputTextMultiline`/`colorEdit3`/`colorEdit4`/`colorPicker4`/`colorButton`/`progressBar`/`plotLines`/`plotHistogram` など. 複数の値を扱うウィジェット: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
-- コンテナとナビゲーション: `withTabBar`/`withTabItem`/`withTreeNode`/`treeNodeEx`/`collapsingHeader`/`withTable` テーブルファミリー/`withListBox`/`withCombo`/`selectable`, 長いリスト向けの `listClipper`. テーブルの並べ替え: `tableGetSortSpecs` / `SortDirection` と, `dataTable` の `sortable: true`.
+- コンテナとナビゲーション: `withTabBar`/`withTabItem`/`withTreeNode`/`treeNodeEx`/`collapsingHeader`/`withTable` テーブルファミリー/`withListBox`/`withCombo`/`selectable`, 長いリスト向けの `listClipper`. テーブルの並べ替え: `tableGetSortSpecs` / `SortDirection` と, `dataTable` の `sortable: true`. 複数選択: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` と `MultiSelectFlags`, 選択を保持する `selectionStorage`.
 - ポップアップとメニュー: `openPopup`/`withPopup`/`withPopupModal`/`beginPopupContextItem`/`beginPopupContextWindow`/`withContextItem`/`withContextWindow`/`closeCurrentPopup`/`withMenuBar`/`withMenu`/`menuItem`/`setTooltip`/`setItemTooltip`/`withItemTooltip`.
 - スタイルとレイアウト: `styleColorsDark`/`styleColorsLight`/`styleColorsClassic`/`pushStyleColor`/`pushStyleVar`/`setWindowFontScale`/`withGroup`/`withDisabled`/`withId`/`indent`/`sameLine`/`separator`/`spacing` に加え, カーソルとスクロールのファミリー.
 - テクスチャと描画: `createTexture` / `texture.update` / `destroyTexture` / `image` / `imageButton` / `colorU32`、および線・矩形・円・三角形・テキスト・ポリライン・ベジェ曲線・画像プリミティブを備えた `getWindowDrawList` / `getForegroundDrawList` / `getBackgroundDrawList`. パス描画: `pathLineTo` / `pathArcTo` / `pathArcToFast` / `pathBezierCubicCurveTo` / `pathBezierQuadraticCurveTo` / `pathRect` / `pathStroke` / `pathFillConvex` / `pathFillConcave`; 描画リストとウィンドウの `pushClipRect` / `popClipRect`; 追加の図形: `addEllipse` / `addNgon` / `addQuad` / `addBezierQuadratic` / `addRectFilledMultiColor` / `addConvexPolyFilled` / `addConcavePolyFilled` / `addImageQuad` / `addImageRounded`.
@@ -156,7 +156,7 @@ imgui.runExample("widget-overview");
 - デバッグツール: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide` は Dear ImGui 組み込みのツールウィンドウを表示します. それぞれ省略可能な可変 boolean 参照を受け取り, 閉じるボタンで false になります.
 - 高レベルコンポーネントと例: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`、および `listExamples` / `getExampleSource` / `runExample`. 各セッションにも同名のファクトリがあります.
 - 可変参照: 軽量な `imgui.ref` (または通常の `{value: x}` オブジェクト) と、互換 Java 配列ヘルパー `imgui.bool` / `imgui.int` / `imgui.float` / `imgui.string` / `imgui.floats` / `imgui.ints` / `imgui.strings`.
-- 定数: `BackendStatus` / `Cond`/`WindowFlags`/`ChildFlags`/`InputTextFlags`/`SliderFlags`/`TreeNodeFlags`/`SelectableFlags`/`TabBarFlags`/`TabItemFlags`/`ComboFlags`/`PopupFlags`/`HoveredFlags`/`FocusedFlags`/`ColorEditFlags`/`TableFlags`/`TableColumnFlags`/`TableRowFlags`/`TableBgTarget`/`SortDirection`/`Col`/`StyleVar`/`Themes`/`Appearance`/`Fonts`/`Icons`/`Dir`/`Key`/`Mod`/`InputFlags`/`DragDropFlags`/`MouseButton`/`ButtonFlags`/`TextureFlags`/`DrawListLayer`/`DrawFlags`/`LogLevel`/`ToastPosition`/`Limits`. Dear ImGui の列挙またはプラグインの同名テーブルに対応します.
+- 定数: `BackendStatus` / `Cond`/`WindowFlags`/`ChildFlags`/`InputTextFlags`/`SliderFlags`/`TreeNodeFlags`/`SelectableFlags`/`TabBarFlags`/`TabItemFlags`/`ComboFlags`/`PopupFlags`/`HoveredFlags`/`FocusedFlags`/`ColorEditFlags`/`TableFlags`/`TableColumnFlags`/`TableRowFlags`/`TableBgTarget`/`SortDirection`/`Col`/`StyleVar`/`Themes`/`Appearance`/`Fonts`/`Icons`/`Dir`/`Key`/`Mod`/`InputFlags`/`DragDropFlags`/`MultiSelectFlags`/`MouseButton`/`ButtonFlags`/`TextureFlags`/`DrawListLayer`/`DrawFlags`/`LogLevel`/`ToastPosition`/`Limits`. Dear ImGui の列挙またはプラグインの同名テーブルに対応します.
 
 ******
 
@@ -164,7 +164,7 @@ imgui.runExample("widget-overview");
 
 ******
 
-- 各スクリプトエンジンが同時に持てるネイティブレンダーセッションは 1 つです。複数パネルはそのセッション内に複数の ImGui ルートウィンドウとして作成してください。新しいオーバーレイまたは Activity セッションは以前のセッションを閉じます。
+- 同時に存在できる ImGui セッションは 1 つ, つまり Surface は 1 つだけです: 新しいオーバーレイまたは Activity セッションは以前のセッションを閉じ, 別のスクリプトが作成したセッションもこれを置き換えます. "複数ウィンドウ" は 1 つのセッション内の複数の ImGui ルートウィンドウを指し, 複数のフローティングウィンドウではありません. `docs/MULTI-WINDOW.md` を参照してください.
 - `imgui.launch` には現在 resumed の AutoJs6 Activity が必要です。フォアグラウンドのホスト Activity なしで描画を続ける場合は `launchFloaty` を使います。
 - 特権モードは固定全画面かつポインター専用です. テキスト欄は AutoJs6 の一時入力ボックスを使い (オーバーレイ権限が必要, カーソル位置への追加のみ), キー入力, ホストレイヤーの透明度/セキュリティ、折りたたみ、補助 Android ボタン、回転時の動的再構築には未対応です。直接入力は `EVIOCGRAB` を使わず、OEM の SurfaceControl/SELinux 方針で起動できない場合があります。能力検査は `su` 実行や Shizuku 許可要求を行いません。
 
@@ -173,6 +173,14 @@ imgui.runExample("widget-overview");
 ### リリース履歴
 
 ******
+
+#### v1.17.0
+
+###### 2026/11/01
+
+* `機能` 複数選択リスト: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection により, タップ, Ctrl+タップ, Shift+タップ, Ctrl+A, Escape で複数の行を選択できます (オプションは MultiSelectFlags). imgui.selectionStorage() が選択された行を保持します. listClipper と併用でき, Shift の範囲は 100000 行にわたり, 一度も描画されていない行も選択されます. スマートフォンには Ctrl キーと Shift キーがないため, large-list の例ではこれらを押し続ける 2 つのチェックボックスを表示します. 詳しくは docs/LIMITS.md を参照してください.
+* `機能` 新しい例 multi-window と新しいガイド docs/MULTI-WINDOW.md: 1 つのセッションに複数のパネルを表示し, それぞれが位置, 折りたたみ矢印, 閉じるボタンを持ち, タップしたウィンドウが最前面に来ます. 同時に存在できるセッションは 1 つ (Surface は 1 つ) なので, "複数ウィンドウ" は常に 1 つのセッション内のウィンドウを指し, 複数のフローティングウィンドウではありません.
+* `修正` 既定の TouchMode.Auto のオーバーレイウィンドウで, タッチがステータスバーの高さ分だけ指より下の位置に届いていたため, ウィンドウ上部のコントロールが反応しないことがあり, タイトルバーをドラッグできませんでした
 
 #### v1.16.0
 
@@ -193,16 +201,6 @@ imgui.runExample("widget-overview");
 * `機能` ドラッグ アンド ドロップ: beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload とヘルパー withDragDropSource / withDragDropTarget で, 項目を別の項目へドラッグできます (オプションは DragDropFlags). ペイロードは文字列, 数値, または JSON に変換できる任意のオブジェクトで, カラー ウィジェットの色もドラッグできます. サンプル widget-overview の新しいセクションを参照してください
 * `機能` カスタム描画: パス関数 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex など), 描画リストとウィンドウの pushClipRect / popClipRect, 新しい図形 addEllipse, addNgon, addQuad とその塗りつぶし版, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded を追加. サンプル widget-overview を参照してください
 * `機能` タッチのシミュレーション: addMousePosEvent(x, y) と addMouseButtonEvent(button, down) で, スクリプトが指のようにウィンドウを操作できます. UI の自動テストなどに使えます. 座標は getMousePos と同じフレーム内ピクセルで, createWindow の dp ではありません. ウィンドウの下のアプリには影響しません
-
-#### v1.14.0
-
-###### 2026/10/30
-
-* `ヒント` 動作の変更: imgui.launch で開いた全画面ウィンドウは, 戻るキーで閉じるようになりました (session.closeReason は "back"). ウィンドウを残すには session.on("back", e) の中で e.preventDefault() を呼びます. フローティングウィンドウ (launchFloaty) は従来どおりです
-* `機能` デバッグ用ツールウィンドウ: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide (別名 ShowMetricsWindow など) で Dear ImGui 組み込みのツールを表示します. imgui.bool(true) を渡すと閉じるボタンで隠せます. 例 widget-overview に, これらを開く Debug メニューを追加しました
-* `機能` テーブルの並べ替え: Sortable フラグ付きのテーブルでは列見出しをタップすると並び順が変わります. tableGetSortSpecs() は並べ替えの列と方向 (imgui.SortDirection) を返し, specsDirty は並び順が変わったフレームだけ true です. tableSetupColumn の 4 番目の引数は列のユーザー id です. dataTable は sortable: true で行を並べ替え, 列の compare 関数で独自の順序を指定できます. 例 data-table-demo を参照してください
-* `機能` 複数の値を扱うウィジェット: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 最小値と最大値を編集する dragFloatRange2 / dragIntRange2, 角度を編集する sliderAngle (ラジアンで保存し度で表示). 値は {value: [x, y, z]}, imgui.floats(...) または新しい imgui.ints(...) で渡します. 例 widget-overview の新しいセクションを参照してください
-* `改善` createWindow({debug: true}) のとき, 描画コールバックが 250 ミリ秒を超えると console.warn で所要時間を示し, sleep, ネットワーク, ファイルなどの遅い処理を threads.start へ移すよう提案します (10 秒に最大 1 回). docs/THREADING.md でやり方を説明しています
 
 ##### その他のリリース履歴
 

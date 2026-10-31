@@ -174,6 +174,52 @@ declare namespace ImGui {
         includeItems?: readonly number[];
     }
 
+    /** One change of the selection, to apply to the selected ids. selectionStorage().apply does it for you. */
+    interface SelectionRequest {
+        /** "setAll": clear the selection, or select every item when selected is true. "setRange": set rangeFirstItem to rangeLastItem. */
+        readonly type: "setAll" | "setRange";
+        /** The state to give the items. */
+        readonly selected: boolean;
+        /** First id of the range; -1 for "setAll". Never greater than rangeLastItem. */
+        readonly rangeFirstItem: number;
+        /** Last id of the range, inclusive; -1 for "setAll". */
+        readonly rangeLastItem: number;
+        /** 1 when the range was selected from rangeFirstItem to rangeLastItem, -1 when backwards, 0 for "setAll". */
+        readonly rangeDirection: number;
+    }
+
+    /** What beginMultiSelect and endMultiSelect return (a copy, ImGuiMultiSelectIO in C++). */
+    interface MultiSelectIO {
+        /** Apply them to the selection in this order. In beginMultiSelect the result has only "setAll" requests. */
+        readonly requests: readonly SelectionRequest[];
+        /** The anchor of a Shift range, -1 for none. With listClipper it must stay submitted: pass it in includeItems. */
+        readonly rangeSrcItem: number;
+        /** The id of the focused item if it was submitted, -1 for none. Pass it in includeItems as well. */
+        readonly navIdItem: number;
+        /** The focused item was selected. */
+        readonly navIdSelected: boolean;
+        /** The itemsCount given to beginMultiSelect, -1 if it was omitted. */
+        readonly itemsCount: number;
+    }
+
+    /** The selected ids of one list (ImGuiSelectionBasicStorage in C++), kept in a JavaScript Set. */
+    interface SelectionStorage {
+        /** Number of selected ids. */
+        readonly size: number;
+        /**
+         * Applies what beginMultiSelect or endMultiSelect returned, or a requests array. A "setAll" request that selects
+         * needs the number of items, which comes from the first argument or from itemsCount; ids are then 0 to itemsCount - 1.
+         * @returns This storage.
+         */
+        apply(requests: MultiSelectIO | readonly SelectionRequest[], itemsCount?: number): this;
+        has(id: number): boolean;
+        /** Selects or unselects one id from the script. */
+        setItemSelected(id: number, selected: boolean): this;
+        clear(): this;
+        /** The selected ids in ascending order. */
+        toArray(): number[];
+    }
+
     interface TextureOptions {
         flags?: number;
         nearest?: boolean;
@@ -1154,6 +1200,8 @@ declare namespace ImGui {
         readonly Mod: NumericConstants<"None" | "Ctrl" | "Shift" | "Alt" | "Super">;
         readonly InputFlags: NumericConstants<"None" | "Repeat" | "RouteActive" | "RouteFocused" | "RouteGlobal" | "RouteAlways" | "RouteOverFocused" | "RouteOverActive" | "RouteUnlessBgFocused" | "RouteFromRootWindow" | "Tooltip">;
         readonly DragDropFlags: NumericConstants<"None" | "SourceNoPreviewTooltip" | "SourceNoDisableHover" | "SourceNoHoldToOpenOthers" | "SourceAllowNullID" | "SourceExtern" | "PayloadAutoExpire" | "PayloadNoCrossContext" | "PayloadNoCrossProcess" | "AcceptBeforeDelivery" | "AcceptNoDrawDefaultRect" | "AcceptNoPreviewTooltip" | "AcceptDrawAsHovered" | "AcceptPeekOnly">;
+        /** Flags of beginMultiSelect. Ctrl+A selects all unless NoSelectAll is set; ClearOnEscape and the BoxSelect flags are off by default. */
+        readonly MultiSelectFlags: NumericConstants<"None" | "SingleSelect" | "NoSelectAll" | "NoRangeSelect" | "NoAutoSelect" | "NoAutoClear" | "NoAutoClearOnReselect" | "BoxSelect1d" | "BoxSelect2d" | "BoxSelectNoScroll" | "ClearOnEscape" | "ClearOnClickVoid" | "ScopeWindow" | "ScopeRect" | "SelectOnAuto" | "SelectOnClickAlways" | "SelectOnClickRelease" | "NavWrapX" | "NoSelectOnRightClick">;
 
         getBackendCapabilities(): BackendCapabilities;
         listExamples(): string[];
@@ -1292,6 +1340,28 @@ declare namespace ImGui {
          */
         listClipper(itemCount: number, callback: (start: number, end: number) => void): void;
         listClipper(itemCount: number, options: ListClipperOptions | null | undefined, callback: (start: number, end: number) => void): void;
+        /**
+         * Starts a multi-select scope: Ctrl and Shift selection, select all, range selection across rows that are not
+         * submitted. Dear ImGui does not keep the selection: apply the `requests` of this result before submitting the
+         * rows and those of endMultiSelect after them, for example with selectionStorage(). Inside, call
+         * setNextItemSelectionUserData(id) before each selectable or checkbox. With listClipper pass
+         * `includeItems: [io.rangeSrcItem, io.navIdItem]`. Two scopes in one window need different ids (pushId).
+         * @param flags MultiSelectFlags.
+         * @param selectionSize The number of selected items, or -1 if unknown (default). ClearOnEscape leaves the Escape key alone at 0.
+         * @param itemsCount The number of items, or -1 if unknown (default). Needed to select all with selectionStorage().
+         */
+        beginMultiSelect(flags?: number, selectionSize?: number, itemsCount?: number): MultiSelectIO;
+        /**
+         * Ends the scope in the window of its beginMultiSelect; otherwise throws IllegalStateException.
+         * @param rangeSrcReset Forget the Shift anchor, after deleting selected items (`RangeSrcReset` in C++).
+         */
+        endMultiSelect(rangeSrcReset?: boolean): MultiSelectIO;
+        /** Gives the next item its id in the scope: usually the row index, so that ranges can be walked. An integer from 0 to 2^53 - 1. */
+        setNextItemSelectionUserData(id: number): void;
+        /** Inside a multi-select scope: the selection state of the last item changed in this frame. Throws IllegalStateException outside. */
+        isItemToggledSelection(): boolean;
+        /** Creates an empty selection; it needs no session, so it can outlive a window. */
+        selectionStorage(): SelectionStorage;
         openPopup(id: string, flags?: number): void;
         beginPopup(id: string, flags?: number): boolean;
         beginPopupModal(name: string, open?: MutableValue<boolean> | null, flags?: number): boolean;
@@ -1667,6 +1737,11 @@ declare namespace ImGui {
         readonly BeginCombo: ApiCore["beginCombo"];
         readonly EndCombo: ApiCore["endCombo"];
         readonly ListClipper: ApiCore["listClipper"];
+        readonly BeginMultiSelect: ApiCore["beginMultiSelect"];
+        readonly EndMultiSelect: ApiCore["endMultiSelect"];
+        readonly SetNextItemSelectionUserData: ApiCore["setNextItemSelectionUserData"];
+        readonly IsItemToggledSelection: ApiCore["isItemToggledSelection"];
+        readonly SelectionStorage: ApiCore["selectionStorage"];
         readonly OpenPopup: ApiCore["openPopup"];
         readonly BeginPopup: ApiCore["beginPopup"];
         readonly BeginPopupModal: ApiCore["beginPopupModal"];

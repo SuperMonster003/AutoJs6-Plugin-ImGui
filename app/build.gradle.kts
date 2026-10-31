@@ -200,6 +200,7 @@ tasks {
             file("../docs/DOCKING-MULTI-VIEWPORT.md"),
             file("../docs/FRAME-LOOP.md"),
             file("../docs/LIMITS.md"),
+            file("../docs/MULTI-WINDOW.md"),
             file("../docs/PRIVILEGED-BACKEND.md"),
             file("../tools/update_imgui_upstream.py"),
         )
@@ -229,6 +230,7 @@ tasks {
                 "src/main/assets/examples/background-task.js",
                 "src/main/assets/examples/large-list.js",
                 "src/main/assets/examples/texture-refresh.js",
+                "src/main/assets/examples/multi-window.js",
                 "src/main/assets/types/imgui.d.ts",
                 "src/main/aidl/io/github/supermonster003/autojs6/plugin/imgui/IImGuiInputCallback.aidl",
                 "src/main/aidl/io/github/supermonster003/autojs6/plugin/imgui/IImGuiPrivilegeBroker.aidl",
@@ -243,6 +245,7 @@ tasks {
                 "../docs/DOCKING-MULTI-VIEWPORT.md",
                 "../docs/FRAME-LOOP.md",
                 "../docs/LIMITS.md",
+                "../docs/MULTI-WINDOW.md",
                 "../docs/PRIVILEGED-BACKEND.md",
                 "../tools/update_imgui_upstream.py",
             )

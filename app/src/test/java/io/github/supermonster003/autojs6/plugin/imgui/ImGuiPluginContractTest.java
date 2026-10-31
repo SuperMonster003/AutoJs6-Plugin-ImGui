@@ -63,6 +63,7 @@ public class ImGuiPluginContractTest {
                 "background-task",
                 "large-list",
                 "texture-refresh",
+                "multi-window",
             },
             ImGuiPluginContract.exampleNames()
         );

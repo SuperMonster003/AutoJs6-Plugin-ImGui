@@ -5,6 +5,16 @@
   "changelog_label_improvement": "Improvement",
   "changelog_label_dependency": "Dependency",
   "$data": {
+    "v1.17.0": {
+      "released_date": "2026/11/01",
+      "feature": [
+        "Multi-select lists: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection select several rows with a tap, Ctrl+tap, Shift+tap, Ctrl+A and Escape (MultiSelectFlags sets the options). imgui.selectionStorage() keeps the selected rows for you. It works with listClipper: a Shift range can span 100000 rows, even rows that were never drawn. A phone has no Ctrl or Shift key, so the large-list example shows two checkboxes that hold them; docs/LIMITS.md explains the rest.",
+        "New example multi-window and new guide docs/MULTI-WINDOW.md: several panels in one session, each with its own position, collapse arrow and close button, and the window you tap comes to the front. Only one session (one Surface) can exist at a time, so \"multiple windows\" always means windows inside one session, not several floating windows."
+      ],
+      "fix": [
+        "Overlay windows in the default TouchMode.Auto: a touch arrived one status bar height below the finger, so controls near the top of a window could miss it and title bars could not be dragged"
+      ]
+    },
     "v1.16.0": {
       "released_date": "2026/10/31",
       "feature": [

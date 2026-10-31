@@ -129,7 +129,7 @@ imgui.createWindow(function (ui, overlay) {
 
 창 세션: 오버레이는 기본적으로 `TouchMode.Auto`를 사용하여 ImGui 루트 창은 상호작용 가능하게 유지하고 Surface 빈 영역의 입력은 뒤쪽 앱으로 전달합니다. 고정 정책은 `Touchable` 또는 `Passthrough`를 선택하세요. 세션은 투명도/보안/터치 모드 변경, 저 FPS 미니 버블로 접기, 독립적인 `addButtonEx`, `AlwaysAutoResize` 콘텐츠 추적, `iniPath` 레이아웃 저장, `on` / `once` / `off` 또는 옵션 콜백 이벤트를 지원합니다. `imgui.launch(...)`는 현재 resumed 상태인 AutoJs6 Activity에 전체 화면 Surface를 만들고 `launchFloaty(...)`는 오버레이를 명시합니다. 스크립트 엔진당 네이티브 렌더 세션은 하나지만 같은 콜백에서 원하는 수의 `begin` / `withWindow` ImGui 루트를 만들 수 있습니다. 새 세션은 이전 세션을 닫습니다. 렌더 콜백이나 이벤트 콜백이 예외를 던지면 `console.error`로 오류와 스택을 출력하고(같은 오류가 이어지면 한 번만) `error` 이벤트(`error` / `phase` / `frame`)를 발생시킵니다. `error` 리스너가 없으면 렌더 오류는 세션을 닫고(`closeReason`은 `render-error`), 리스너가 있으면 해당 프레임의 나머지를 건너뛰고 렌더링을 계속합니다. 옵션 `debug: true`는 `begin`에 짝이 맞는 `end`가 없는 등의 사용 오류를 `console.warn`과 logcat으로 보고하고 Metrics와 Debug Log 창을 표시합니다. `setTouchable` / `setGlobalAlpha` / `getComponent` 등 전역 메서드는 현재 세션에 작용하며 활성 세션이 없으면 `imgui.<name>: no active session`을 던집니다. `imgui.launch` 세션에서는 `back` 리스너가 `event.preventDefault()`를 호출하지 않는 한 뒤로 키가 세션을 닫습니다(`closeReason`은 `back`). 소프트 키보드가 표시되어 있으면 뒤로 키는 먼저 키보드를 닫습니다. 오버레이 창은 텍스트 입력에 포커스가 있을 때만 뒤로 키를 받으며 이때는 키보드만 닫습니다. `debug: true`에서는 렌더 콜백이 250 ms를 넘으면 `threads.start` 사용을 권하는 `console.warn`도 출력합니다(10초에 최대 한 번).
 
-고수준 컴포넌트는 활성 세션에 연결되어 사용자 렌더 콜백 뒤에 그려집니다. `logWindow`는 레벨 색상, 지우기, 내보내기, 자동 스크롤을, `toast`는 위치 지정 시간 알림을, `alert` / `confirm` / `singleChoice` / `multiChoice`는 Promise를, `statsOverlay`는 프레임 시간 그래프와 프레임별 작업 시간을, `dataTable`은 선택과 CRUD를 제공합니다. 내장 예제 9개(`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling`, `background-task`, `large-list`, `texture-refresh`)는 `listExamples` / `getExampleSource`로 찾고 `runExample`로 실행할 수 있습니다. AutoJs6 6.8 플러그인 센터는 아직 범용 예제 메타데이터를 사용하지 않으므로 호스트 지원 전에는 아래 호출을 직접 실행하세요:
+고수준 컴포넌트는 활성 세션에 연결되어 사용자 렌더 콜백 뒤에 그려집니다. `logWindow`는 레벨 색상, 지우기, 내보내기, 자동 스크롤을, `toast`는 위치 지정 시간 알림을, `alert` / `confirm` / `singleChoice` / `multiChoice`는 Promise를, `statsOverlay`는 프레임 시간 그래프와 프레임별 작업 시간을, `dataTable`은 선택과 CRUD를 제공합니다. 내장 예제 10개(`widget-overview`, `parameter-panel`, `log-hud`, `data-table-demo`, `theme-gallery`, `error-handling`, `background-task`, `large-list`, `texture-refresh`, `multi-window`)는 `listExamples` / `getExampleSource`로 찾고 `runExample`로 실행할 수 있습니다. AutoJs6 6.8 플러그인 센터는 아직 범용 예제 메타데이터를 사용하지 않으므로 호스트 지원 전에는 아래 호출을 직접 실행하세요:
 
 ```js
 imgui.runExample("widget-overview");
@@ -147,7 +147,7 @@ imgui.runExample("widget-overview");
 - 백엔드 탐색: `getBackendCapabilities` / `BackendStatus`는 창, split-touch, 권한 있는 프로세스, 직접 입력, Docking 및 Multi-Viewport의 사용 가능 여부와 운영 환경 준비 상태를 보고하며 권한 상승은 수행하지 않습니다.
 - 세션과 창: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `setNextWindowPos`, `setNextWindowSize`, `setNextWindowBgAlpha` 및 `isWindowHovered` 같은 창 상태 조회.
 - 텍스트와 컨트롤: `text`, `textColored`, `textWrapped`, `separatorText`, `bulletText`, `labelText`, `button`, `arrowButton`, `invisibleButton`, `checkbox`, `toggle`, `radioButton`, `sliderFloat`, `sliderInt`, `vSliderFloat`, `dragFloat`, `dragInt`, `inputText`, `inputInt`, `inputFloat`, `inputTextMultiline`, `colorEdit3`, `colorEdit4`, `colorPicker4`, `colorButton`, `progressBar`, `plotLines`, `plotHistogram` 등. 여러 값을 다루는 위젯: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
-- 컨테이너와 탐색: `withTabBar`, `withTabItem`, `withTreeNode`, `treeNodeEx`, `collapsingHeader`, `withTable` 테이블 계열, `withListBox`, `withCombo`, `selectable`, 긴 목록용 `listClipper`. 표 정렬: `tableGetSortSpecs` / `SortDirection`, `dataTable`의 `sortable: true`.
+- 컨테이너와 탐색: `withTabBar`, `withTabItem`, `withTreeNode`, `treeNodeEx`, `collapsingHeader`, `withTable` 테이블 계열, `withListBox`, `withCombo`, `selectable`, 긴 목록용 `listClipper`. 표 정렬: `tableGetSortSpecs` / `SortDirection`, `dataTable`의 `sortable: true`. 다중 선택: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection`와 `MultiSelectFlags`, 선택 상태를 보관하는 `selectionStorage`.
 - 팝업과 메뉴: `openPopup`, `withPopup`, `withPopupModal`, `beginPopupContextItem`, `beginPopupContextWindow`, `withContextItem`, `withContextWindow`, `closeCurrentPopup`, `withMenuBar`, `withMenu`, `menuItem`, `setTooltip`, `setItemTooltip`, `withItemTooltip`.
 - 스타일과 레이아웃: `styleColorsDark`, `styleColorsLight`, `styleColorsClassic`, `pushStyleColor`, `pushStyleVar`, `setWindowFontScale`, `withGroup`, `withDisabled`, `withId`, `indent`, `sameLine`, `separator`, `spacing` 및 커서와 스크롤 계열.
 - 텍스처와 그리기: `createTexture`, `texture.update`, `destroyTexture`, `image`, `imageButton`, `colorU32` 및 선, 사각형, 원, 삼각형, 텍스트, 폴리라인, 베지어 곡선, 이미지 프리미티브를 제공하는 `getWindowDrawList`, `getForegroundDrawList`, `getBackgroundDrawList`. 경로 그리기: `pathLineTo` / `pathArcTo` / `pathArcToFast` / `pathBezierCubicCurveTo` / `pathBezierQuadraticCurveTo` / `pathRect` / `pathStroke` / `pathFillConvex` / `pathFillConcave`; 드로우 리스트와 창의 `pushClipRect` / `popClipRect`; 추가 도형: `addEllipse` / `addNgon` / `addQuad` / `addBezierQuadratic` / `addRectFilledMultiColor` / `addConvexPolyFilled` / `addConcavePolyFilled` / `addImageQuad` / `addImageRounded`.
@@ -156,7 +156,7 @@ imgui.runExample("widget-overview");
 - 디버그 도구: `showMetricsWindow` / `showDebugLogWindow` / `showIdStackToolWindow` / `showStyleEditor` / `showAboutWindow` / `showUserGuide`는 Dear ImGui 내장 도구 창을 표시합니다. 각각 선택적인 가변 boolean 참조를 받으며 닫기 버튼을 누르면 false가 됩니다.
 - 고수준 컴포넌트와 예제: `logWindow` / `toast` / `alert` / `confirm` / `singleChoice` / `multiChoice` / `statsOverlay` / `dataTable`, 그리고 `listExamples` / `getExampleSource` / `runExample`; 각 세션에도 같은 팩터리가 있습니다.
 - 가변 참조: 가벼운 `imgui.ref`(또는 일반 `{value: x}` 객체)와 호환 Java 배열 헬퍼 `imgui.bool`, `imgui.int`, `imgui.float`, `imgui.string`, `imgui.floats`, `imgui.ints`, `imgui.strings`.
-- 상수: `BackendStatus` / `Cond`, `WindowFlags`, `ChildFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags`, `ComboFlags`, `PopupFlags`, `HoveredFlags`, `FocusedFlags`, `ColorEditFlags`, `TableFlags`, `TableColumnFlags`, `TableRowFlags`, `TableBgTarget`, `SortDirection`, `Col`, `StyleVar`, `Themes`, `Appearance`, `Fonts`, `Icons`, `Dir`, `Key`, `Mod`, `InputFlags`, `DragDropFlags`, `MouseButton`, `ButtonFlags`, `TextureFlags`, `DrawListLayer`, `DrawFlags`, `LogLevel`, `ToastPosition`, `Limits`. 값은 같은 이름의 Dear ImGui 열거형 또는 플러그인 표와 일치합니다.
+- 상수: `BackendStatus` / `Cond`, `WindowFlags`, `ChildFlags`, `InputTextFlags`, `SliderFlags`, `TreeNodeFlags`, `SelectableFlags`, `TabBarFlags`, `TabItemFlags`, `ComboFlags`, `PopupFlags`, `HoveredFlags`, `FocusedFlags`, `ColorEditFlags`, `TableFlags`, `TableColumnFlags`, `TableRowFlags`, `TableBgTarget`, `SortDirection`, `Col`, `StyleVar`, `Themes`, `Appearance`, `Fonts`, `Icons`, `Dir`, `Key`, `Mod`, `InputFlags`, `DragDropFlags`, `MultiSelectFlags`, `MouseButton`, `ButtonFlags`, `TextureFlags`, `DrawListLayer`, `DrawFlags`, `LogLevel`, `ToastPosition`, `Limits`. 값은 같은 이름의 Dear ImGui 열거형 또는 플러그인 표와 일치합니다.
 
 ******
 
@@ -164,7 +164,7 @@ imgui.runExample("widget-overview");
 
 ******
 
-- 각 스크립트 엔진은 한 번에 하나의 네이티브 렌더 세션만 지원합니다. 여러 패널이 필요하면 해당 세션 안에 여러 ImGui 루트 창을 만드세요. 새 오버레이 또는 Activity 세션은 이전 세션을 닫습니다.
+- ImGui 세션은 한 번에 하나, 즉 Surface도 하나만 있을 수 있습니다: 새 오버레이 또는 Activity 세션은 이전 세션을 닫으며, 다른 스크립트가 만든 세션도 이를 대체합니다. "다중 창"은 한 세션 안의 여러 ImGui 루트 창을 뜻하며 여러 개의 플로팅 창이 아닙니다. `docs/MULTI-WINDOW.md`를 참고하세요.
 - `imgui.launch`에는 현재 resumed 상태인 AutoJs6 Activity가 필요합니다. 전면 호스트 Activity 없이 계속 렌더링해야 하면 `launchFloaty`를 사용하세요.
 - 권한 모드는 고정 전체 화면의 포인터 전용이며, 텍스트 입력란은 AutoJs6 임시 입력 상자를 사용합니다 (오버레이 권한 필요, 커서 위치에 추가만 가능). 키 입력, 호스트 레이어 알파/보안, 접기, 보조 Android 버튼, 회전 시 동적 재생성을 지원하지 않습니다. 직접 입력은 `EVIOCGRAB`을 쓰지 않으며 OEM SurfaceControl/SELinux 정책으로 시작이 거부될 수 있습니다. 기능 탐지는 `su` 실행이나 Shizuku 권한 요청을 하지 않습니다.
 
@@ -173,6 +173,14 @@ imgui.runExample("widget-overview");
 ### 릴리스 기록
 
 ******
+
+#### v1.17.0
+
+###### 2026/11/01
+
+* `기능` 다중 선택 목록: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection로 탭, Ctrl+탭, Shift+탭, Ctrl+A, Escape를 사용해 여러 행을 선택할 수 있습니다 (옵션은 MultiSelectFlags). imgui.selectionStorage()가 선택된 행을 보관합니다. listClipper와 함께 쓸 수 있어 Shift 범위가 100000행에 걸칠 수 있고, 한 번도 그려지지 않은 행도 선택됩니다. 휴대폰에는 Ctrl과 Shift 키가 없으므로 large-list 예제는 이 키를 누른 상태로 유지하는 체크박스 두 개를 보여 줍니다. 자세한 내용은 docs/LIMITS.md를 참고하세요.
+* `기능` 새 예제 multi-window와 새 안내서 docs/MULTI-WINDOW.md: 한 세션에 여러 패널을 표시하고, 각 패널은 자체 위치, 접기 화살표, 닫기 버튼을 가지며, 탭한 창이 맨 앞으로 옵니다. 세션은 한 번에 하나(Surface 하나)만 있을 수 있으므로 "다중 창"은 항상 한 세션 안의 창을 뜻하며 여러 개의 플로팅 창이 아닙니다.
+* `수정` 기본 TouchMode.Auto 오버레이 창에서 터치가 손가락보다 상태 표시줄 높이만큼 아래에 전달되어, 창 위쪽의 컨트롤이 반응하지 않을 수 있었고 제목 표시줄을 끌 수 없었습니다
 
 #### v1.16.0
 
@@ -193,16 +201,6 @@ imgui.runExample("widget-overview");
 * `기능` 드래그 앤 드롭: beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload 와 도우미 함수 withDragDropSource / withDragDropTarget 으로 항목을 다른 항목으로 끌어다 놓을 수 있습니다 (옵션은 DragDropFlags). 페이로드는 문자열, 숫자 또는 JSON 으로 직렬화할 수 있는 객체이며, 색상 위젯의 색도 끌 수 있습니다. 예제 widget-overview 의 새 섹션을 참고하세요
 * `기능` 사용자 정의 그리기: 경로 함수 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex 등), 드로우 리스트와 창의 pushClipRect / popClipRect, 새 도형 addEllipse, addNgon, addQuad 와 채우기 버전, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded 를 추가했습니다. 예제 widget-overview 를 참고하세요
 * `기능` 터치 시뮬레이션: addMousePosEvent(x, y) 와 addMouseButtonEvent(button, down) 으로 스크립트가 손가락처럼 창을 조작할 수 있어 UI 자동 테스트 등에 쓸 수 있습니다. 좌표는 getMousePos 와 같은 프레임 픽셀이며 createWindow 의 dp 가 아닙니다. 창 아래의 앱에는 영향을 주지 않습니다
-
-#### v1.14.0
-
-###### 2026/10/30
-
-* `힌트` 동작 변경: imgui.launch로 연 전체 화면 창은 이제 뒤로 키를 누르면 닫힙니다(session.closeReason은 "back"). 창을 유지하려면 session.on("back", e) 안에서 e.preventDefault()를 호출하세요. 플로팅 창(launchFloaty)은 이전과 같습니다
-* `기능` 디버그 도구 창: showMetricsWindow / showDebugLogWindow / showIdStackToolWindow / showStyleEditor / showAboutWindow / showUserGuide(별칭 ShowMetricsWindow 등)로 Dear ImGui 내장 도구를 표시합니다. imgui.bool(true)를 넘기면 닫기 버튼으로 숨길 수 있습니다. widget-overview 예제에 이 창들을 여는 Debug 메뉴가 추가되었습니다
-* `기능` 표 정렬: Sortable 플래그가 있는 표에서는 열 머리글을 누르면 정렬이 바뀝니다. tableGetSortSpecs()는 정렬 열과 방향(imgui.SortDirection)을 반환하며 specsDirty는 정렬이 바뀐 프레임에서만 true입니다. tableSetupColumn의 네 번째 인수는 열의 사용자 id입니다. dataTable은 sortable: true로 행을 정렬하고 열의 compare 함수로 순서를 직접 정할 수 있습니다. data-table-demo 예제를 참고하세요
-* `기능` 여러 값을 다루는 위젯: dragFloat2 / 3 / 4, dragInt2 / 3 / 4, sliderFloat2 / 3 / 4, sliderInt2 / 3 / 4, inputFloat2 / 3 / 4, inputInt2 / 3 / 4, 최솟값과 최댓값을 편집하는 dragFloatRange2 / dragIntRange2, 각도를 편집하는 sliderAngle(라디안으로 저장하고 도로 표시). 값은 {value: [x, y, z]}, imgui.floats(...) 또는 새 imgui.ints(...)로 넘깁니다. widget-overview 예제의 새 섹션을 참고하세요
-* `개선` createWindow({debug: true})일 때 렌더 콜백이 250밀리초를 넘기면 console.warn으로 걸린 시간을 알리고 sleep, 네트워크, 파일 같은 느린 작업을 threads.start로 옮기라고 안내합니다(10초에 최대 한 번). 방법은 docs/THREADING.md에 있습니다
 
 ##### 더 많은 릴리스 기록
 

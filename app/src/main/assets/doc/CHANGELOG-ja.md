@@ -4,6 +4,14 @@
 
 ******
 
+# v1.17.0
+
+###### 2026/11/01
+
+* `機能` 複数選択リスト: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection により, タップ, Ctrl+タップ, Shift+タップ, Ctrl+A, Escape で複数の行を選択できます (オプションは MultiSelectFlags). imgui.selectionStorage() が選択された行を保持します. listClipper と併用でき, Shift の範囲は 100000 行にわたり, 一度も描画されていない行も選択されます. スマートフォンには Ctrl キーと Shift キーがないため, large-list の例ではこれらを押し続ける 2 つのチェックボックスを表示します. 詳しくは docs/LIMITS.md を参照してください.
+* `機能` 新しい例 multi-window と新しいガイド docs/MULTI-WINDOW.md: 1 つのセッションに複数のパネルを表示し, それぞれが位置, 折りたたみ矢印, 閉じるボタンを持ち, タップしたウィンドウが最前面に来ます. 同時に存在できるセッションは 1 つ (Surface は 1 つ) なので, "複数ウィンドウ" は常に 1 つのセッション内のウィンドウを指し, 複数のフローティングウィンドウではありません.
+* `修正` 既定の TouchMode.Auto のオーバーレイウィンドウで, タッチがステータスバーの高さ分だけ指より下の位置に届いていたため, ウィンドウ上部のコントロールが反応しないことがあり, タイトルバーをドラッグできませんでした
+
 # v1.16.0
 
 ###### 2026/10/31

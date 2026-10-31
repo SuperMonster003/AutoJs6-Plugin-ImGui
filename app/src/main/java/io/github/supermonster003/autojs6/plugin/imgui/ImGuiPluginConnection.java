@@ -1219,6 +1219,26 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         ImGuiNative.nativeListClipperEnd();
     }
 
+    public long[] beginMultiSelect(int flags, int selectionSize, int itemsCount) {
+        requireOwner();
+        return ImGuiNative.nativeBeginMultiSelect(flags, selectionSize, itemsCount);
+    }
+
+    public long[] endMultiSelect(boolean rangeSrcReset) {
+        requireOwner();
+        return ImGuiNative.nativeEndMultiSelect(rangeSrcReset);
+    }
+
+    public void setNextItemSelectionUserData(long selectionUserData) {
+        requireOwner();
+        ImGuiNative.nativeSetNextItemSelectionUserData(selectionUserData);
+    }
+
+    public boolean isItemToggledSelection() {
+        requireOwner();
+        return ImGuiNative.nativeIsItemToggledSelection();
+    }
+
     public boolean collapsingHeader(String label, int flags) {
         requireOwner();
         return ImGuiNative.nativeCollapsingHeader(label, flags);
@@ -3560,12 +3580,17 @@ public final class ImGuiPluginConnection implements ServiceConnection {
                     hostParams.type,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
                         WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
                         WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
                     PixelFormat.TRANSLUCENT
                 );
                 if ((hostParams.flags & WindowManager.LayoutParams.FLAG_SECURE) != 0) {
                     params.flags |= WindowManager.LayoutParams.FLAG_SECURE;
+                }
+                // x and y are screen coordinates: without this the system bars shift the proxy away from its root window.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    params.setFitInsetsTypes(0);
                 }
                 params.gravity = Gravity.TOP | Gravity.START;
                 params.x = location[0] + bounds[0];

@@ -617,6 +617,14 @@ final class ImGuiNative {
 
     static native void nativeListClipperEnd();
 
+    static native long[] nativeBeginMultiSelect(int flags, int selectionSize, int itemsCount);
+
+    static native long[] nativeEndMultiSelect(boolean rangeSrcReset);
+
+    static native void nativeSetNextItemSelectionUserData(long selectionUserData);
+
+    static native boolean nativeIsItemToggledSelection();
+
     static native boolean nativeCollapsingHeader(String label, int flags);
 
     static native boolean nativeTreeNode(String label);

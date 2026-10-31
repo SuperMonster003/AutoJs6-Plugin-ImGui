@@ -3578,6 +3578,95 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeListClippe
     gState.clippers.pop_back();
 }
 
+namespace {
+
+// {rangeSrcItem, navIdItem, navIdSelected, itemsCount, request count, then type, selected, direction, first, last of
+// each request}.
+jlongArray MultiSelectIoToJava(JNIEnv* env, const ImGuiMultiSelectIO* io) {
+    std::vector<jlong> values;
+    values.reserve(static_cast<size_t>(5 + io->Requests.Size * 5));
+    values.push_back(static_cast<jlong>(io->RangeSrcItem));
+    values.push_back(static_cast<jlong>(io->NavIdItem));
+    values.push_back(io->NavIdSelected ? 1 : 0);
+    values.push_back(static_cast<jlong>(io->ItemsCount));
+    values.push_back(static_cast<jlong>(io->Requests.Size));
+    for (const ImGuiSelectionRequest& request : io->Requests) {
+        values.push_back(static_cast<jlong>(request.Type));
+        values.push_back(request.Selected ? 1 : 0);
+        values.push_back(static_cast<jlong>(request.RangeDirection));
+        values.push_back(static_cast<jlong>(request.RangeFirstItem));
+        values.push_back(static_cast<jlong>(request.RangeLastItem));
+    }
+    jlongArray result = env->NewLongArray(static_cast<jsize>(values.size()));
+    if (result != nullptr) {
+        env->SetLongArrayRegion(result, 0, static_cast<jsize>(values.size()), values.data());
+    }
+    return result;
+}
+
+}  // namespace
+
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeBeginMultiSelect(
+    JNIEnv* env,
+    jclass,
+    jint flags,
+    jint selectionSize,
+    jint itemsCount
+) {
+    if (!RequireFrame(env)) return nullptr;
+    return MultiSelectIoToJava(
+        env,
+        ImGui::BeginMultiSelect(static_cast<ImGuiMultiSelectFlags>(flags), selectionSize, itemsCount)
+    );
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeEndMultiSelect(
+    JNIEnv* env,
+    jclass,
+    jboolean rangeSrcReset
+) {
+    if (!RequireFrame(env)) return nullptr;
+    ImGuiContext& context = *GImGui;
+    ImGuiMultiSelectTempData* scope = context.CurrentMultiSelect;
+    if (scope == nullptr) {
+        ThrowIllegalState(env, "endMultiSelect called without a matching beginMultiSelect");
+        return nullptr;
+    }
+    if (scope->Storage->Window != context.CurrentWindow) {
+        ThrowIllegalState(env, "endMultiSelect must be called in the window of its beginMultiSelect");
+        return nullptr;
+    }
+    if (rangeSrcReset == JNI_TRUE) {
+        scope->IO.RangeSrcReset = true;
+    }
+    return MultiSelectIoToJava(env, ImGui::EndMultiSelect());
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetNextItemSelectionUserData(
+    JNIEnv* env,
+    jclass,
+    jlong selectionUserData
+) {
+    if (!RequireFrame(env)) return;
+    ImGui::SetNextItemSelectionUserData(static_cast<ImGuiSelectionUserData>(selectionUserData));
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeIsItemToggledSelection(
+    JNIEnv* env,
+    jclass
+) {
+    if (!RequireFrame(env)) return JNI_FALSE;
+    if (GImGui->CurrentMultiSelect == nullptr) {
+        ThrowIllegalState(env, "isItemToggledSelection called outside a multi-select scope");
+        return JNI_FALSE;
+    }
+    return ImGui::IsItemToggledSelection() ? JNI_TRUE : JNI_FALSE;
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeCollapsingHeader(
     JNIEnv* env,

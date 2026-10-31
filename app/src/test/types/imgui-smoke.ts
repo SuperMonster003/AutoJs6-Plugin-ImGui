@@ -122,3 +122,33 @@ plugin.getWindowDrawList()
     .popClipRect();
 plugin.pushClipRect([0, 0], [10, 10]);
 plugin.PopClipRect();
+
+const selection: ImGui.SelectionStorage = plugin.selectionStorage();
+const scope: ImGui.MultiSelectIO = plugin.beginMultiSelect(
+    plugin.MultiSelectFlags.ClearOnEscape,
+    selection.size,
+    100_000,
+);
+selection.apply(scope);
+plugin.listClipper(100_000, {includeItems: [scope.rangeSrcItem, scope.navIdItem]}, (start, end) => {
+    for (let row = start; row < end; row += 1) {
+        plugin.setNextItemSelectionUserData(row);
+        plugin.selectable(`Row ${row}`, selection.has(row));
+        const toggled: boolean = plugin.isItemToggledSelection();
+        plugin.text(toggled);
+    }
+});
+const ended = plugin.endMultiSelect();
+ended.requests.forEach((request) => {
+    if (request.type === "setRange") {
+        plugin.text(`${request.selected} ${request.rangeFirstItem} ${request.rangeLastItem} ${request.rangeDirection}`);
+    }
+});
+selection.apply(ended.requests, ended.itemsCount).setItemSelected(1, false);
+const selectedIds: number[] = selection.clear().toArray();
+plugin.text(selectedIds.length);
+plugin.BeginMultiSelect();
+plugin.SetNextItemSelectionUserData(1);
+plugin.IsItemToggledSelection();
+plugin.EndMultiSelect(true);
+plugin.SelectionStorage();

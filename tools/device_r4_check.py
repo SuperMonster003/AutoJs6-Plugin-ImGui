@@ -736,7 +736,7 @@ steps.push(function () {
     var overview = String(imgui.getExampleSource('widget-overview'));
     var hasDrop = overview.indexOf('withDragDropSource') >= 0;
     var hasDraw = overview.indexOf('pathArcTo') >= 0;
-    report('example-list', total === 9 && hasDrop && hasDraw, 'length=' + total + ' dragDrop=' + hasDrop + ' drawing=' + hasDraw);
+    report('example-list', total === 10 && hasDrop && hasDraw, 'length=' + total + ' dragDrop=' + hasDrop + ' drawing=' + hasDraw);
     var results = [];
     function runNext() {
         var name = names.shift();

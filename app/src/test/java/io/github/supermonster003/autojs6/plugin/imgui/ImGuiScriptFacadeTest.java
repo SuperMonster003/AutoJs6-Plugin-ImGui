@@ -357,6 +357,98 @@ public class ImGuiScriptFacadeTest {
     }
 
     @Test
+    public void multiSelectTurnsNativeResultsIntoRequests() {
+        eval(
+            "function longs(values) {"
+                + "    var array = java.lang.reflect.Array.newInstance(java.lang.Long.TYPE, values.length);"
+                + "    values.forEach(function (value, index) { array[index] = value; });"
+                + "    return array;"
+                + "}"
+                + "var nativeResult = longs([-1, -1, 0, -1, 0]);"
+                + "bridge.beginMultiSelect = function () { record('begin').apply(null, arguments); return nativeResult; };"
+                + "bridge.endMultiSelect = function () { record('end').apply(null, arguments); return nativeResult; };"
+                + "bridge.setNextItemSelectionUserData = record('id');"
+                + "function showRequest(r) {"
+                + "    return [r.type, r.selected, r.rangeFirstItem, r.rangeLastItem, r.rangeDirection].join(':');"
+                + "}"
+        );
+        assertEquals(
+            "3|7|true|100|setAll:true:-1:-1:0;setRange:false:10:5000000000:-1|number",
+            String.valueOf(eval(
+                "nativeResult = longs([3, 7, 1, 100, 2, 1, 1, 0, -1, -1, 2, 0, -1, 10, 5000000000]);"
+                    + "var io = api.endMultiSelect();"
+                    + "[io.rangeSrcItem, io.navIdItem, io.navIdSelected, io.itemsCount,"
+                    + "    io.requests.map(showRequest).join(';'), typeof io.requests[1].rangeLastItem].join('|')"
+            ))
+        );
+        String[][] cases = {
+            {"api.beginMultiSelect()", "0,-1,-1"},
+            {"api.BeginMultiSelect(api.MultiSelectFlags.ClearOnEscape, 2, 100000)", "512,2,100000"},
+            {"api.endMultiSelect()", "false"},
+            {"api.EndMultiSelect(true)", "true"},
+            {"api.setNextItemSelectionUserData(0)", "0"},
+            {"api.SetNextItemSelectionUserData(9007199254740991)", "9007199254740991"},
+        };
+        for (String[] c : cases) {
+            assertEquals(c[0], c[1], lastCall(c[0]));
+        }
+        assertFailures(new String[][] {
+            {"api.beginMultiSelect('x')", "TypeError", "beginMultiSelect", "flags"},
+            {"api.beginMultiSelect(0, -2)", "RangeError", "beginMultiSelect", "selectionSize"},
+            {"api.beginMultiSelect(0, 0, -2)", "RangeError", "beginMultiSelect", "itemsCount"},
+            {"api.setNextItemSelectionUserData(-1)", "RangeError", "setNextItemSelectionUserData", "id"},
+            {"api.setNextItemSelectionUserData('a')", "TypeError", "setNextItemSelectionUserData", "id"},
+        });
+    }
+
+    @Test
+    public void selectionStorageAppliesRequestsToASet() {
+        assertEquals(
+            "0|5|true|true|false|3,6,7|3|0,1,2,3|0|2,9",
+            String.valueOf(eval(
+                "var selection = api.selectionStorage(); var out = [selection.size];"
+                    + "function range(selected, first, last) {"
+                    + "    return {type: 'setRange', selected: selected, rangeFirstItem: first, rangeLastItem: last,"
+                    + "        rangeDirection: 1};"
+                    + "}"
+                    + "selection.apply([range(true, 3, 7)]);"
+                    + "out.push(selection.size, selection.has(3), selection.has(6.0), selection.has(8));"
+                    + "selection.apply({requests: [range(false, 4, 5)], itemsCount: 10});"
+                    + "out.push(selection.toArray().join(','), selection.size);"
+                    + "var all = {type: 'setAll', selected: true, rangeFirstItem: -1, rangeLastItem: -1, rangeDirection: 0};"
+                    + "out.push(selection.apply({requests: [all], itemsCount: 4}).toArray().join(','));"
+                    + "all = {type: 'setAll', selected: false, rangeFirstItem: -1, rangeLastItem: -1, rangeDirection: 0};"
+                    + "out.push(selection.apply([all]).size);"
+                    + "selection.setItemSelected(9, true).setItemSelected(2, true).setItemSelected(5, true);"
+                    + "selection.setItemSelected(5, false);"
+                    + "out.push(selection.toArray().join(','));"
+                    + "out.join('|')"
+            ))
+        );
+        assertEquals(
+            "100000|true|false|0",
+            String.valueOf(eval(
+                "var large = api.SelectionStorage();"
+                    + "large.apply([{type: 'setAll', selected: true}], 100000);"
+                    + "var result = [large.size, large.has(99999), large.has(100000)];"
+                    + "result.push(large.clear().size); result.join('|')"
+            ))
+        );
+        eval("var storage = api.selectionStorage();");
+        assertFailures(new String[][] {
+            {"storage.apply(null)", "TypeError", "selectionStorage.apply", "requests"},
+            {"storage.apply(5)", "TypeError", "selectionStorage.apply", "requests"},
+            {"storage.apply([{type: 'other'}])", "TypeError", "selectionStorage.apply", "requests"},
+            {"storage.apply([null])", "TypeError", "selectionStorage.apply", "requests"},
+            {"storage.apply([{type: 'setAll', selected: true}])", "RangeError", "selectionStorage.apply", "itemsCount"},
+            {"storage.apply({requests: [{type: 'setAll', selected: true}], itemsCount: -1})", "RangeError",
+                "selectionStorage.apply", "itemsCount"},
+            {"storage.apply([], -2)", "RangeError", "selectionStorage.apply", "itemsCount"},
+            {"storage.setItemSelected(-1, true)", "RangeError", "selectionStorage.setItemSelected", "id"},
+        });
+    }
+
+    @Test
     public void textureUpdateKeepsTheHandleAndTracksTheSize() {
         eval(
             "var owner = {closed: false, ready: true, _textures: []}; api._activeSession = owner;"
