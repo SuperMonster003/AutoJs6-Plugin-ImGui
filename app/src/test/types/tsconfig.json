@@ -3,9 +3,13 @@
     "noEmit": true,
     "strict": true,
     "skipLibCheck": false,
+    "allowJs": true,
+    "checkJs": true,
     "target": "ES2020",
     "module": "commonjs",
-    "lib": ["ES2020"]
+    "lib": ["ES2020"],
+    "types": []
   },
-  "files": ["imgui-smoke.ts"]
+  "files": ["imgui-smoke.ts", "examples-env.d.ts"],
+  "include": ["../../main/assets/examples/*.js"]
 }

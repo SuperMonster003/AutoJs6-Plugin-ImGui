@@ -44,7 +44,7 @@
   "api_groups": [
     "Session runtime: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, `density` / `dp` / `px` unit conversion, session `on` / `once` / `off` plus their per-session forms, the session `error` event that reports callback errors, the `debug` option that turns on debug mode, and power saving through `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps`, and the `idle` / `active` events.",
     "Backend discovery: `getBackendCapabilities` / `BackendStatus` reports availability and production readiness for windows, split touch, the privileged process, direct input, Docking, and Multi-Viewport without performing elevation.",
-    "Session and windows: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, plus window state queries such as `isWindowHovered`.",
+    "Session and windows: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` / `setNextWindowFocus` / `setNextWindowCollapsed`, plus window state queries such as `isWindowHovered`.",
     "Text and widgets: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram`, and more. Widgets with 2 to 4 values: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.",
     "Containers and navigation: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / the `withTable` table family / `withListBox` / `withCombo` / `selectable`, plus `listClipper` for long lists. Table sorting: `tableGetSortSpecs` / `SortDirection`, and `dataTable` with `sortable: true`. Multi-select: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` with `MultiSelectFlags`, and `selectionStorage` to keep the selection.",
     "Popups and menus: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.",
@@ -74,5 +74,6 @@
   "h3_links": "Links",
   "text_link_autojs6": "AutoJs6 project",
   "text_link_dear_imgui": "Dear ImGui official project",
+  "text_link_docs": "Documentation index",
   "text_link_roadmap": "Capability roadmap"
 }

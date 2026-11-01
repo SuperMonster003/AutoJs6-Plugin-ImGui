@@ -145,7 +145,7 @@ imgui.runExample("widget-overview");
 
 - セッションランタイム: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 単位換算の `density` / `dp` / `px`, セッション版を含む `on` / `once` / `off`, コールバックのエラーを伝えるセッションの `error` イベント, デバッグモードを有効にする `debug` オプション, 省電力のための `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps`, `idle` / `active` イベント.
 - バックエンドの検出: `getBackendCapabilities` / `BackendStatus` は, ウィンドウ, split-touch, 特権プロセス, direct input, Docking, Multi-Viewport の利用可否と本番運用への対応状況を報告します. 権限昇格は行いません.
-- セッションとウィンドウ: `createWindow`/`closeWindow`/`withWindow`/`withChild`/`setNextWindowPos`/`setNextWindowSize`/`setNextWindowBgAlpha` に加え, `isWindowHovered` などのウィンドウ状態クエリ.
+- セッションとウィンドウ: `createWindow`/`closeWindow`/`withWindow`/`withChild`/`setNextWindowPos`/`setNextWindowSize`/`setNextWindowBgAlpha`/`setNextWindowFocus`/`setNextWindowCollapsed` に加え, `isWindowHovered` などのウィンドウ状態クエリ.
 - テキストとコントロール: `text`/`textColored`/`textWrapped`/`separatorText`/`bulletText`/`labelText`/`button`/`arrowButton`/`invisibleButton`/`checkbox`/`toggle`/`radioButton`/`sliderFloat`/`sliderInt`/`vSliderFloat`/`dragFloat`/`dragInt`/`inputText`/`inputInt`/`inputFloat`/`inputTextMultiline`/`colorEdit3`/`colorEdit4`/`colorPicker4`/`colorButton`/`progressBar`/`plotLines`/`plotHistogram` など. 複数の値を扱うウィジェット: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
 - コンテナとナビゲーション: `withTabBar`/`withTabItem`/`withTreeNode`/`treeNodeEx`/`collapsingHeader`/`withTable` テーブルファミリー/`withListBox`/`withCombo`/`selectable`, 長いリスト向けの `listClipper`. テーブルの並べ替え: `tableGetSortSpecs` / `SortDirection` と, `dataTable` の `sortable: true`. 複数選択: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` と `MultiSelectFlags`, 選択を保持する `selectionStorage`.
 - ポップアップとメニュー: `openPopup`/`withPopup`/`withPopupModal`/`beginPopupContextItem`/`beginPopupContextWindow`/`withContextItem`/`withContextWindow`/`closeCurrentPopup`/`withMenuBar`/`withMenu`/`menuItem`/`setTooltip`/`setItemTooltip`/`withItemTooltip`.
@@ -174,6 +174,15 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.18.0
+
+###### 2026/11/01
+
+* `機能` setNextWindowFocus() と setNextWindowCollapsed(collapsed, condition) により, スクリプトからセッション内のウィンドウをフォーカスしたり折りたたんだりできます. 次の begin または withWindow に作用します. サンプル multi-window にそれぞれのボタンを追加しました
+* `修正` dataTable: 列の render 関数はドキュメントに記載されていましたが呼び出されていませんでした. この列のセルを描画するようになりました
+* `修正` launchPrivileged: Android 12 以降では一時テキストボックスとキーボードへのタッチが届かず, ボックスの外をタッチしても閉じませんでした. ボックスを開いている間は特権レイヤーを隠すようになりました
+* `改善` imgui.d.ts が API を正確に記述するようになりました: すべてのメンバーに単位とスレッドを記したコメントがあり, alert / confirm / singleChoice / multiChoice には具体的なシグネチャがあり, セッションイベントごとに固有のフィールドがあり, オプション名の綴りを間違えると TypeScript がエラーにします. 効果のなかった toast のオプション title と background は削除しました. 同梱のサンプルはすべて tsc --strict を通ります
+
 #### v1.17.0
 
 ###### 2026/11/01
@@ -191,16 +200,6 @@ imgui.runExample("widget-overview");
 * `機能` createWindow({pinchZoom: true}) で, 2 本指のピンチにより文字サイズを 0.5 倍から 3 倍まで変更できます. 2 本指を同じ方向に動かすとこれまで通りスクロールします. 倍率は session.fontScale で読み取り, session.setFontScale(scale) で設定し, 新しい fontScaleChanged イベントで変更を受け取れます. widget-overview の例で確認できます
 * `機能` 特権モードのテキスト入力: inputText をタップすると AutoJs6 の小さな入力ボックスとキーボードが開きます (AutoJs6 のオーバーレイ権限が必要です). OK ボタン, キーボードの完了キー, またはほかの場所をタップすると, 文字が入力欄のカーソル位置に入ります. 入力欄の既存の文字はボックスでは編集できません
 * `改善` ウィンドウは実行中の表示サイズ (密度) とシステムのフォントサイズの変更に追従するようになりました. 文字とコントロールは新しいサイズになり, ウィンドウの dp サイズは変わりません. configurationChanged に density, oldDensity, fontScale, oldFontScale を追加しました. imgui.launch の全画面ウィンドウは閉じます (session.closeReason は "configuration-changed"). Android がそのウィンドウのある Activity を作り直すためです
-
-#### v1.15.0
-
-###### 2026/10/30
-
-* `機能` キーボード照会: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed と, ショートカットの shortcut / setNextItemShortcut を追加. キーの組み合わせは ui.Mod.Ctrl | ui.Key.S と書きます. Key 定数はキーボード全体に対応しました: A から Z, Digit0 から Digit9, F1 から F24, テンキーなど
-* `機能` クリップボード: getClipboardText / setClipboardText はホストの getClip / setClip と同じ Android クリップボードを使い, 入力欄の Ctrl+C / Ctrl+V も同様です. Android 10 以降, クリップボードを読み取れるのは入力フォーカスを持つアプリだけです. フローティング ウィンドウへの影響は docs/LIMITS.md を参照してください
-* `機能` ドラッグ アンド ドロップ: beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload とヘルパー withDragDropSource / withDragDropTarget で, 項目を別の項目へドラッグできます (オプションは DragDropFlags). ペイロードは文字列, 数値, または JSON に変換できる任意のオブジェクトで, カラー ウィジェットの色もドラッグできます. サンプル widget-overview の新しいセクションを参照してください
-* `機能` カスタム描画: パス関数 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex など), 描画リストとウィンドウの pushClipRect / popClipRect, 新しい図形 addEllipse, addNgon, addQuad とその塗りつぶし版, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded を追加. サンプル widget-overview を参照してください
-* `機能` タッチのシミュレーション: addMousePosEvent(x, y) と addMouseButtonEvent(button, down) で, スクリプトが指のようにウィンドウを操作できます. UI の自動テストなどに使えます. 座標は getMousePos と同じフレーム内ピクセルで, createWindow の dp ではありません. ウィンドウの下のアプリには影響しません
 
 ##### その他のリリース履歴
 
@@ -258,6 +257,7 @@ Roadmap.md
 
 - AutoJs6 プロジェクト: https://github.com/SuperMonster003/AutoJs6
 - Dear ImGui 公式プロジェクト: https://github.com/ocornut/imgui
+- ドキュメント一覧: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/README.md
 - 機能拡張ロードマップ (Roadmap): https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
 
 

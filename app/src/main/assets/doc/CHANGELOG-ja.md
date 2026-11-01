@@ -4,6 +4,15 @@
 
 ******
 
+# v1.18.0
+
+###### 2026/11/01
+
+* `機能` setNextWindowFocus() と setNextWindowCollapsed(collapsed, condition) により, スクリプトからセッション内のウィンドウをフォーカスしたり折りたたんだりできます. 次の begin または withWindow に作用します. サンプル multi-window にそれぞれのボタンを追加しました
+* `修正` dataTable: 列の render 関数はドキュメントに記載されていましたが呼び出されていませんでした. この列のセルを描画するようになりました
+* `修正` launchPrivileged: Android 12 以降では一時テキストボックスとキーボードへのタッチが届かず, ボックスの外をタッチしても閉じませんでした. ボックスを開いている間は特権レイヤーを隠すようになりました
+* `改善` imgui.d.ts が API を正確に記述するようになりました: すべてのメンバーに単位とスレッドを記したコメントがあり, alert / confirm / singleChoice / multiChoice には具体的なシグネチャがあり, セッションイベントごとに固有のフィールドがあり, オプション名の綴りを間違えると TypeScript がエラーにします. 効果のなかった toast のオプション title と background は削除しました. 同梱のサンプルはすべて tsc --strict を通ります
+
 # v1.17.0
 
 ###### 2026/11/01

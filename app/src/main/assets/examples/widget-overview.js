@@ -6,7 +6,7 @@
         return;
     }
     factory(imgui, {});
-})(function (imgui, options) {
+})(/** @type {ImGui.ExampleRunner} */ function (imgui, options) {
     options = options || {};
 
     var enabled = imgui.ref(true);
@@ -32,8 +32,11 @@
         {label: "User Guide", show: imgui.showUserGuide, open: imgui.ref(false)}
     ];
     var initialized = false;
+    /** @type {ImGui.LogWindow} */
     var logWindow;
+    /** @type {ImGui.DataTable<{id: number, component: string, state: string, notes: string}>} */
     var dataTable;
+    /** @type {ImGui.StatsOverlay} */
     var stats;
     var lastLogAt = 0;
 
@@ -45,6 +48,7 @@
         {id: 5, component: "dataTable", state: "ready", notes: "Selection and CRUD"}
     ];
 
+    /** @type {(label: string, value: ImGui.JsonSerializable) => void} */
     function appendResult(label, value) {
         if (logWindow && !logWindow.closed) {
             logWindow.info(label + ": " + JSON.stringify(value));
@@ -98,6 +102,7 @@
             });
         }
 
+        /** @type {(text: string, level?: ImGui.LogLevel) => void} */
         function toast(text, level) {
             window.toast(text, 2200, {level: level || ui.LogLevel.Info});
         }
@@ -306,6 +311,7 @@
         systemCjkFont: true
     });
 
+    /** @type {(value: number | undefined, fallback: number) => number} */
     function numberOption(value, fallback) {
         var result = Number(value);
         return isFinite(result) ? result : fallback;

@@ -428,6 +428,10 @@ final class ImGuiNative {
 
     static native void nativeSetNextWindowBgAlpha(float alpha);
 
+    static native void nativeSetNextWindowFocus();
+
+    static native void nativeSetNextWindowCollapsed(boolean collapsed, int condition);
+
     static native void nativeSetKeyboardFocusHere(int offset);
 
     static native boolean nativeBegin(String name, boolean[] open, int flags);

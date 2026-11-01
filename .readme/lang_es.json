@@ -44,7 +44,7 @@
   "api_groups": [
     "Ejecución de sesión: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, conversión de unidades `density` / `dp` / `px`, `on` / `once` / `off` junto con sus formas por sesión, el evento de sesión `error` que informa de los errores de los callbacks, la opción `debug` que activa el modo de depuración y el ahorro de energía con `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` y los eventos `idle` / `active`.",
     "Detección del backend: `getBackendCapabilities` / `BackendStatus` informa de la disponibilidad y preparación para producción de las ventanas, el toque dividido, el proceso privilegiado, la entrada directa, Docking y Multi-Viewport, sin elevar privilegios.",
-    "Sesión y ventanas: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, además de consultas de estado de ventana como `isWindowHovered`.",
+    "Sesión y ventanas: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` / `setNextWindowFocus` / `setNextWindowCollapsed`, además de consultas de estado de ventana como `isWindowHovered`.",
     "Texto y controles: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram`, entre otros. Controles de 2 a 4 valores: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.",
     "Contenedores y navegación: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / la familia de tablas `withTable` / `withListBox` / `withCombo` / `selectable`, además de `listClipper` para listas largas. Ordenación de tablas: `tableGetSortSpecs` / `SortDirection` y `dataTable` con `sortable: true`. Selección múltiple: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` con `MultiSelectFlags`, y `selectionStorage` para guardar la selección.",
     "Ventanas emergentes y menús: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.",
@@ -74,5 +74,6 @@
   "h3_links": "Enlaces",
   "text_link_autojs6": "Proyecto AutoJs6",
   "text_link_dear_imgui": "Proyecto oficial Dear ImGui",
+  "text_link_docs": "Índice de la documentación",
   "text_link_roadmap": "Hoja de ruta de funciones"
 }

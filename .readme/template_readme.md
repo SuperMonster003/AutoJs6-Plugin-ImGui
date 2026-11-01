@@ -192,6 +192,7 @@ Roadmap.md
 
 - {{ text_link_autojs6 }}: {{ autojs6_url }}
 - {{ text_link_dear_imgui }}: {{ dear_imgui_url }}
+- {{ text_link_docs }}: {{ repo_url }}/blob/master/docs/README.md
 - {{ text_link_roadmap }}: {{ roadmap_url }}
 
 

@@ -44,7 +44,7 @@
   "api_groups": [
     "工作階段執行階段: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, `density` / `dp` / `px` 單位換算, 以及工作階段級 `on` / `once` / `off` 與對應執行個體方法; 工作階段 `error` 事件回報回呼錯誤, `debug` 選項開啟偵錯模式; 省電相關的 `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` 與 `idle` / `active` 事件.",
     "後端探測: `getBackendCapabilities` / `BackendStatus` 回報視窗, split-touch, 特權處理程序, direct input, Docking 與 Multi-Viewport 的可用性與正式環境就緒狀態, 不執行權限提升操作.",
-    "會話與視窗: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` 以及 `isWindowHovered` 等視窗狀態查詢.",
+    "會話與視窗: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` / `setNextWindowFocus` / `setNextWindowCollapsed` 以及 `isWindowHovered` 等視窗狀態查詢.",
     "文字與控制項: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等. 多值控制項: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.",
     "容器與導覽: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / `withTable` 表格族 / `withListBox` / `withCombo` / `selectable`, 以及用於長清單的 `listClipper`. 表格排序: `tableGetSortSpecs` / `SortDirection`, 以及 `dataTable` 的 `sortable: true`. 多選: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` 與 `MultiSelectFlags`, 以及儲存選取結果的 `selectionStorage`.",
     "彈窗與選單: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.",
@@ -74,5 +74,6 @@
   "h3_links": "相關連結",
   "text_link_autojs6": "AutoJs6 專案",
   "text_link_dear_imgui": "Dear ImGui 官方專案",
+  "text_link_docs": "文件索引",
   "text_link_roadmap": "能力擴充路線圖 (Roadmap)"
 }

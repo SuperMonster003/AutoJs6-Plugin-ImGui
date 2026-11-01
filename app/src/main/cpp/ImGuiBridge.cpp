@@ -3002,6 +3002,26 @@ Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetNextWin
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetNextWindowFocus(
+    JNIEnv* env,
+    jclass
+) {
+    if (!RequireFrame(env)) return;
+    ImGui::SetNextWindowFocus();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetNextWindowCollapsed(
+    JNIEnv* env,
+    jclass,
+    jboolean collapsed,
+    jint condition
+) {
+    if (!RequireFrame(env)) return;
+    ImGui::SetNextWindowCollapsed(collapsed == JNI_TRUE, static_cast<ImGuiCond>(condition));
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_io_github_supermonster003_autojs6_plugin_imgui_ImGuiNative_nativeSetKeyboardFocusHere(
     JNIEnv* env,
     jclass,

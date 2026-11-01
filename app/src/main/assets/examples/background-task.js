@@ -15,17 +15,19 @@
         return;
     }
     factory(imgui, {});
-})(function (imgui, options) {
+})(/** @type {ImGui.ExampleRunner} */ function (imgui, options) {
     options = options || {};
 
     var controllerOpen = imgui.ref(true);
     var upperBound = imgui.ref(200000);
     var inbox = new java.util.concurrent.ConcurrentLinkedQueue();
+    /** @type {any} */
     var cancelFlag = null;
     var taskId = 0;
     var frames = 0;
     var task = {running: false, progress: 0, primes: 0, elapsedMs: 0, status: "idle"};
 
+    /** @type {(value: number) => boolean} */
     function isPrime(value) {
         if (value < 4) {
             return value > 1;
@@ -41,6 +43,7 @@
         return true;
     }
 
+    /** @type {(limit: number) => void} */
     function startTask(limit) {
         cancelTask();
         var id = ++taskId;
@@ -144,6 +147,7 @@
         clearInterval(pump);
     });
 
+    /** @type {(value: number | undefined, fallback: number) => number} */
     function numberOption(value, fallback) {
         var result = Number(value);
         return isFinite(result) ? result : fallback;

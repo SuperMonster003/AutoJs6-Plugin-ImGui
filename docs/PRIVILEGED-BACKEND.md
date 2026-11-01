@@ -268,9 +268,10 @@ opens a host floaty with an input field and an OK button at the top of the displ
 
 - The box needs the AutoJs6 overlay permission, unlike the rest of the mode. Without it the session prints one warning
   and the text field stays empty.
-- The layer is above every window, so it would hide the box and the keyboard: while the box is open the layer presents
-  empty frames. The frame loop and the render callback go on. Direct input is off meanwhile, because a touch on the box
-  would also reach ImGui and end the edit.
+- The layer is above every window, so it would hide the box and the keyboard. From Android 12 on it also blocks their
+  touches, even with an empty frame, because the system drops a touch on a window below a layer of another uid. So the
+  layer is hidden while the box is open. The frame loop and the render callback go on, with empty frames. Direct input is
+  off meanwhile, because a touch on the box would also reach ImGui and end the edit.
 - The box opens once the finger that activated the field has lifted, so ImGui does not keep a pressed mouse button.
 - A multi-line field gets a box of 160 dp, a field with `InputTextFlags.Password` a password field.
 - The OK button, the done key of the keyboard, a touch outside the box and the loss of the window focus all hand the

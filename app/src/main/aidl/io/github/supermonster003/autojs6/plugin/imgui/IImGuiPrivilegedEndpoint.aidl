@@ -13,4 +13,5 @@ interface IImGuiPrivilegedEndpoint {
     void setInputEnabled(boolean enabled);
     String info();
     void close();
+    void setLayerVisible(boolean visible);
 }

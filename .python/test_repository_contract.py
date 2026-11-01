@@ -71,6 +71,12 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertEqual(name.lower(), name)
 
 
+    def test_documentation_index_lists_every_page(self):
+        documents = {path.name for path in (ROOT / "docs").glob("*.md")} - {"README.md"}
+        index = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+        listed = set(re.findall(r"\]\(([\w.-]+\.md)\)", index))
+        self.assertEqual(documents, listed)
+
     def test_fixed_android_upgrade_offset(self):
         text = (ROOT / "version.properties").read_text(encoding="utf-8")
         build = int(re.search(r"^VERSION_BUILD=(\d+)$", text, re.M).group(1))

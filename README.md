@@ -145,7 +145,7 @@ imgui.runExample("widget-overview");
 
 - 会话运行时: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, `density` / `dp` / `px` 单位换算, 以及会话级 `on` / `once` / `off` 与对应实例方法; 会话 `error` 事件报告回调错误, `debug` 选项开启调试模式; 省电相关的 `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` 与 `idle` / `active` 事件.
 - 后端探测: `getBackendCapabilities` / `BackendStatus` 报告窗口、split-touch、特权进程、direct input、Docking 与 Multi-Viewport 的可用性和生产就绪状态, 不执行提权操作.
-- 会话与窗口: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` 以及 `isWindowHovered` 等窗口状态查询.
+- 会话与窗口: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` / `setNextWindowFocus` / `setNextWindowCollapsed` 以及 `isWindowHovered` 等窗口状态查询.
 - 文本与控件: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` 等. 多值控件: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
 - 容器与导航: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / `withTable` 表格族 / `withListBox` / `withCombo` / `selectable`, 以及用于长列表的 `listClipper`. 表格排序: `tableGetSortSpecs` / `SortDirection`, 以及 `dataTable` 的 `sortable: true`. 多选: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` 与 `MultiSelectFlags`, 以及保存选择结果的 `selectionStorage`.
 - 弹窗与菜单: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
@@ -174,6 +174,15 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.18.0
+
+###### 2026/11/01
+
+* `新增` setNextWindowFocus() 和 setNextWindowCollapsed(collapsed, condition) 让脚本可以聚焦或折叠会话里的某个窗口, 作用于下一个 begin 或 withWindow. 示例 multi-window 为这两项各加了一个按钮
+* `修复` dataTable: 列的 render 函数写在文档里却从未被调用, 现在它会绘制这一列的单元格
+* `修复` launchPrivileged: 在 Android 12 及以上, 手指点不到临时输入框和键盘, 点框外也不会收起输入框. 现在输入框打开期间会隐藏特权层
+* `优化` imgui.d.ts 现在准确描述全部 API: 每个成员都有注释, 写明单位和线程, alert / confirm / singleChoice / multiChoice 有了具体的参数形式, 每个会话事件有各自的字段, 选项名拼错时 TypeScript 会报错. 同时去掉了从未生效的 toast 选项 title 和 background. 全部内置示例都能通过 tsc --strict 检查
+
 #### v1.17.0
 
 ###### 2026/11/01
@@ -191,16 +200,6 @@ imgui.runExample("widget-overview");
 * `新增` createWindow({pinchZoom: true}) 可以用双指捏合把文字缩放到 0.5 到 3 倍, 双指同向移动仍然是滚动. 用 session.fontScale 读取缩放值, session.setFontScale(scale) 设置, 新事件 fontScaleChanged 通知变化. widget-overview 示例演示了这些功能
 * `新增` 特权模式支持文本输入: 点击 inputText 会打开 AutoJs6 的小输入框和键盘 (需要 AutoJs6 的悬浮窗权限). 点 OK, 键盘的完成键或其他位置后, 文字写入控件的光标处; 控件里已有的文字不能在小输入框里修改
 * `优化` 窗口运行时会跟随显示大小 (密度) 和系统字体大小的变化: 文字和控件换成新尺寸, 窗口的 dp 尺寸不变. configurationChanged 事件新增 density, oldDensity, fontScale, oldFontScale 字段. imgui.launch 打开的全屏窗口则会关闭 (session.closeReason 为 "configuration-changed"), 因为 Android 会重建它所在的 Activity
-
-#### v1.15.0
-
-###### 2026/10/30
-
-* `新增` 键盘查询: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, 以及快捷键 shortcut 和 setNextItemShortcut. 组合键写成 ui.Mod.Ctrl | ui.Key.S. Key 常量现在覆盖整个键盘: A 到 Z, Digit0 到 Digit9, F1 到 F24, 小键盘等
-* `新增` 剪贴板: getClipboardText / setClipboardText 与宿主的 getClip / setClip 是同一个 Android 剪贴板, 输入框里的 Ctrl+C / Ctrl+V 也一样. 从 Android 10 起, 系统只允许拥有输入焦点的应用读取剪贴板; docs/LIMITS.md 说明了这对悬浮窗的影响
-* `新增` 拖放: 用 beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload 以及辅助函数 withDragDropSource / withDragDropTarget 把一个控件拖到另一个控件上 (DragDropFlags 设置选项). 载荷可以是字符串, 数字或任何可 JSON 序列化的对象, 颜色控件的颜色也可以拖动; 见示例 widget-overview 的新分区
-* `新增` 自定义绘制: 路径函数 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex 等), 绘制列表与窗口的 pushClipRect / popClipRect, 以及新图形 addEllipse, addNgon, addQuad 及其填充版本, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded; 见示例 widget-overview
-* `新增` 模拟触摸: addMousePosEvent(x, y) 与 addMouseButtonEvent(button, down) 让脚本像手指一样操作窗口, 例如自动测试界面. 坐标是帧内像素, 与 getMousePos 相同, 不是 createWindow 的 dp; 不影响窗口下方的应用
 
 ##### 更多发行历史可参阅
 
@@ -258,6 +257,7 @@ Roadmap.md
 
 - AutoJs6 项目: https://github.com/SuperMonster003/AutoJs6
 - Dear ImGui 官方项目: https://github.com/ocornut/imgui
+- 文档索引: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/README.md
 - 能力扩展路线图 (Roadmap): https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
 
 

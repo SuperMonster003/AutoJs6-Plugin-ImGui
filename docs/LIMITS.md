@@ -16,6 +16,23 @@ numeric literals.
 | Encoded texture source | 128 MiB | Java rejects larger encoded inputs before decode. | Fixed safety ceiling. |
 | Decoded texture area | 32 megapixels | Java rejects larger bitmaps before upload. | Fixed safety ceiling; downsample source images before creating textures. |
 
+## Platform and device coverage
+
+The plugin needs OpenGL ES 3.0: the manifest declares it and the renderer asks for a version 3 context. On a device or an
+emulator image without it the plugin loads and its names work, but a window closes before its first frame.
+
+What the releases are checked on, and what they are not:
+
+| Area | Checked | Not checked |
+| --- | --- | --- |
+| ABI | arm64-v8a on phones and tablets, x86_64 in full on an emulator with 16 KB pages, x86 for loading and names on API 24 | armeabi-v7a is built and aligned, but not run. x86 windows: the x86 emulator images have no OpenGL ES 3.0 |
+| Android | 9, 13 and 15 on devices, 16 on an emulator | 7.0: loading and names only, for the same reason. 8 to 12 and 14 are not run in each release |
+| Vendors | Xiaomi HyperOS, Redmi MIUI, ColorOS, Sony | |
+| `launchPrivileged` | With Shizuku on Sony G8441 (Android 9, up to 1.17.0), Redmi 22120RN86C (Android 13), Xiaomi 23046RP50C (Android 15) | ColorOS: the test device has no authorized backend |
+| Input | Injected pointer and key events, taps and swipes through `adb` | Two-finger pinch and real fingers in a multi-select list or in drag and drop: tested with injected input or simulated `MotionEvent`s. Modifier keys of a physical keyboard |
+
+The bundled examples are sized for a display of 360 dp width or more.
+
 ## Text capacity is measured in bytes
 
 Dear ImGui stores text as UTF-8. `maxLength` is therefore a byte capacity including the terminating null,

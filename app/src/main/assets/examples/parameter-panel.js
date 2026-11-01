@@ -6,7 +6,7 @@
         return;
     }
     factory(imgui, {});
-})(function (imgui, options) {
+})(/** @type {ImGui.ExampleRunner} */ function (imgui, options) {
     options = options || {};
 
     var open = imgui.ref(true);
@@ -18,6 +18,7 @@
     var segments = imgui.ref(32);
     var opacity = imgui.ref(1);
     var accent = imgui.ref([0.12, 0.72, 0.96, 1]);
+    /** @type {number[]} */
     var wave = [];
     var startedAt = Date.now();
     var lastAlpha = opacity.value;
@@ -58,6 +59,7 @@
             var previewHeight = ui.dp(150);
             ui.invisibleButton("parameter-preview", available[0], previewHeight);
             var windowPosition = ui.getWindowPos();
+            /** @type {[number, number]} */
             var center = [
                 windowPosition[0] + origin[0] + available[0] * 0.5,
                 windowPosition[1] + origin[1] + previewHeight * 0.5
@@ -132,6 +134,7 @@
         collapseButton: true
     });
 
+    /** @type {(value: number | undefined, fallback: number) => number} */
     function numberOption(value, fallback) {
         var result = Number(value);
         return isFinite(result) ? result : fallback;

@@ -68,8 +68,24 @@ The arrow in the title bar collapses a root window to its title bar. `begin` the
 called; `withWindow` does this and skips its body. Inside `begin` and `end` `ui.isWindowCollapsed()` reads the state.
 `WindowFlags.NoCollapse` removes the arrow and `WindowFlags.NoTitleBar` the whole title bar.
 
-The plugin has no script call that collapses or expands a root window. `session.collapse()` is something else: it hides
-the whole session behind a small button, all root windows included.
+`ui.setNextWindowCollapsed(collapsed, condition)` does the same from the script, for the next `begin` or `withWindow`.
+Call it in one frame, from a button for example: with `Cond.Always`, the default, a call in every frame overrules the arrow.
+`Cond.Once` applies once per session, `Cond.Appearing` each time the window appears, and `Cond.FirstUseEver` only to a window
+that has no saved settings. `WindowFlags.NoCollapse` removes the arrow, not this call.
+
+```javascript
+var collapseLog = null; // true or false for one frame
+// In the render callback:
+if (collapseLog !== null) {
+    ui.setNextWindowCollapsed(collapseLog);
+    collapseLog = null;
+}
+ui.withWindow("Log", null, 0, function () {
+    ui.text("Second window");
+});
+```
+
+`session.collapse()` is something else: it hides the whole session behind a small button, all root windows included.
 
 ## Close button
 
@@ -102,7 +118,10 @@ and popups stay above root windows, and a modal popup blocks input to all of the
   `WindowFlags.NoFocusOnAppearing` keeps a new window from taking the focus.
 - Text input and injected keys go to the focused window. `addKeyEvent` chords such as Ctrl+A reach a multi-select list
   only while its window has the focus.
-- The plugin has no script call that focuses a root window or changes the order.
+- `ui.setNextWindowFocus()` focuses the next `begin` or `withWindow` and brings it to the front, whatever its place in the
+  render callback. Call it in one frame: a call in every frame keeps taking the focus back from the user. A window with
+  `NoBringToFrontOnFocus` takes the focus and keeps its place, and a modal popup stays above it. Nothing changes the order
+  without the focus.
 
 ## Touch regions and window modes
 

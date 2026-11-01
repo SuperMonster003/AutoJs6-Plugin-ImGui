@@ -1862,6 +1862,17 @@ module.exports = function (bridge) {
     api.setNextWindowBgAlpha = function (alpha) {
         bridge.setNextWindowBgAlpha(argNumber("setNextWindowBgAlpha", "alpha", alpha, undefined, 0, 1));
     };
+
+    api.setNextWindowFocus = function () {
+        bridge.setNextWindowFocus();
+    };
+
+    api.setNextWindowCollapsed = function (collapsed, condition) {
+        bridge.setNextWindowCollapsed(
+            Boolean(collapsed),
+            argInt("setNextWindowCollapsed", "condition", condition, 0)
+        );
+    };
     api.setKeyboardFocusHere = function (offset) {
         bridge.setKeyboardFocusHere(argInt("setKeyboardFocusHere", "offset", offset, 0));
     };
@@ -5067,7 +5078,8 @@ module.exports = function (bridge) {
                         argNumber("dataTable", name + ".weight", header.weight, 0, 0),
                         0
                     ),
-                    compare: header.compare == null ? null : argFunction("dataTable", name + ".compare", header.compare)
+                    compare: header.compare == null ? null : argFunction("dataTable", name + ".compare", header.compare),
+                    render: header.render == null ? null : argFunction("dataTable", name + ".render", header.render)
                 });
             } else {
                 result.push({
@@ -5075,12 +5087,13 @@ module.exports = function (bridge) {
                     label: String(header),
                     flags: 0,
                     width: 0,
-                    compare: null
+                    compare: null,
+                    render: null
                 });
             }
         }
         if (result.length === 0) {
-            result.push({key: 0, label: "Value", flags: 0, width: 0, compare: null});
+            result.push({key: 0, label: "Value", flags: 0, width: 0, compare: null, render: null});
         }
         return result;
     }
@@ -5507,7 +5520,10 @@ module.exports = function (bridge) {
                                 }
                             } else {
                                 var rendered = false;
-                                if (typeof options.renderCell === "function") {
+                                if (header.render) {
+                                    header.render(rawCellValue(row, header, columnIndex), row, rowIndex, component);
+                                    rendered = true;
+                                } else if (typeof options.renderCell === "function") {
                                     rendered = options.renderCell(
                                         value, row, header, rowIndex, columnIndex, component
                                     ) === true;
@@ -7694,6 +7710,7 @@ module.exports = function (bridge) {
             inputBox = box;
             state.imeView = box.field;
             bridge.setFrameHidden(true);
+            bridge.setPrivilegedLayerVisible(privilegedSurface, false);
             setHostTouchable(false);
             box.field.post(new Runnable({
                 run: function () {
@@ -7784,6 +7801,7 @@ module.exports = function (bridge) {
             }
             try {
                 bridge.setFrameHidden(false);
+                bridge.setPrivilegedLayerVisible(privilegedSurface, true);
                 setHostTouchable(state.touchable);
             } catch (ignored) {
                 // While the session closes, the native layer may already belong to no one.
@@ -8447,6 +8465,8 @@ module.exports = function (bridge) {
         SetNextWindowSize: "setNextWindowSize",
         SetNextWindowSizeConstraints: "setNextWindowSizeConstraints",
         SetNextWindowBgAlpha: "setNextWindowBgAlpha",
+        SetNextWindowFocus: "setNextWindowFocus",
+        SetNextWindowCollapsed: "setNextWindowCollapsed",
         SetKeyboardFocusHere: "setKeyboardFocusHere",
         Begin: "begin",
         End: "end",

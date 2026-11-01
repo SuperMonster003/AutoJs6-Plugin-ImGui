@@ -922,6 +922,16 @@ public final class ImGuiPluginConnection implements ServiceConnection {
         ImGuiNative.nativeSetNextWindowBgAlpha(alpha);
     }
 
+    public void setNextWindowFocus() {
+        requireOwner();
+        ImGuiNative.nativeSetNextWindowFocus();
+    }
+
+    public void setNextWindowCollapsed(boolean collapsed, int condition) {
+        requireOwner();
+        ImGuiNative.nativeSetNextWindowCollapsed(collapsed, condition);
+    }
+
     public void setKeyboardFocusHere(int offset) {
         requireOwner();
         ImGuiNative.nativeSetKeyboardFocusHere(offset);
@@ -2430,6 +2440,29 @@ public final class ImGuiPluginConnection implements ServiceConnection {
             }
             try {
                 host.endpoint.setInputEnabled(enabled);
+                return true;
+            } catch (RemoteException | RuntimeException error) {
+                host.inputError.set(describePrivilegeError(error));
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Shows or hides the layer of a privileged session. From Android 12 on a layer of another uid blocks the touches of
+     * every window below it, also with an empty frame; the frame loop goes on while it is hidden.
+     */
+    public boolean setPrivilegedLayerVisible(Surface surface, boolean visible) {
+        if (surface == null) {
+            return false;
+        }
+        synchronized (privilegedSessionLock) {
+            PrivilegedSurfaceHost host = privilegedSurfaceHosts.get(surface);
+            if (host == null) {
+                return false;
+            }
+            try {
+                host.endpoint.setLayerVisible(visible);
                 return true;
             } catch (RemoteException | RuntimeException error) {
                 host.inputError.set(describePrivilegeError(error));

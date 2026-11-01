@@ -6,11 +6,12 @@
         return;
     }
     factory(imgui, {});
-})(function (imgui, options) {
+})(/** @type {ImGui.ExampleRunner} */ function (imgui, options) {
     options = options || {};
 
     var controlsOpen = imgui.ref(true);
     var nextId = 7;
+    /** @type {ImGui.DataTable<{id: number, task: string, owner: string, state: string, cost: number}>} */
     var table;
     var stateOrder = ["New", "Pending", "Active", "Done"];
     var rows = [
@@ -36,7 +37,7 @@
                         label: "State",
                         width: 82,
                         compare: function (a, b) {
-                            return stateOrder.indexOf(a) - stateOrder.indexOf(b);
+                            return stateOrder.indexOf(String(a)) - stateOrder.indexOf(String(b));
                         }
                     },
                     {
@@ -125,6 +126,7 @@
         collapseButton: true
     });
 
+    /** @type {(value: number | undefined, fallback: number) => number} */
     function numberOption(value, fallback) {
         var result = Number(value);
         return isFinite(result) ? result : fallback;

@@ -44,7 +44,7 @@
   "api_groups": [
     "Среда сессии: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, перевод единиц `density` / `dp` / `px`, а также `on` / `once` / `off` и их формы для сессии, событие сессии `error`, сообщающее об ошибках колбэков, опция `debug`, включающая режим отладки, и энергосбережение через `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` и события `idle` / `active`.",
     "Обнаружение бэкенда: `getBackendCapabilities` / `BackendStatus` сообщает о доступности и готовности к эксплуатации окон, разделенной обработки касаний, привилегированного процесса, прямого ввода, Docking и Multi-Viewport, не повышая привилегии.",
-    "Сессия и окна: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, а также запросы состояния окна, такие как `isWindowHovered`.",
+    "Сессия и окна: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` / `setNextWindowFocus` / `setNextWindowCollapsed`, а также запросы состояния окна, такие как `isWindowHovered`.",
     "Текст и элементы управления: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` и другие. Элементы с 2-4 значениями: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.",
     "Контейнеры и навигация: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / семейство таблиц `withTable` / `withListBox` / `withCombo` / `selectable`, а также `listClipper` для длинных списков. Сортировка таблиц: `tableGetSortSpecs` / `SortDirection` и `dataTable` с `sortable: true`. Множественный выбор: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` с `MultiSelectFlags` и `selectionStorage` для хранения выбора.",
     "Всплывающие окна и меню: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.",
@@ -74,5 +74,6 @@
   "h3_links": "Ссылки",
   "text_link_autojs6": "Проект AutoJs6",
   "text_link_dear_imgui": "Официальный проект Dear ImGui",
+  "text_link_docs": "Указатель документации",
   "text_link_roadmap": "Дорожная карта возможностей"
 }

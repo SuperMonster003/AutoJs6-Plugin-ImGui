@@ -44,7 +44,7 @@
   "api_groups": [
     "세션 런타임: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 단위 변환 `density` / `dp` / `px`, 세션별 형식을 포함한 `on` / `once` / `off`, 콜백 오류를 알리는 세션 `error` 이벤트, 디버그 모드를 켜는 `debug` 옵션, 절전을 위한 `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps`, `idle` / `active` 이벤트.",
     "백엔드 탐색: `getBackendCapabilities` / `BackendStatus`는 창, split-touch, 권한 있는 프로세스, 직접 입력, Docking 및 Multi-Viewport의 사용 가능 여부와 운영 환경 준비 상태를 보고하며 권한 상승은 수행하지 않습니다.",
-    "세션과 창: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `setNextWindowPos`, `setNextWindowSize`, `setNextWindowBgAlpha` 및 `isWindowHovered` 같은 창 상태 조회.",
+    "세션과 창: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `setNextWindowPos`, `setNextWindowSize`, `setNextWindowBgAlpha`, `setNextWindowFocus`, `setNextWindowCollapsed` 및 `isWindowHovered` 같은 창 상태 조회.",
     "텍스트와 컨트롤: `text`, `textColored`, `textWrapped`, `separatorText`, `bulletText`, `labelText`, `button`, `arrowButton`, `invisibleButton`, `checkbox`, `toggle`, `radioButton`, `sliderFloat`, `sliderInt`, `vSliderFloat`, `dragFloat`, `dragInt`, `inputText`, `inputInt`, `inputFloat`, `inputTextMultiline`, `colorEdit3`, `colorEdit4`, `colorPicker4`, `colorButton`, `progressBar`, `plotLines`, `plotHistogram` 등. 여러 값을 다루는 위젯: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.",
     "컨테이너와 탐색: `withTabBar`, `withTabItem`, `withTreeNode`, `treeNodeEx`, `collapsingHeader`, `withTable` 테이블 계열, `withListBox`, `withCombo`, `selectable`, 긴 목록용 `listClipper`. 표 정렬: `tableGetSortSpecs` / `SortDirection`, `dataTable`의 `sortable: true`. 다중 선택: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection`와 `MultiSelectFlags`, 선택 상태를 보관하는 `selectionStorage`.",
     "팝업과 메뉴: `openPopup`, `withPopup`, `withPopupModal`, `beginPopupContextItem`, `beginPopupContextWindow`, `withContextItem`, `withContextWindow`, `closeCurrentPopup`, `withMenuBar`, `withMenu`, `menuItem`, `setTooltip`, `setItemTooltip`, `withItemTooltip`.",
@@ -74,5 +74,6 @@
   "h3_links": "링크",
   "text_link_autojs6": "AutoJs6 프로젝트",
   "text_link_dear_imgui": "Dear ImGui 공식 프로젝트",
+  "text_link_docs": "문서 목록",
   "text_link_roadmap": "기능 확장 로드맵 (Roadmap)"
 }

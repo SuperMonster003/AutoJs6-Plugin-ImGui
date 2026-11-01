@@ -147,6 +147,81 @@ ended.requests.forEach((request) => {
 selection.apply(ended.requests, ended.itemsCount).setItemSelected(1, false);
 const selectedIds: number[] = selection.clear().toArray();
 plugin.text(selectedIds.length);
+plugin.setNextWindowFocus();
+plugin.setNextWindowCollapsed(true, plugin.Cond.Once);
+plugin.SetNextWindowFocus();
+plugin.SetNextWindowCollapsed(false);
+plugin.withWindow("Focused", null, 0, () => plugin.text(plugin.isWindowFocused()));
+
+const dialogs: ImGui.Session = plugin.launchFloaty(() => undefined);
+const accepted: ImGui.DialogPromise<boolean> = dialogs.alert("Title", "Message", {okLabel: "Fine", width: 240});
+accepted.then((ok: boolean) => plugin.text(ok));
+plugin.confirm("Message only", {cancelLabel: "No"}).controller.cancel();
+plugin.singleChoice("Pick", ["a", "b"], 1, {autoAccept: true}).then((index: number) => plugin.text(index));
+plugin.singleChoice(["a", "b"], {selected: 1, onChoice: (index, item) => plugin.text(`${index}${item}`)});
+plugin.multiChoice(["a", "b"], [true, false]).then((indices: number[] | null) => plugin.text(indices));
+plugin.MultiChoice("Pick", [{label: "a"}], [0], {onChoice: (index, checked) => plugin.text(`${index}${checked}`)}).accept();
+
+interface Task {
+    id: number;
+    name: string;
+}
+
+const tasks: ImGui.DataTable<Task> = dialogs.dataTable<Task>("tasks", [
+    "Plain",
+    {key: "id", label: "#", compare: (a, b) => Number(a) - Number(b)},
+    {key: "name", weight: 2, render: (value, row, rowIndex, table) => plugin.text(`${value}${row.id}${rowIndex}${table.id}`)},
+], [{id: 1, name: "One"}], {
+    rowKey: "id",
+    sortable: true,
+    labels: {add: "New"},
+    formatCell: (value, row) => (value === undefined ? row.id : value),
+    renderCell: (value, row, header, rowIndex, columnIndex) => columnIndex === 2 && value === header.label && row.id === rowIndex,
+    createRow: table => ({id: table.rows.length + 1, name: "New"}),
+    onRowsChanged: (rows, action, row, index, table) => plugin.text(`${rows.length}${action}${row === null}${index}${table.id}`),
+});
+tasks.updateRow(0, {name: "First"});
+tasks.updateRow(1, row => ({name: row.name + "!"}));
+dialogs.dataTable("tasks by function", [{key: "id"}], [{id: 1}], {rowKey: row => row.id});
+const log: ImGui.LogWindow = dialogs.logWindow("log", {
+    entries: ["text", {level: "warn", text: 1}],
+    onExport: (text, entries, component) => plugin.text(`${text}${entries.length}${component.id}`),
+});
+plugin.text(log.export());
+dialogs.toast("Saved", {duration: 500, showLevel: true});
+dialogs.on("moved", event => plugin.text(event.x + event.oldY));
+dialogs.once("configurationChanged", event => plugin.text(event.orientation));
+dialogs.off("idle");
+plugin.runExample("multi-window", {autoCloseMs: 1000}).close();
+plugin.setStyleProperties({windowRounding: 4, itemSpacing: [8, 4], colors: {text: "#fff", WindowBg: [0, 0, 0, 1]}});
+plugin.pushStyleVar("Alpha", 0.5);
+plugin.popStyleVar();
+plugin.createWindow(() => undefined, {windowPadding: [4, 4], iniPath: true, onError: (event, source) => source.close(event.message)});
+
+// A misspelled option or a key that is not in the row does not compile.
+// @ts-expect-error
+const misspelledWindow: ImGui.WindowOptions = {fpsMax: 60};
+// @ts-expect-error
+const misspelledStyle: ImGui.WindowOptions = {windowRouding: 4};
+// @ts-expect-error
+const misspelledLog: ImGui.LogWindowOptions = {maxEntry: 10};
+// @ts-expect-error
+const misspelledToast: ImGui.ToastOptions = {postion: "center"};
+// @ts-expect-error
+const misspelledStats: ImGui.StatsOverlayOptions = {warnMs: 10};
+// @ts-expect-error
+const misspelledTable: ImGui.DataTableOptions = {multiselect: true};
+// @ts-expect-error
+const misspelledDialog: ImGui.DialogOptions = {oKLabel: "OK"};
+// @ts-expect-error
+const wrongRowKey: ImGui.DataTableOptions<Task> = {rowKey: "identifier"};
+// @ts-expect-error
+const wrongHeaderKey: ImGui.DataTableHeader<Task> = {key: "title"};
+// @ts-expect-error
+dialogs.on("mooved", () => undefined);
+plugin.text(`${misspelledWindow}${misspelledStyle}${misspelledLog}${misspelledToast}${misspelledStats}`);
+plugin.text(`${misspelledTable}${misspelledDialog}${wrongRowKey}${wrongHeaderKey}`);
+
 plugin.BeginMultiSelect();
 plugin.SetNextItemSelectionUserData(1);
 plugin.IsItemToggledSelection();

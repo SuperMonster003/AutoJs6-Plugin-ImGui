@@ -891,6 +891,26 @@ public final class ImGuiPrivilegedProcess {
         }
 
         @Override
+        public void setLayerVisible(boolean visible) {
+            synchronized (lock) {
+                if (closed) {
+                    throw new IllegalStateException("Privileged endpoint is closed");
+                }
+                if (layer == null) {
+                    return;
+                }
+                try {
+                    layer.setVisible(visible);
+                } catch (Exception error) {
+                    throw new IllegalStateException(
+                        "Unable to change the privileged layer: " + describe(error),
+                        error
+                    );
+                }
+            }
+        }
+
+        @Override
         public String info() {
             synchronized (lock) {
                 return "uid=" + Process.myUid() +
@@ -1313,6 +1333,25 @@ public final class ImGuiPrivilegedProcess {
                 }
                 releaseSurfaceControl(surfaceControlClass, surfaceControl);
                 throw error;
+            }
+        }
+
+        void setVisible(boolean visible) throws Exception {
+            Class<?> transactionClass = Class.forName("android.view.SurfaceControl$Transaction");
+            Constructor<?> transactionConstructor = transactionClass.getDeclaredConstructor();
+            transactionConstructor.setAccessible(true);
+            Object transaction = transactionConstructor.newInstance();
+            try {
+                invoke(
+                    transactionClass,
+                    transaction,
+                    visible ? "show" : "hide",
+                    new Class<?>[] {surfaceControlClass},
+                    surfaceControl
+                );
+                invoke(transactionClass, transaction, "apply", new Class<?>[0]);
+            } finally {
+                closeReflectively(transactionClass, transaction);
             }
         }
 

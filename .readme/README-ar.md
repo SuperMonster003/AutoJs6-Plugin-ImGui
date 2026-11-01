@@ -145,7 +145,7 @@ imgui.runExample("widget-overview");
 
 - وقت تشغيل الجلسة: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode` و`setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure` و`collapseWindow` / `expandWindow` و`addButtonEx` وتحويل الوحدات `density` / `dp` / `px` و`on` / `once` / `off` مع صيغها الخاصة بالجلسة, والحدث `error` للجلسة الذي يبلّغ عن أخطاء الدوال, والخيار `debug` الذي يفعّل وضع التصحيح, وتوفير الطاقة عبر `idleFps` / `idleDelay` و`setFps` / `setIdleFps` / `getFps` والحدثين `idle` / `active`.
 - اكتشاف الواجهة الخلفية: تعرض `getBackendCapabilities` / `BackendStatus` مدى التوفر والجاهزية للإنتاج للنوافذ واللمس المقسم والعملية ذات الامتيازات والإدخال المباشر وDocking وMulti-Viewport, من دون رفع الامتيازات.
-- الجلسة والنوافذ: `createWindow` و `closeWindow` و `withWindow` و `withChild` و `setNextWindowPos` و `setNextWindowSize` و `setNextWindowBgAlpha` إضافة إلى استعلامات حالة النافذة مثل `isWindowHovered`.
+- الجلسة والنوافذ: `createWindow` و `closeWindow` و `withWindow` و `withChild` و `setNextWindowPos` و `setNextWindowSize` و `setNextWindowBgAlpha` و `setNextWindowFocus` و `setNextWindowCollapsed` إضافة إلى استعلامات حالة النافذة مثل `isWindowHovered`.
 - النص وعناصر التحكم: `text` و `textColored` و `textWrapped` و `separatorText` و `bulletText` و `labelText` و `button` و `arrowButton` و `invisibleButton` و `checkbox` و `toggle` و `radioButton` و `sliderFloat` و `sliderInt` و `vSliderFloat` و `dragFloat` و `dragInt` و `inputText` و `inputInt` و `inputFloat` و `inputTextMultiline` و `colorEdit3` و `colorEdit4` و `colorPicker4` و `colorButton` و `progressBar` و `plotLines` و `plotHistogram` وغيرها. عناصر تحكم بقيمتين إلى أربع قيم: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
 - الحاويات والتنقل: `withTabBar` و `withTabItem` و `withTreeNode` و `treeNodeEx` و `collapsingHeader` وعائلة الجداول `withTable` و `withListBox` و `withCombo` و `selectable`, إضافة إلى `listClipper` للقوائم الطويلة. فرز الجداول: `tableGetSortSpecs` / `SortDirection` و `dataTable` مع `sortable: true`. التحديد المتعدد: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` مع `MultiSelectFlags`, و `selectionStorage` لحفظ التحديد.
 - النوافذ المنبثقة والقوائم: `openPopup` و `withPopup` و `withPopupModal` و `beginPopupContextItem` و `beginPopupContextWindow` و `withContextItem` و `withContextWindow` و `closeCurrentPopup` و `withMenuBar` و `withMenu` و `menuItem` و `setTooltip` و `setItemTooltip` و `withItemTooltip`.
@@ -174,6 +174,15 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.18.0
+
+###### 2026/11/01
+
+* `ميزة` يتيح setNextWindowFocus() و setNextWindowCollapsed(collapsed, condition) للسكربت منح التركيز لنافذة في الجلسة أو طيها, ويسري ذلك على begin أو withWindow التالي. يضم المثال multi-window زرا لكل منهما
+* `إصلاح` dataTable: كانت دالة render للعمود موثقة لكنها لم تستدع قط. وهي ترسم الآن خلايا هذا العمود
+* `إصلاح` launchPrivileged: في Android 12 وما بعده لم تكن اللمسات تصل إلى مربع النص المؤقت ولوحة المفاتيح, ولم تكن لمسة خارج المربع تغلقه. تخفى الطبقة الآن ما دام المربع مفتوحا
+* `تحسين` يصف imgui.d.ts الواجهة البرمجية بدقة: لكل عضو تعليق يذكر وحداته وخيطه, ولـ alert / confirm / singleChoice / multiChoice تواقيع حقيقية, ولكل حدث جلسة حقوله الخاصة, ويصبح الخطأ الإملائي في اسم خيار خطأ في TypeScript. أزيل خيارا title و background من toast لأنهما لم يفعلا شيئا قط. تجتاز جميع الأمثلة المضمنة tsc --strict
+
 #### v1.17.0
 
 ###### 2026/11/01
@@ -191,16 +200,6 @@ imgui.runExample("widget-overview");
 * `ميزة` يتيح createWindow({pinchZoom: true}) تغيير حجم النص من 0.5 إلى 3 أضعاف بإصبعين; وتحريك الإصبعين معا يبقى تمريرا. اقرأ المقياس من session.fontScale واضبطه عبر session.setFontScale(scale) واستمع إلى الحدث الجديد fontScaleChanged. يعرض مثال widget-overview كل ذلك
 * `ميزة` إدخال النص في وضع الامتياز: يفتح النقر على inputText الآن مربع إدخال صغيرا من AutoJs6 مع لوحة المفاتيح (يتطلب إذن التراكب لـ AutoJs6). يدخل زر OK أو مفتاح الإنهاء أو النقر في مكان آخر النص عند مؤشر الحقل; ولا يمكن تعديل النص الموجود في الحقل داخل المربع
 * `تحسين` تتبع النوافذ الآن تغييرات حجم العرض (الكثافة) وحجم خط النظام أثناء التشغيل: يأخذ النص وعناصر التحكم الحجم الجديد وتحتفظ النافذة بحجمها بوحدة dp. أضيفت إلى configurationChanged الحقول density و oldDensity و fontScale و oldFontScale. تغلق نافذة ملء الشاشة من imgui.launch بدلا من ذلك (session.closeReason يساوي "configuration-changed") لأن Android يعيد إنشاء Activity الخاصة بها
-
-#### v1.15.0
-
-###### 2026/10/30
-
-* `ميزة` استعلامات لوحة المفاتيح: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, واختصارات لوحة المفاتيح عبر shortcut و setNextItemShortcut. تكتب التركيبات هكذا: ui.Mod.Ctrl | ui.Key.S. تغطي ثوابت Key الآن لوحة المفاتيح كاملة: من A إلى Z, ومن Digit0 إلى Digit9, ومن F1 إلى F24, ولوحة الأرقام وغيرها
-* `ميزة` الحافظة: يستخدم getClipboardText / setClipboardText حافظة Android نفسها التي يستخدمها getClip / setClip في المضيف, وكذلك Ctrl+C / Ctrl+V في حقول النص. منذ Android 10 لا يسمح النظام بقراءة الحافظة إلا للتطبيق الذي يملك تركيز الإدخال; يشرح docs/LIMITS.md تأثير ذلك على النوافذ العائمة
-* `ميزة` السحب والإفلات: اسحب عنصرا إلى عنصر آخر باستخدام beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload والدالتين المساعدتين withDragDropSource / withDragDropTarget (تضبط DragDropFlags الخيارات). يمكن أن تكون الحمولة سلسلة نصية أو رقما أو أي كائن يمكن تحويله إلى JSON, ويمكن سحب الألوان من عناصر الألوان; راجع القسم الجديد في المثال widget-overview
-* `ميزة` الرسم المخصص: دوال المسارات (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex وغيرها), و pushClipRect / popClipRect لقوائم الرسم والنوافذ, وأشكال جديدة: addEllipse و addNgon و addQuad ونسخها المعبأة, و addBezierQuadratic و addRectFilledMultiColor و addConvexPolyFilled و addConcavePolyFilled و addImageQuad و addImageRounded; راجع المثال widget-overview
-* `ميزة` محاكاة اللمس: يتيح addMousePosEvent(x, y) و addMouseButtonEvent(button, down) للسكربت التصرف كإصبع على النافذة, مثلا لاختبار الواجهة آليا. الإحداثيات بكسلات الإطار مثل getMousePos, وليست dp الخاصة بـ createWindow; ولا تتأثر التطبيقات أسفل النافذة
 
 ##### لمزيد من سجل الإصدارات
 
@@ -258,6 +257,7 @@ Roadmap.md
 
 - مشروع AutoJs6: https://github.com/SuperMonster003/AutoJs6
 - مشروع Dear ImGui الرسمي: https://github.com/ocornut/imgui
+- فهرس التوثيق: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/README.md
 - خارطة طريق توسيع القدرات (Roadmap): https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
 
 

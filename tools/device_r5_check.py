@@ -20,8 +20,8 @@ Sections (default: all but density and pinch-manual):
 - pinch: two-finger MotionEvents on the surface view: scrolling keeps the scale, a pinch doubles it, halves it and stops
   at the limit; text follows the scale.
 - pinch-manual: opens a window for --manual-seconds and prints every scale; the fingers are the maintainer's.
-- privileged: capture between frames and in a frame, the text box with Chinese text through the done key, the OK button
-  and a touch outside, single and multi-line, the empty layer while the box is open.
+- privileged: capture between frames and in a frame, the text box with Chinese text through the done key, the OK button,
+  a real tap on the OK button and a touch outside, single and multi-line, the empty layer while the box is open.
 """
 
 from __future__ import annotations
@@ -843,6 +843,35 @@ if (wanted('privileged')) steps.push(function () {
         });
     }
 
+    // A real touch reaches the box only while the layer lets it through: from Android 12 on the system drops touches below
+    // a layer of another uid.
+    function realTap() {
+        focusNext = 'single';
+        waitFor(function () { return session.imeView != null; }, 5000, guarded('privileged-real-tap', session, function (opened) {
+            if (!opened) {
+                report('privileged-real-tap', false, 'imeView=null');
+                finish();
+                return;
+            }
+            later(800, guarded('privileged-real-tap', session, function () {
+                var text = '手指';
+                session.imeView.post(new java.lang.Runnable({
+                    run: function () { session.imeView.setText(text); }
+                }));
+                later(500, guarded('privileged-real-tap', session, function () {
+                    var ok = session.imeView.getParent().getChildAt(1);
+                    var at = java.lang.reflect.Array.newInstance(java.lang.Integer.TYPE, 2);
+                    ok.getLocationOnScreen(at);
+                    action('tap-box-' + Math.round(Number(at[0]) + ok.getWidth() / 2) + '-' + Math.round(Number(at[1]) + ok.getHeight() / 2));
+                    afterBox(function () { return single.value.indexOf(text) >= 0; }, function (met) {
+                        report('privileged-real-tap', met, 'length=' + single.value.length + ' box=' + (session.imeView != null));
+                        later(600, outsideTouch);
+                    });
+                }));
+            }));
+        }));
+    }
+
     function outsideTouch() {
         focusNext = 'single';
         waitFor(function () { return session.imeView != null; }, 5000, guarded('privileged-outside', session, function (opened) {
@@ -947,7 +976,7 @@ if (wanted('privileged')) steps.push(function () {
                                         afterBox(function () { return multi.value === lines; }, guarded('privileged-input', session, function (metMulti) {
                                             report('privileged-input-multi', metMulti && !active.multi,
                                                 'match=' + (multi.value === lines) + ' length=' + multi.value.length + ' active=' + active.multi);
-                                            later(600, outsideTouch);
+                                            later(600, realTap);
                                         }));
                                     }));
                                 }));
@@ -1093,6 +1122,13 @@ class Device:
             return self.set_density(request.split("-", 1)[1]), []
         if request.startswith("font-scale-"):
             return self.set_font_scale(request.rsplit("-", 1)[1]), []
+        if request.startswith("tap-box-"):
+            x, y = request.rsplit("-", 2)[1:]
+            # MIUI uses the first touch of a dimmed screen to light it up: a key press counts as activity without touching.
+            adb(self.serial, "shell", "input", "keyevent", "KEYCODE_SHIFT_LEFT")
+            time.sleep(0.2)
+            adb(self.serial, "shell", "input", "tap", x, y)
+            return "tap on the box", []
         if request.startswith("swipe-outside-"):
             x, y = request.rsplit("-", 2)[1:]
             adb(self.serial, "shell", "input", "swipe", x, y, str(int(x) + 150), y, "200")

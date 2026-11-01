@@ -44,7 +44,7 @@
   "api_groups": [
     "وقت تشغيل الجلسة: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode` و`setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure` و`collapseWindow` / `expandWindow` و`addButtonEx` وتحويل الوحدات `density` / `dp` / `px` و`on` / `once` / `off` مع صيغها الخاصة بالجلسة, والحدث `error` للجلسة الذي يبلّغ عن أخطاء الدوال, والخيار `debug` الذي يفعّل وضع التصحيح, وتوفير الطاقة عبر `idleFps` / `idleDelay` و`setFps` / `setIdleFps` / `getFps` والحدثين `idle` / `active`.",
     "اكتشاف الواجهة الخلفية: تعرض `getBackendCapabilities` / `BackendStatus` مدى التوفر والجاهزية للإنتاج للنوافذ واللمس المقسم والعملية ذات الامتيازات والإدخال المباشر وDocking وMulti-Viewport, من دون رفع الامتيازات.",
-    "الجلسة والنوافذ: `createWindow` و `closeWindow` و `withWindow` و `withChild` و `setNextWindowPos` و `setNextWindowSize` و `setNextWindowBgAlpha` إضافة إلى استعلامات حالة النافذة مثل `isWindowHovered`.",
+    "الجلسة والنوافذ: `createWindow` و `closeWindow` و `withWindow` و `withChild` و `setNextWindowPos` و `setNextWindowSize` و `setNextWindowBgAlpha` و `setNextWindowFocus` و `setNextWindowCollapsed` إضافة إلى استعلامات حالة النافذة مثل `isWindowHovered`.",
     "النص وعناصر التحكم: `text` و `textColored` و `textWrapped` و `separatorText` و `bulletText` و `labelText` و `button` و `arrowButton` و `invisibleButton` و `checkbox` و `toggle` و `radioButton` و `sliderFloat` و `sliderInt` و `vSliderFloat` و `dragFloat` و `dragInt` و `inputText` و `inputInt` و `inputFloat` و `inputTextMultiline` و `colorEdit3` و `colorEdit4` و `colorPicker4` و `colorButton` و `progressBar` و `plotLines` و `plotHistogram` وغيرها. عناصر تحكم بقيمتين إلى أربع قيم: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.",
     "الحاويات والتنقل: `withTabBar` و `withTabItem` و `withTreeNode` و `treeNodeEx` و `collapsingHeader` وعائلة الجداول `withTable` و `withListBox` و `withCombo` و `selectable`, إضافة إلى `listClipper` للقوائم الطويلة. فرز الجداول: `tableGetSortSpecs` / `SortDirection` و `dataTable` مع `sortable: true`. التحديد المتعدد: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` مع `MultiSelectFlags`, و `selectionStorage` لحفظ التحديد.",
     "النوافذ المنبثقة والقوائم: `openPopup` و `withPopup` و `withPopupModal` و `beginPopupContextItem` و `beginPopupContextWindow` و `withContextItem` و `withContextWindow` و `closeCurrentPopup` و `withMenuBar` و `withMenu` و `menuItem` و `setTooltip` و `setItemTooltip` و `withItemTooltip`.",
@@ -74,5 +74,6 @@
   "h3_links": "الروابط",
   "text_link_autojs6": "مشروع AutoJs6",
   "text_link_dear_imgui": "مشروع Dear ImGui الرسمي",
+  "text_link_docs": "فهرس التوثيق",
   "text_link_roadmap": "خارطة طريق توسيع القدرات (Roadmap)"
 }

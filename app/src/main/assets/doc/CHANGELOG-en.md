@@ -4,6 +4,15 @@
 
 ******
 
+# v1.18.0
+
+###### 2026/11/01
+
+* `Feature` setNextWindowFocus() and setNextWindowCollapsed(collapsed, condition) let a script focus or fold one window of a session, for the next begin or withWindow. The example multi-window has a button for each
+* `Fix` dataTable: the render function of a column was documented but never called. It now draws the cells of that column
+* `Fix` launchPrivileged: on Android 12 and later, touches on the temporary text box and the keyboard did not arrive, and a touch outside did not close the box. The layer is now hidden while the box is open
+* `Improvement` imgui.d.ts describes the API precisely: every member has a comment with its units and thread, alert / confirm / singleChoice / multiChoice have real signatures, each session event has its own fields, and a misspelled option name is now an error in TypeScript. The toast options title and background, which never did anything, are gone. All bundled examples pass tsc --strict
+
 # v1.17.0
 
 ###### 2026/11/01

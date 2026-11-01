@@ -15,7 +15,7 @@
         return;
     }
     factory(imgui, {});
-})(function (imgui, options) {
+})(/** @type {ImGui.ExampleRunner} */ function (imgui, options) {
     options = options || {};
 
     var Bitmap = android.graphics.Bitmap;
@@ -31,16 +31,19 @@
 
     var controllerOpen = imgui.ref(true);
     var halfSize = imgui.ref(false);
-    var texture = null;
+    /** @type {ImGui.Texture} */
+    var texture;
     var tick = 0;
     var updates = 0;
     var lastUpdateMs = 0;
+    /** @type {string | null} */
     var lastError = null;
     var paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     // Hue (0 - 360), saturation and value (0 - 1) to [r, g, b] in 0 - 255. Colors go to Canvas / Paint as separate
     // channels: since Android 10 drawColor and setColor also take a long (a color with a color space), and Rhino may
     // pick that overload for a JavaScript number.
+    /** @type {(hue: number, saturation: number, value: number) => number[]} */
     function hsvToRgb(hue, saturation, value) {
         var chroma = value * saturation;
         var x = chroma * (1 - Math.abs((hue / 60) % 2 - 1));
@@ -175,6 +178,7 @@
         clearInterval(timer);
     });
 
+    /** @type {(value: number | undefined, fallback: number) => number} */
     function numberOption(value, fallback) {
         var result = Number(value);
         return isFinite(result) ? result : fallback;

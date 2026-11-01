@@ -145,7 +145,7 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 
 - Ejecución de sesión: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, conversión de unidades `density` / `dp` / `px`, `on` / `once` / `off` junto con sus formas por sesión, el evento de sesión `error` que informa de los errores de los callbacks, la opción `debug` que activa el modo de depuración y el ahorro de energía con `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` y los eventos `idle` / `active`.
 - Detección del backend: `getBackendCapabilities` / `BackendStatus` informa de la disponibilidad y preparación para producción de las ventanas, el toque dividido, el proceso privilegiado, la entrada directa, Docking y Multi-Viewport, sin elevar privilegios.
-- Sesión y ventanas: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, además de consultas de estado de ventana como `isWindowHovered`.
+- Sesión y ventanas: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` / `setNextWindowFocus` / `setNextWindowCollapsed`, además de consultas de estado de ventana como `isWindowHovered`.
 - Texto y controles: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram`, entre otros. Controles de 2 a 4 valores: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
 - Contenedores y navegación: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / la familia de tablas `withTable` / `withListBox` / `withCombo` / `selectable`, además de `listClipper` para listas largas. Ordenación de tablas: `tableGetSortSpecs` / `SortDirection` y `dataTable` con `sortable: true`. Selección múltiple: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` con `MultiSelectFlags`, y `selectionStorage` para guardar la selección.
 - Ventanas emergentes y menús: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
@@ -174,6 +174,15 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 
 ******
 
+#### v1.18.0
+
+###### 2026/11/01
+
+* `Función` setNextWindowFocus() y setNextWindowCollapsed(collapsed, condition) permiten a un script enfocar o plegar una ventana de la sesión, para el siguiente begin o withWindow. El ejemplo multi-window tiene un botón para cada una
+* `Corrección` dataTable: la función render de una columna estaba documentada pero nunca se llamaba. Ahora dibuja las celdas de esa columna
+* `Corrección` launchPrivileged: en Android 12 y posteriores, los toques en el cuadro de texto temporal y el teclado no llegaban, y un toque fuera no cerraba el cuadro. Ahora la capa se oculta mientras el cuadro está abierto
+* `Mejora` imgui.d.ts describe la API con precisión: cada miembro tiene un comentario con sus unidades y su hilo, alert / confirm / singleChoice / multiChoice tienen firmas reales, cada evento de sesión tiene sus propios campos, y un nombre de opción mal escrito es un error en TypeScript. Se quitaron las opciones title y background de toast, que nunca hicieron nada. Todos los ejemplos incluidos pasan tsc --strict
+
 #### v1.17.0
 
 ###### 2026/11/01
@@ -191,16 +200,6 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 * `Función` createWindow({pinchZoom: true}) permite cambiar el tamaño del texto de 0.5 a 3 veces con dos dedos; mover los dos dedos juntos sigue desplazando. Lea la escala en session.fontScale, cámbiela con session.setFontScale(scale) y escuche el nuevo evento fontScaleChanged. El ejemplo widget-overview lo muestra todo
 * `Función` Entrada de texto en modo privilegiado: tocar un inputText ahora abre un pequeño cuadro de entrada de AutoJs6 con el teclado (requiere el permiso de superposición de AutoJs6). El botón OK, la tecla de finalizar o un toque en otro lugar introducen el texto en el cursor del campo; el texto que ya está en el campo no se puede editar en el cuadro
 * `Mejora` Las ventanas ahora siguen los cambios de tamaño de pantalla (densidad) y de tamaño de fuente del sistema mientras se ejecutan: el texto y los controles toman el nuevo tamaño, y la ventana conserva su tamaño en dp. configurationChanged tiene los nuevos campos density, oldDensity, fontScale y oldFontScale. Una ventana a pantalla completa de imgui.launch se cierra en su lugar (session.closeReason es "configuration-changed"), porque Android recrea su Activity
-
-#### v1.15.0
-
-###### 2026/10/30
-
-* `Función` Consultas de teclado: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, y atajos de teclado con shortcut y setNextItemShortcut. Las combinaciones se escriben ui.Mod.Ctrl | ui.Key.S. Las constantes Key cubren ahora todo el teclado: A a Z, Digit0 a Digit9, F1 a F24, el teclado numérico y más
-* `Función` Portapapeles: getClipboardText / setClipboardText usan el mismo portapapeles de Android que getClip / setClip del host, igual que Ctrl+C / Ctrl+V en los campos de texto. Desde Android 10 el sistema solo deja leer el portapapeles a la app con el foco de entrada; docs/LIMITS.md explica cómo afecta a las ventanas flotantes
-* `Función` Arrastrar y soltar: arrastra un elemento sobre otro con beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload y los auxiliares withDragDropSource / withDragDropTarget (DragDropFlags define las opciones). La carga puede ser una cadena, un número o cualquier objeto serializable a JSON, y también se pueden arrastrar colores desde los controles de color; consulta la nueva sección del ejemplo widget-overview
-* `Función` Dibujo personalizado: funciones de trazado (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex y más), pushClipRect / popClipRect en listas de dibujo y ventanas, y formas nuevas: addEllipse, addNgon, addQuad y sus versiones rellenas, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded; consulta el ejemplo widget-overview
-* `Función` Toque simulado: addMousePosEvent(x, y) y addMouseButtonEvent(button, down) permiten que un script actúe como un dedo sobre la ventana, por ejemplo para probar una interfaz automáticamente. Las coordenadas son píxeles del fotograma, como en getMousePos, no los dp de createWindow; las apps bajo la ventana no se ven afectadas
 
 ##### Para consultar más versiones
 
@@ -258,6 +257,7 @@ Roadmap.md
 
 - Proyecto AutoJs6: https://github.com/SuperMonster003/AutoJs6
 - Proyecto oficial Dear ImGui: https://github.com/ocornut/imgui
+- Índice de la documentación: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/README.md
 - Hoja de ruta de funciones: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
 
 

@@ -6,7 +6,7 @@
         return;
     }
     factory(imgui, {});
-})(function (imgui, options) {
+})(/** @type {ImGui.ExampleRunner} */ function (imgui, options) {
     options = options || {};
 
     var open = imgui.ref(true);
@@ -41,7 +41,6 @@
             for (var index = 0; index < themes.length; index += 1) {
                 if (ui.button(themes[index][0] + "##theme-" + index, ui.dp(150), 0)) {
                     currentTheme = ui.setTheme(themes[index][1]);
-                    window.theme = currentTheme;
                     window.toast(themes[index][0] + " applied", 1200, {
                         position: ui.ToastPosition.BottomCenter,
                         level: ui.LogLevel.Info
@@ -60,6 +59,7 @@
             ui.progressBar(value.value, -1, 0, Math.round(value.value * 100) + "%");
 
             ui.separatorText("Semantic colors");
+            /** @type {[string, number[]][]} */
             var swatches = [
                 ["Accent", accent.value],
                 ["Success", [0.22, 0.78, 0.42, 1]],
@@ -84,12 +84,10 @@
             ui.separatorText("Appearance shortcuts");
             if (ui.button("Flat")) {
                 ui.setStyleProperties({windowRounding: 0, frameRounding: 0, grabRounding: 0});
-                window.appearance = ui.Appearance.Flat;
             }
             ui.sameLine();
             if (ui.button("Rounded")) {
                 ui.setStyleProperties({windowRounding: 10, frameRounding: 6, grabRounding: 6});
-                window.appearance = ui.Appearance.Rounded;
             }
             ui.sameLine();
             if (ui.button("Close")) {
@@ -112,6 +110,7 @@
         collapseButton: true
     });
 
+    /** @type {(value: number | undefined, fallback: number) => number} */
     function numberOption(value, fallback) {
         var result = Number(value);
         return isFinite(result) ? result : fallback;

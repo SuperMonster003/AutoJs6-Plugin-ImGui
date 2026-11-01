@@ -5,6 +5,19 @@
   "changelog_label_improvement": "تحسين",
   "changelog_label_dependency": "تبعية",
   "$data": {
+    "v1.18.0": {
+      "released_date": "2026/11/01",
+      "feature": [
+        "يتيح setNextWindowFocus() و setNextWindowCollapsed(collapsed, condition) للسكربت منح التركيز لنافذة في الجلسة أو طيها, ويسري ذلك على begin أو withWindow التالي. يضم المثال multi-window زرا لكل منهما"
+      ],
+      "fix": [
+        "dataTable: كانت دالة render للعمود موثقة لكنها لم تستدع قط. وهي ترسم الآن خلايا هذا العمود",
+        "launchPrivileged: في Android 12 وما بعده لم تكن اللمسات تصل إلى مربع النص المؤقت ولوحة المفاتيح, ولم تكن لمسة خارج المربع تغلقه. تخفى الطبقة الآن ما دام المربع مفتوحا"
+      ],
+      "improvement": [
+        "يصف imgui.d.ts الواجهة البرمجية بدقة: لكل عضو تعليق يذكر وحداته وخيطه, ولـ alert / confirm / singleChoice / multiChoice تواقيع حقيقية, ولكل حدث جلسة حقوله الخاصة, ويصبح الخطأ الإملائي في اسم خيار خطأ في TypeScript. أزيل خيارا title و background من toast لأنهما لم يفعلا شيئا قط. تجتاز جميع الأمثلة المضمنة tsc --strict"
+      ]
+    },
     "v1.17.0": {
       "released_date": "2026/11/01",
       "feature": [

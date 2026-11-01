@@ -145,7 +145,7 @@ imgui.runExample("widget-overview");
 
 - Среда сессии: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, перевод единиц `density` / `dp` / `px`, а также `on` / `once` / `off` и их формы для сессии, событие сессии `error`, сообщающее об ошибках колбэков, опция `debug`, включающая режим отладки, и энергосбережение через `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps` и события `idle` / `active`.
 - Обнаружение бэкенда: `getBackendCapabilities` / `BackendStatus` сообщает о доступности и готовности к эксплуатации окон, разделенной обработки касаний, привилегированного процесса, прямого ввода, Docking и Multi-Viewport, не повышая привилегии.
-- Сессия и окна: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha`, а также запросы состояния окна, такие как `isWindowHovered`.
+- Сессия и окна: `createWindow` / `closeWindow` / `withWindow` / `withChild` / `setNextWindowPos` / `setNextWindowSize` / `setNextWindowBgAlpha` / `setNextWindowFocus` / `setNextWindowCollapsed`, а также запросы состояния окна, такие как `isWindowHovered`.
 - Текст и элементы управления: `text` / `textColored` / `textWrapped` / `separatorText` / `bulletText` / `labelText` / `button` / `arrowButton` / `invisibleButton` / `checkbox` / `toggle` / `radioButton` / `sliderFloat` / `sliderInt` / `vSliderFloat` / `dragFloat` / `dragInt` / `inputText` / `inputInt` / `inputFloat` / `inputTextMultiline` / `colorEdit3` / `colorEdit4` / `colorPicker4` / `colorButton` / `progressBar` / `plotLines` / `plotHistogram` и другие. Элементы с 2-4 значениями: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
 - Контейнеры и навигация: `withTabBar` / `withTabItem` / `withTreeNode` / `treeNodeEx` / `collapsingHeader` / семейство таблиц `withTable` / `withListBox` / `withCombo` / `selectable`, а также `listClipper` для длинных списков. Сортировка таблиц: `tableGetSortSpecs` / `SortDirection` и `dataTable` с `sortable: true`. Множественный выбор: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection` с `MultiSelectFlags` и `selectionStorage` для хранения выбора.
 - Всплывающие окна и меню: `openPopup` / `withPopup` / `withPopupModal` / `beginPopupContextItem` / `beginPopupContextWindow` / `withContextItem` / `withContextWindow` / `closeCurrentPopup` / `withMenuBar` / `withMenu` / `menuItem` / `setTooltip` / `setItemTooltip` / `withItemTooltip`.
@@ -174,6 +174,15 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.18.0
+
+###### 2026/11/01
+
+* `Функция` setNextWindowFocus() и setNextWindowCollapsed(collapsed, condition) позволяют скрипту передать фокус окну сессии или свернуть его, для следующего begin или withWindow. В примере multi-window для каждой функции есть кнопка
+* `Исправление` dataTable: функция render столбца была описана в документации, но никогда не вызывалась. Теперь она рисует ячейки этого столбца
+* `Исправление` launchPrivileged: на Android 12 и новее касания временного поля ввода и клавиатуры не доходили, а касание снаружи не закрывало поле. Теперь слой скрывается, пока поле открыто
+* `Улучшение` imgui.d.ts точно описывает API: у каждого члена есть комментарий с единицами и потоком, у alert / confirm / singleChoice / multiChoice настоящие сигнатуры, у каждого события сессии свои поля, а опечатка в имени опции стала ошибкой TypeScript. Опции title и background у toast, которые никогда ничего не делали, удалены. Все встроенные примеры проходят tsc --strict
+
 #### v1.17.0
 
 ###### 2026/11/01
@@ -191,16 +200,6 @@ imgui.runExample("widget-overview");
 * `Функция` createWindow({pinchZoom: true}) позволяет двумя пальцами менять размер текста от 0.5 до 3 раз; движение двух пальцев в одну сторону по-прежнему прокручивает. Масштаб читается из session.fontScale, задается через session.setFontScale(scale), а изменения приходят в новом событии fontScaleChanged. Все это показано в примере widget-overview
 * `Функция` Ввод текста в привилегированном режиме: нажатие на inputText открывает небольшое поле ввода AutoJs6 с клавиатурой (нужно разрешение оверлея для AutoJs6). Кнопка OK, клавиша готово или нажатие в другом месте вводят текст у курсора поля; уже имеющийся в поле текст в этом окне не редактируется
 * `Улучшение` Окна теперь следуют за изменением размера экрана (плотности) и системного размера шрифта во время работы: текст и элементы получают новый размер, а размер окна в dp сохраняется. В configurationChanged появились поля density, oldDensity, fontScale и oldFontScale. Полноэкранное окно imgui.launch вместо этого закрывается (session.closeReason равен "configuration-changed"), потому что Android пересоздает его Activity
-
-#### v1.15.0
-
-###### 2026/10/30
-
-* `Функция` Запросы клавиатуры: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed, а также сочетания клавиш через shortcut и setNextItemShortcut. Сочетания записываются как ui.Mod.Ctrl | ui.Key.S. Константы Key теперь охватывают всю клавиатуру: A - Z, Digit0 - Digit9, F1 - F24, цифровой блок и другие клавиши
-* `Функция` Буфер обмена: getClipboardText / setClipboardText используют тот же буфер обмена Android, что и getClip / setClip хоста, как и Ctrl+C / Ctrl+V в текстовых полях. Начиная с Android 10 система разрешает читать буфер обмена только приложению с фокусом ввода; о влиянии на плавающие окна см. docs/LIMITS.md
-* `Функция` Перетаскивание: перетаскивайте один элемент на другой с помощью beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload и вспомогательных функций withDragDropSource / withDragDropTarget (параметры задаёт DragDropFlags). Полезная нагрузка - строка, число или любой объект, сериализуемый в JSON; можно перетаскивать и цвета из виджетов цвета. См. новый раздел примера widget-overview
-* `Функция` Пользовательское рисование: функции контуров (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex и другие), pushClipRect / popClipRect для списков рисования и окон и новые фигуры: addEllipse, addNgon, addQuad и их залитые варианты, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded. См. пример widget-overview
-* `Функция` Имитация касаний: addMousePosEvent(x, y) и addMouseButtonEvent(button, down) позволяют скрипту действовать как палец на окне, например для автоматического тестирования интерфейса. Координаты - пиксели кадра, как в getMousePos, а не dp из createWindow; приложения под окном это не затрагивает
 
 ##### Дополнительная история выпусков
 
@@ -258,6 +257,7 @@ Roadmap.md
 
 - Проект AutoJs6: https://github.com/SuperMonster003/AutoJs6
 - Официальный проект Dear ImGui: https://github.com/ocornut/imgui
+- Указатель документации: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/README.md
 - Дорожная карта возможностей: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
 
 

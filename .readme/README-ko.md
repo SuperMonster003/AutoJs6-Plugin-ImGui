@@ -145,7 +145,7 @@ imgui.runExample("widget-overview");
 
 - 세션 런타임: `launch` / `launchFloaty` / `launchPrivileged` / `TouchMode` / `WindowMode`, `setTouchable` / `setMoreTouch` / `setGlobalAlpha` / `setSecure`, `collapseWindow` / `expandWindow`, `addButtonEx`, 단위 변환 `density` / `dp` / `px`, 세션별 형식을 포함한 `on` / `once` / `off`, 콜백 오류를 알리는 세션 `error` 이벤트, 디버그 모드를 켜는 `debug` 옵션, 절전을 위한 `idleFps` / `idleDelay`, `setFps` / `setIdleFps` / `getFps`, `idle` / `active` 이벤트.
 - 백엔드 탐색: `getBackendCapabilities` / `BackendStatus`는 창, split-touch, 권한 있는 프로세스, 직접 입력, Docking 및 Multi-Viewport의 사용 가능 여부와 운영 환경 준비 상태를 보고하며 권한 상승은 수행하지 않습니다.
-- 세션과 창: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `setNextWindowPos`, `setNextWindowSize`, `setNextWindowBgAlpha` 및 `isWindowHovered` 같은 창 상태 조회.
+- 세션과 창: `createWindow`, `closeWindow`, `withWindow`, `withChild`, `setNextWindowPos`, `setNextWindowSize`, `setNextWindowBgAlpha`, `setNextWindowFocus`, `setNextWindowCollapsed` 및 `isWindowHovered` 같은 창 상태 조회.
 - 텍스트와 컨트롤: `text`, `textColored`, `textWrapped`, `separatorText`, `bulletText`, `labelText`, `button`, `arrowButton`, `invisibleButton`, `checkbox`, `toggle`, `radioButton`, `sliderFloat`, `sliderInt`, `vSliderFloat`, `dragFloat`, `dragInt`, `inputText`, `inputInt`, `inputFloat`, `inputTextMultiline`, `colorEdit3`, `colorEdit4`, `colorPicker4`, `colorButton`, `progressBar`, `plotLines`, `plotHistogram` 등. 여러 값을 다루는 위젯: `dragFloat2/3/4` / `dragInt2/3/4` / `sliderFloat2/3/4` / `sliderInt2/3/4` / `inputFloat2/3/4` / `inputInt2/3/4` / `dragFloatRange2` / `dragIntRange2` / `sliderAngle`.
 - 컨테이너와 탐색: `withTabBar`, `withTabItem`, `withTreeNode`, `treeNodeEx`, `collapsingHeader`, `withTable` 테이블 계열, `withListBox`, `withCombo`, `selectable`, 긴 목록용 `listClipper`. 표 정렬: `tableGetSortSpecs` / `SortDirection`, `dataTable`의 `sortable: true`. 다중 선택: `beginMultiSelect` / `endMultiSelect` / `setNextItemSelectionUserData` / `isItemToggledSelection`와 `MultiSelectFlags`, 선택 상태를 보관하는 `selectionStorage`.
 - 팝업과 메뉴: `openPopup`, `withPopup`, `withPopupModal`, `beginPopupContextItem`, `beginPopupContextWindow`, `withContextItem`, `withContextWindow`, `closeCurrentPopup`, `withMenuBar`, `withMenu`, `menuItem`, `setTooltip`, `setItemTooltip`, `withItemTooltip`.
@@ -174,6 +174,15 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.18.0
+
+###### 2026/11/01
+
+* `기능` setNextWindowFocus() 와 setNextWindowCollapsed(collapsed, condition) 로 스크립트가 세션 안의 창에 포커스를 주거나 창을 접을 수 있습니다. 다음 begin 또는 withWindow 에 적용됩니다. 예제 multi-window 에 각각의 버튼을 추가했습니다
+* `수정` dataTable: 열의 render 함수는 문서에 있었지만 호출되지 않았습니다. 이제 해당 열의 셀을 그립니다
+* `수정` launchPrivileged: Android 12 이상에서 임시 입력 상자와 키보드에 터치가 전달되지 않았고, 상자 바깥을 터치해도 닫히지 않았습니다. 이제 상자가 열려 있는 동안 특권 레이어를 숨깁니다
+* `개선` imgui.d.ts 가 API 를 정확하게 설명합니다: 모든 멤버에 단위와 스레드를 적은 주석이 있고, alert / confirm / singleChoice / multiChoice 에 구체적인 시그니처가 있으며, 세션 이벤트마다 고유한 필드가 있고, 옵션 이름을 잘못 쓰면 TypeScript 가 오류를 냅니다. 효과가 없던 toast 옵션 title 과 background 는 제거했습니다. 포함된 모든 예제가 tsc --strict 를 통과합니다
+
 #### v1.17.0
 
 ###### 2026/11/01
@@ -191,16 +200,6 @@ imgui.runExample("widget-overview");
 * `기능` createWindow({pinchZoom: true})를 사용하면 두 손가락 핀치로 글자 크기를 0.5배에서 3배까지 바꿀 수 있습니다. 두 손가락을 같은 방향으로 움직이면 이전처럼 스크롤됩니다. 배율은 session.fontScale로 읽고 session.setFontScale(scale)로 설정하며, 새 fontScaleChanged 이벤트로 변경을 받습니다. widget-overview 예제에서 확인할 수 있습니다
 * `기능` 권한 모드의 텍스트 입력: inputText를 누르면 AutoJs6의 작은 입력 상자와 키보드가 열립니다 (AutoJs6의 오버레이 권한 필요). OK 버튼, 키보드의 완료 키 또는 다른 곳을 누르면 글자가 입력란의 커서 위치에 들어갑니다. 입력란에 이미 있는 글자는 상자에서 편집할 수 없습니다
 * `개선` 창이 실행 중에 화면 크기 (밀도)와 시스템 글꼴 크기의 변경을 따라갑니다. 글자와 컨트롤은 새 크기가 되고 창의 dp 크기는 그대로입니다. configurationChanged에 density, oldDensity, fontScale, oldFontScale 필드를 추가했습니다. imgui.launch의 전체 화면 창은 닫힙니다 (session.closeReason은 "configuration-changed"). Android가 해당 Activity를 다시 만들기 때문입니다
-
-#### v1.15.0
-
-###### 2026/10/30
-
-* `기능` 키보드 조회: isKeyDown / isKeyPressed / isKeyReleased / getKeyPressedAmount / getKeyName / isKeyChordPressed 와 단축키 shortcut, setNextItemShortcut 을 추가했습니다. 키 조합은 ui.Mod.Ctrl | ui.Key.S 처럼 씁니다. Key 상수는 이제 키보드 전체를 포함합니다: A 부터 Z, Digit0 부터 Digit9, F1 부터 F24, 숫자 키패드 등
-* `기능` 클립보드: getClipboardText / setClipboardText 는 호스트의 getClip / setClip 과 같은 Android 클립보드를 사용하며, 입력란의 Ctrl+C / Ctrl+V 도 마찬가지입니다. Android 10 부터는 입력 포커스를 가진 앱만 클립보드를 읽을 수 있습니다. 플로팅 창에 미치는 영향은 docs/LIMITS.md 를 참고하세요
-* `기능` 드래그 앤 드롭: beginDragDropSource / setDragDropPayload / beginDragDropTarget / acceptDragDropPayload 와 도우미 함수 withDragDropSource / withDragDropTarget 으로 항목을 다른 항목으로 끌어다 놓을 수 있습니다 (옵션은 DragDropFlags). 페이로드는 문자열, 숫자 또는 JSON 으로 직렬화할 수 있는 객체이며, 색상 위젯의 색도 끌 수 있습니다. 예제 widget-overview 의 새 섹션을 참고하세요
-* `기능` 사용자 정의 그리기: 경로 함수 (pathLineTo / pathArcTo / pathBezierCubicCurveTo / pathStroke / pathFillConvex 등), 드로우 리스트와 창의 pushClipRect / popClipRect, 새 도형 addEllipse, addNgon, addQuad 와 채우기 버전, addBezierQuadratic, addRectFilledMultiColor, addConvexPolyFilled, addConcavePolyFilled, addImageQuad, addImageRounded 를 추가했습니다. 예제 widget-overview 를 참고하세요
-* `기능` 터치 시뮬레이션: addMousePosEvent(x, y) 와 addMouseButtonEvent(button, down) 으로 스크립트가 손가락처럼 창을 조작할 수 있어 UI 자동 테스트 등에 쓸 수 있습니다. 좌표는 getMousePos 와 같은 프레임 픽셀이며 createWindow 의 dp 가 아닙니다. 창 아래의 앱에는 영향을 주지 않습니다
 
 ##### 더 많은 릴리스 기록
 
@@ -258,6 +257,7 @@ Roadmap.md
 
 - AutoJs6 프로젝트: https://github.com/SuperMonster003/AutoJs6
 - Dear ImGui 공식 프로젝트: https://github.com/ocornut/imgui
+- 문서 목록: https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/docs/README.md
 - 기능 확장 로드맵 (Roadmap): https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/Roadmap.md
 
 

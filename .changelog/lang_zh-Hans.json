@@ -5,6 +5,19 @@
   "changelog_label_improvement": "优化",
   "changelog_label_dependency": "依赖",
   "$data": {
+    "v1.18.0": {
+      "released_date": "2026/11/01",
+      "feature": [
+        "setNextWindowFocus() 和 setNextWindowCollapsed(collapsed, condition) 让脚本可以聚焦或折叠会话里的某个窗口, 作用于下一个 begin 或 withWindow. 示例 multi-window 为这两项各加了一个按钮"
+      ],
+      "fix": [
+        "dataTable: 列的 render 函数写在文档里却从未被调用, 现在它会绘制这一列的单元格",
+        "launchPrivileged: 在 Android 12 及以上, 手指点不到临时输入框和键盘, 点框外也不会收起输入框. 现在输入框打开期间会隐藏特权层"
+      ],
+      "improvement": [
+        "imgui.d.ts 现在准确描述全部 API: 每个成员都有注释, 写明单位和线程, alert / confirm / singleChoice / multiChoice 有了具体的参数形式, 每个会话事件有各自的字段, 选项名拼错时 TypeScript 会报错. 同时去掉了从未生效的 toast 选项 title 和 background. 全部内置示例都能通过 tsc --strict 检查"
+      ]
+    },
     "v1.17.0": {
       "released_date": "2026/11/01",
       "feature": [

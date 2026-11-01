@@ -4,6 +4,15 @@
 
 ******
 
+# v1.18.0
+
+###### 2026/11/01
+
+* `新增` setNextWindowFocus() 和 setNextWindowCollapsed(collapsed, condition) 讓腳本可以聚焦或摺疊會話裡的某個視窗, 作用於下一個 begin 或 withWindow. 範例 multi-window 為這兩項各加了一個按鈕
+* `修復` dataTable: 欄的 render 函式寫在文件裡卻從未被呼叫, 現在它會繪製這一欄的儲存格
+* `修復` launchPrivileged: 在 Android 12 及以上, 手指點不到臨時輸入框和鍵盤, 點框外也不會收起輸入框. 現在輸入框開啟期間會隱藏特權層
+* `優化` imgui.d.ts 現在準確描述全部 API: 每個成員都有註解, 寫明單位和執行緒, alert / confirm / singleChoice / multiChoice 有了具體的參數形式, 每個會話事件有各自的欄位, 選項名稱拼錯時 TypeScript 會報錯. 同時移除了從未生效的 toast 選項 title 和 background. 全部內建範例都能通過 tsc --strict 檢查
+
 # v1.17.0
 
 ###### 2026/11/01

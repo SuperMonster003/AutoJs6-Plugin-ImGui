@@ -197,6 +197,7 @@ public class ImGuiScriptFacadeTest {
             {"api.setNextWindowPos('x', 10)", "TypeError", "setNextWindowPos", "x"},
             {"api.setNextWindowPos(10, null)", "TypeError", "setNextWindowPos", "y"},
             {"api.setNextWindowBgAlpha(2)", "RangeError", "setNextWindowBgAlpha", "alpha"},
+            {"api.setNextWindowCollapsed(true, 'once')", "TypeError", "setNextWindowCollapsed", "condition"},
             {"api.progressBar(NaN)", "TypeError", "progressBar", "fraction"},
             {"api.dummy('10', 10)", "TypeError", "dummy", "width"},
             {"api.arrowButton('a', 9)", "RangeError", "arrowButton", "direction"},
@@ -831,6 +832,46 @@ public class ImGuiScriptFacadeTest {
         assertEquals("0,1,2", String.valueOf(eval(
             "[api.SortDirection.None, api.SortDirection.Ascending, api.SortDirection.Descending].join(',')"
         )));
+    }
+
+    @Test
+    public void nextWindowFocusAndCollapsedReachTheBridge() {
+        eval(
+            "bridge.setNextWindowFocus = record('setNextWindowFocus');"
+                + "bridge.setNextWindowCollapsed = record('setNextWindowCollapsed');"
+        );
+        assertEquals("", lastCall("api.setNextWindowFocus()"));
+        assertEquals("", lastCall("api.SetNextWindowFocus()"));
+        assertEquals("true,0", lastCall("api.setNextWindowCollapsed(true)"));
+        assertEquals("false,2", lastCall("api.SetNextWindowCollapsed(false, api.Cond.Once)"));
+    }
+
+    @Test
+    public void dataTableHeaderRenderDrawsTheCellsOfItsColumn() {
+        eval(
+            "var s = openWindow();"
+                + "['endTable', 'tableSetupColumn', 'tableSetupScrollFreeze', 'tableHeadersRow', 'tableNextRow',"
+                + "    'tableSetColumnIndex', 'selectable', 'text', 'textDisabled'"
+                + "].forEach(function (name) { bridge[name] = record(name); });"
+                + "bridge.beginTable = function () { return true; };"
+                + "var seen = [];"
+                + "var t = api.dataTable('t', ["
+                + "    {key: 'name', render: function () { seen.push('selectable column'); }},"
+                + "    {key: 'cost', render: function (value, row, rowIndex, table) {"
+                + "        seen.push([value, row.name, rowIndex, table === t].join('/'));"
+                + "    }},"
+                + "    {key: 'note'}"
+                + "], [{name: 'a', cost: 1.5, note: 'x'}, {name: 'b', cost: 2, note: 'y'}], {toolbar: false});"
+                + "t.renderTable();"
+        );
+        assertEquals("1.5/a/0/true|2/b/1/true", String.valueOf(eval("seen.join('|')")));
+        assertEquals(
+            "x|y",
+            String.valueOf(eval(
+                "calls.filter(function (c) { return c.name === 'text'; })"
+                    + ".map(function (c) { return c.args[0]; }).join('|')"
+            ))
+        );
     }
 
     @Test

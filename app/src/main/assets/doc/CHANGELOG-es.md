@@ -4,6 +4,15 @@
 
 ******
 
+# v1.18.0
+
+###### 2026/11/01
+
+* `Función` setNextWindowFocus() y setNextWindowCollapsed(collapsed, condition) permiten a un script enfocar o plegar una ventana de la sesión, para el siguiente begin o withWindow. El ejemplo multi-window tiene un botón para cada una
+* `Corrección` dataTable: la función render de una columna estaba documentada pero nunca se llamaba. Ahora dibuja las celdas de esa columna
+* `Corrección` launchPrivileged: en Android 12 y posteriores, los toques en el cuadro de texto temporal y el teclado no llegaban, y un toque fuera no cerraba el cuadro. Ahora la capa se oculta mientras el cuadro está abierto
+* `Mejora` imgui.d.ts describe la API con precisión: cada miembro tiene un comentario con sus unidades y su hilo, alert / confirm / singleChoice / multiChoice tienen firmas reales, cada evento de sesión tiene sus propios campos, y un nombre de opción mal escrito es un error en TypeScript. Se quitaron las opciones title y background de toast, que nunca hicieron nada. Todos los ejemplos incluidos pasan tsc --strict
+
 # v1.17.0
 
 ###### 2026/11/01

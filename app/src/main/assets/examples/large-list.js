@@ -21,7 +21,7 @@
         return;
     }
     factory(imgui, {});
-})(function (imgui, options) {
+})(/** @type {ImGui.ExampleRunner} */ function (imgui, options) {
     options = options || {};
 
     var ROW_COUNT = 100000;
@@ -34,10 +34,12 @@
     var holdCtrl = imgui.ref(false);
     var holdShift = imgui.ref(false);
 
+    /** @type {(index: number) => string} */
     function rowLabel(index) {
         return "Row " + index + "  |  checksum " + ((index * 2654435761) % 9973) + "##row" + index;
     }
 
+    /** @type {(ui: ImGui.Api, rowHeight: number) => void} */
     function multiSelectRows(ui, rowHeight) {
         var scope = ui.beginMultiSelect(ui.MultiSelectFlags.ClearOnEscape, selection.size, ROW_COUNT);
         selection.apply(scope);
@@ -51,12 +53,14 @@
         selection.apply(ui.endMultiSelect());
     }
 
+    /** @type {(ui: ImGui.Api, label: string, key: number, held: ImGui.ValueRef<boolean>) => void} */
     function holdKey(ui, label, key, held) {
         if (ui.checkbox(label, held)) {
             ui.addKeyEvent(key, held.value);
         }
     }
 
+    /** @type {(ui: ImGui.Api, key: number, held: ImGui.ValueRef<boolean>) => void} */
     function releaseKey(ui, key, held) {
         if (held.value) {
             held.value = false;
@@ -144,8 +148,9 @@
     session.statsOverlay("large-list", {position: imgui.ToastPosition.BottomRight});
 
     // The selection of the multi-select mode, for scripts that check this example.
-    session.selection = selection;
+    /** @type {any} */ (session).selection = selection;
 
+    /** @type {(value: number | undefined, fallback: number) => number} */
     function numberOption(value, fallback) {
         var result = Number(value);
         return isFinite(result) ? result : fallback;
