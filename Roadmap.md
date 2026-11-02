@@ -312,6 +312,21 @@
 
 ******
 
+### 补丁版 v1.18.1 (来自 api-coverage 主题, 不属于 R 系列)
+
+******
+
+两项都是宿主 api-coverage 主题的 P5.2f-2 卡 C 接入 d.ts 时发现的, 编号指宿主 `docs/api-coverage/ROADMAP.md` 附录 C, 不是本文件附录 B 的 Q 编号. 维护者 2026-11-02 11:5x 选现在发 (该主题的 Q250), 只有 ImGui 仓库例外于该主题 "不推不发" 的 D6.
+
+- [x] Q219 (b) 晚注册的 ready 监听器: ready 在 UI 线程上触发, 通常早于 createWindow 返回, 监听器又在触发时取走, 所以 `session.on("ready", ...)` 收不到.
+  完成: 0080f5e 改为在脚本线程上取监听器, Session.on 把记录下的事件补发给之后注册的监听器, off 可取消, 已关闭的会话不补发. 05b799d 加设备脚本 `tools/device_ready_check.py`.
+- [x] Q236 (a) Session.once 的监听器收不到第二个参数: 包装函数只传 event, 而 Session.on 与 d.ts 的 SessionEventListener 都是 (event, session).
+  完成: 836f12f 透传 session, 单测 `onceListenerGetsTheSessionLikeAnOnListener` (共 78 项), 设备脚本加 once-session 项. 同一提交删掉 d.ts 里提到不存在的 `ui.getFontSize()` 的半句注释, 公开成员与签名不变, `docs/API-COVERAGE-HANDOVER.md` 的 588 个名称不变. check_types 全过, 10 个示例 tsc --strict 0 错误.
+- [x] 发布 v1.18.1.
+  完成: 836f12f (功能, VERSION_BUILD 59, versionCode 63 = 59 + 4) 推 master, Android CI 绿; 附注 tag v1.18.1 = 836f12f 由工作流创建 Release (5 APK + SHA256SUMS), 下载核对哈希, 签名者 31a681f... 与 versionCode 63 通过; 索引 63.json 提交 546a164 (79 个条目中只有 ImGui 变化), 索引 CI 绿, 线上索引已是 1.18.1. 设备: bek749scrwv4wo8h (Android 13, 宿主 5935) 卸载 debug 57 后依次装本地 release 包与 Release 上的 arm64-v8a 正式包, device_ready_check 8 项与 device_r7_check names + focus 都全过, 之后装回 debug 57, md5 一致. 文档站 20f3bac / 6376f96 与 Offline Docs b053d46 仅本地. TS `aj6-int-imgui.d.ts` 与 Ace 副本里同一处 `ui.getFontSize()` 注释留给 api-coverage 的 P5.3 同步. 未覆盖: 这两项只在 Android 13 上跑过 1.18.1 的包, 0080f5e 的调试包在 968e9f18 (Android 15) 上跑过.
+
+******
+
 ### 附录 A - R 系列决策记录 (2026-10-29, 维护者选择题拍板)
 
 ******
