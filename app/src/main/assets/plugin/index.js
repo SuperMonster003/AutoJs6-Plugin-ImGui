@@ -5932,6 +5932,8 @@ module.exports = function (bridge) {
         var managedButtons = [];
         var highLevelRuntime = createHighLevelRuntime();
         var eventListeners = {};
+        // The "ready" event once it reached the listeners of that moment; Session.on passes it on to later ones.
+        var readyEvent = null;
         // Session events and companion button callbacks run on the thread that created the window, the
         // Looper of the frame callback; one raised on the UI thread (surface, touch) is posted there.
         var scriptThread = java.lang.Thread.currentThread();
@@ -5946,8 +5948,8 @@ module.exports = function (bridge) {
             scriptDispatcher = null;
         }
 
-        function runOnScriptThread(action) {
-            if (scriptDispatcher == null || java.lang.Thread.currentThread().equals(scriptThread)) {
+        function runOnScriptThread(action, posted) {
+            if (scriptDispatcher == null || (!posted && java.lang.Thread.currentThread().equals(scriptThread))) {
                 action();
             } else {
                 scriptDispatcher.emit("dispatch", action);
@@ -6041,6 +6043,14 @@ module.exports = function (bridge) {
                     eventListeners[key] = [];
                 }
                 eventListeners[key].push(listener);
+                // "ready" comes once, usually before createWindow returns. A later listener gets it after on returned.
+                if (key === "ready" && readyEvent != null) {
+                    runOnScriptThread(function () {
+                        if (!state.closed && (eventListeners.ready || []).indexOf(listener) >= 0) {
+                            callSessionListeners("ready", readyEvent, [listener]);
+                        }
+                    }, true);
+                }
                 return session;
             },
 
@@ -6441,7 +6451,24 @@ module.exports = function (bridge) {
             bridge.setActivityBackListener(surfaceView, new Runnable({run: handleBackPressed}));
         }
 
-        // Listeners run on the script thread with the listeners registered when the event was raised.
+        function callSessionListeners(eventName, event, listeners) {
+            for (var listenerIndex = 0; listenerIndex < listeners.length; listenerIndex += 1) {
+                try {
+                    listeners[listenerIndex](event, session);
+                } catch (error) {
+                    if (eventName === "error") {
+                        printError("Session 'error' listener", error);
+                    } else {
+                        reportSessionError("event", "Session '" + eventName + "' listener", error, {
+                            event: String(eventName)
+                        });
+                    }
+                }
+            }
+        }
+
+        // Listeners run on the script thread with the listeners registered when the event was raised. "ready" takes
+        // them on the script thread instead, as Session.on does: a listener is in this list or sees readyEvent.
         function emitSessionEvent(eventName, details) {
             var event = {
                 type: String(eventName),
@@ -6449,25 +6476,20 @@ module.exports = function (bridge) {
                 timestamp: Date.now()
             };
             copyOwnProperties(event, details);
+            if (eventName === "ready") {
+                runOnScriptThread(function () {
+                    readyEvent = event;
+                    callSessionListeners(eventName, event, (eventListeners.ready || []).slice());
+                });
+                return;
+            }
             var listeners = eventListeners[eventName];
             if (!listeners || listeners.length === 0) {
                 return;
             }
             listeners = listeners.slice();
             runOnScriptThread(function () {
-                for (var listenerIndex = 0; listenerIndex < listeners.length; listenerIndex += 1) {
-                    try {
-                        listeners[listenerIndex](event, session);
-                    } catch (error) {
-                        if (eventName === "error") {
-                            printError("Session 'error' listener", error);
-                        } else {
-                            reportSessionError("event", "Session '" + eventName + "' listener", error, {
-                                event: String(eventName)
-                            });
-                        }
-                    }
-                }
+                callSessionListeners(eventName, event, listeners);
             });
         }
 

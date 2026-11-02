@@ -1209,7 +1209,7 @@ declare namespace ImGui {
         moved: SessionMovedEvent;
         /** The overlay changed size. */
         resized: SessionResizedEvent;
-        /** The first frame can be drawn. */
+        /** The first frame can be drawn. A listener added later gets it too: see {@link Session.on}. */
         ready: SessionReadyEvent;
         /** The surface came back after it was lost. */
         surfaceRestored: SessionReadyEvent<"surfaceRestored">;
@@ -1842,9 +1842,13 @@ declare namespace ImGui {
         destroyTexture(texture: Texture): boolean;
         /** Live backend/UID/PID/Surface/direct-input diagnostics. */
         getBackendInfo(): string;
-        /** Adds a listener; it runs on the script thread. */
+        /**
+         * Adds a listener; it runs on the script thread. "ready" comes only once, usually before createWindow returns: a
+         * listener added after it gets that same event once, posted to the script thread, so after on returned. off
+         * cancels that, and a closed session does not send it.
+         */
         on<Name extends SessionEventName>(eventName: Name, listener: SessionEventListener<Name>): this;
-        /** Adds a listener that runs once, on the script thread. */
+        /** Adds a listener that runs once, on the script thread. A late "ready" listener runs as with {@link Session.on}. */
         once<Name extends SessionEventName>(eventName: Name, listener: SessionEventListener<Name>): this;
         /** Removes a listener, or all listeners of the event without the second argument. */
         off<Name extends SessionEventName>(eventName: Name, listener?: SessionEventListener<Name> | null): this;

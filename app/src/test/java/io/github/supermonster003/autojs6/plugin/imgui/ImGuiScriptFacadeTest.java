@@ -571,6 +571,68 @@ public class ImGuiScriptFacadeTest {
     }
 
     @Test
+    public void readyReachesALateListenerOnce() {
+        eval(
+            "var seen = [];"
+                + "function listener(name) { return function (event) { seen.push(name + ':' + event.type); }; }"
+                + "function drain() { dispatched.splice(0).forEach(function (action) { action(); }); return seen.join(); }"
+                + "var s = openReadyWindow({onReady: listener('option')});"
+        );
+        assertEquals("option:ready|0", String.valueOf(eval("seen.join() + '|' + dispatched.length")));
+
+        // Posted, so the listener runs after on returned, not inside it.
+        assertEquals("true,option:ready,1", String.valueOf(eval(
+            "[s.on('ready', listener('late')) === s, seen.join(), dispatched.length].join()"
+        )));
+        assertEquals("option:ready,late:ready", String.valueOf(eval("drain()")));
+
+        // once and off go through the same list; a closed session delivers nothing.
+        eval("seen.length = 0; s.once('ready', listener('once'));");
+        assertEquals("once:ready", String.valueOf(eval("drain()")));
+        assertEquals("", String.valueOf(eval(
+            "seen.length = 0; var removed = listener('removed'); s.on('ready', removed); s.off('ready', removed); drain()"
+        )));
+        assertEquals("", String.valueOf(eval("s.on('ready', listener('closed')); s.close(); drain()")));
+
+        // A listener that was in time is not called a second time.
+        eval(
+            "var next = api.createWindow(function () {}, {x: 100, y: 100, width: 200, height: 100, ime: false});"
+                + "next.on('ready', listener('early'));"
+                + "holderCallbacks[holderCallbacks.length - 1].surfaceCreated({getSurface: function () { return null; }});"
+        );
+        assertEquals("early:ready", String.valueOf(eval("drain()")));
+    }
+
+    @Test
+    public void readyRaisedOnAnotherThreadTakesTheListenersOfItsDelivery() throws InterruptedException {
+        eval(
+            "var seen = [];"
+                + "function listener(name) { return function (event) { seen.push(name + ':' + event.type); }; }"
+                + "function drain() { dispatched.splice(0).forEach(function (action) { action(); }); return seen.join(); }"
+                + "var s = openReadyWindow(); s.close(); seen.length = 0;"
+                + "s = api.createWindow(function () {}, {x: 100, y: 100, width: 200, height: 100, ime: false});"
+        );
+        // The surface usually comes on the UI thread before createWindow returns, and the event is posted from there.
+        Thread uiThread = new Thread(() -> {
+            Context threadContext = Context.enter();
+            threadContext.setLanguageVersion(Context.VERSION_ES6);
+            threadContext.setInterpretedMode(true);
+            try {
+                threadContext.evaluateString(scope,
+                    "holderCallbacks[holderCallbacks.length - 1].surfaceCreated({getSurface: function () { return null; }});",
+                    "ui", 1, null);
+            } finally {
+                Context.exit();
+            }
+        });
+        uiThread.start();
+        uiThread.join();
+        assertEquals("true,1", String.valueOf(eval("[s.ready, dispatched.length].join()")));
+        assertEquals("posted:ready", String.valueOf(eval("s.on('ready', listener('posted')); drain()")));
+        assertEquals("posted:ready", String.valueOf(eval("drain()")));
+    }
+
+    @Test
     public void screenStatePausesAndResumesTheFrameLoop() {
         eval(
             "var wake = null; var screenOn = true;"
