@@ -5,6 +5,13 @@
   "changelog_label_improvement": "تحسين",
   "changelog_label_dependency": "تبعية",
   "$data": {
+    "v1.18.1": {
+      "released_date": "2026/11/02",
+      "fix": [
+        "session.on: لم يكن مستمع ready المضاف بعد عودة createWindow يستدعى أبدا, لأن النافذة تكون جاهزة عادة قبل ذلك. وهو يتلقى الحدث الآن مرة واحدة",
+        "session.once: لم يكن المستمع يتلقى الجلسة كوسيط ثان. وهو يتلقى الآن (event, session) كما في session.on"
+      ]
+    },
     "v1.18.0": {
       "released_date": "2026/11/01",
       "feature": [

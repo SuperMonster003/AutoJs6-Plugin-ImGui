@@ -174,6 +174,13 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.18.1
+
+###### 2026/11/02
+
+* `修復` session.on: createWindow 回傳後才註冊的 ready 監聽器收不到事件, 因為視窗通常在回傳前就已準備好. 現在這樣的監聽器會收到一次
+* `修復` session.once: 監聽器收不到第二個參數 session. 現在和 session.on 一樣傳入 (event, session)
+
 #### v1.18.0
 
 ###### 2026/11/01
@@ -190,16 +197,6 @@ imgui.runExample("widget-overview");
 * `新增` 多選清單: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection 支援用點按, Ctrl+點按, Shift+點按, Ctrl+A 和 Escape 選取多列 (選項見 MultiSelectFlags). imgui.selectionStorage() 替你儲存選取的列. 可以和 listClipper 一起用: Shift 範圍可以跨 100000 列, 沒有繪製過的列也會選取. 手機沒有 Ctrl 和 Shift 鍵, large-list 範例用兩個核取方塊按住它們; 其餘說明見 docs/LIMITS.md.
 * `新增` 新增範例 multi-window 和說明文件 docs/MULTI-WINDOW.md: 在一個工作階段內顯示多個面板, 各有自己的位置, 摺疊箭頭和關閉按鈕, 點按哪個視窗它就到最前面. 同一時間只能有一個工作階段 (一個 Surface), 所以 "多視窗" 指一個工作階段內的多個視窗, 不是多個懸浮窗.
 * `修復` 懸浮視窗在預設的 TouchMode.Auto 下, 觸控位置比手指低一個狀態列的高度, 視窗頂部的控制項可能點不中, 標題列也拖不動
-
-#### v1.16.0
-
-###### 2026/10/31
-
-* `新增` session.capture(options) 擷取視窗畫面, 回傳 images 模組可用的影像, 例如 images.save(session.capture(), path). options.region 指定視窗的一部分, 單位 dp. 特權模式的視窗只能在兩個影格之間擷取, 例如放進 setTimeout(fn, 0)
-* `新增` createWindow({systemCjkFont: true}) 可以顯示裝置上所有的中日韓字元, 包括內建字型缺少的罕用字 (例如 龘). 每個字元在首次使用時由 Android 繪製, 幾乎不占額外記憶體; docs/LIMITS.md 列出了內建字型的涵蓋範圍
-* `新增` createWindow({pinchZoom: true}) 可以用雙指捏合把文字縮放到 0.5 到 3 倍, 雙指同向移動仍然是捲動. 用 session.fontScale 讀取縮放值, session.setFontScale(scale) 設定, 新事件 fontScaleChanged 通知變化. widget-overview 範例示範了這些功能
-* `新增` 特權模式支援文字輸入: 點選 inputText 會開啟 AutoJs6 的小輸入框和鍵盤 (需要 AutoJs6 的懸浮視窗權限). 點 OK, 鍵盤的完成鍵或其他位置後, 文字寫入控制項的游標處; 控制項裡已有的文字不能在小輸入框裡修改
-* `優化` 視窗執行時會跟隨顯示大小 (密度) 和系統字型大小的變化: 文字和控制項換成新尺寸, 視窗的 dp 尺寸不變. configurationChanged 事件新增 density, oldDensity, fontScale, oldFontScale 欄位. imgui.launch 開啟的全螢幕視窗則會關閉 (session.closeReason 為 "configuration-changed"), 因為 Android 會重建它所在的 Activity
 
 ##### 更多發行歷史可參閱
 

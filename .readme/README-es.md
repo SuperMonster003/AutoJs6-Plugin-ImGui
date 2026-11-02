@@ -174,6 +174,13 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 
 ******
 
+#### v1.18.1
+
+###### 2026/11/02
+
+* `Corrección` session.on: un oyente de ready añadido después de que createWindow volviera nunca se ejecutaba, porque la ventana suele estar lista antes. Ahora recibe el evento una vez
+* `Corrección` session.once: el oyente no recibía la sesión como segundo argumento. Ahora recibe (event, session), igual que con session.on
+
 #### v1.18.0
 
 ###### 2026/11/01
@@ -190,16 +197,6 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 * `Función` Listas de selección múltiple: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection seleccionan varias filas con un toque, Ctrl+toque, Shift+toque, Ctrl+A y Escape (MultiSelectFlags define las opciones). imgui.selectionStorage() guarda las filas seleccionadas por usted. Funciona con listClipper: un rango con Shift puede abarcar 100000 filas, incluso filas que nunca se dibujaron. Un teléfono no tiene teclas Ctrl ni Shift, por eso el ejemplo large-list muestra dos casillas que las mantienen pulsadas; docs/LIMITS.md explica el resto.
 * `Función` Nuevo ejemplo multi-window y nueva guía docs/MULTI-WINDOW.md: varios paneles en una sesión, cada uno con su posición, flecha de plegado y botón de cierre, y la ventana que toca pasa al frente. Solo puede existir una sesión (una Surface) a la vez, así que "varias ventanas" siempre significa ventanas dentro de una sesión, no varias ventanas flotantes.
 * `Corrección` Ventanas flotantes en el modo predeterminado TouchMode.Auto: un toque llegaba a la altura de una barra de estado por debajo del dedo, por lo que los controles cercanos a la parte superior podían no responder y las barras de título no se podían arrastrar
-
-#### v1.16.0
-
-###### 2026/10/31
-
-* `Función` session.capture(options) toma una imagen de la ventana y devuelve una imagen para el módulo images, por ejemplo images.save(session.capture(), path). options.region elige una parte de la ventana, en dp. Una ventana en modo privilegiado solo se puede capturar entre dos fotogramas, por ejemplo desde setTimeout(fn, 0)
-* `Función` createWindow({systemCjkFont: true}) muestra todos los caracteres CJK del dispositivo, incluidos los raros como 龘 que faltan en la fuente integrada. Android dibuja cada carácter la primera vez que se usa, así que casi no necesita memoria adicional; docs/LIMITS.md indica lo que cubre la fuente integrada
-* `Función` createWindow({pinchZoom: true}) permite cambiar el tamaño del texto de 0.5 a 3 veces con dos dedos; mover los dos dedos juntos sigue desplazando. Lea la escala en session.fontScale, cámbiela con session.setFontScale(scale) y escuche el nuevo evento fontScaleChanged. El ejemplo widget-overview lo muestra todo
-* `Función` Entrada de texto en modo privilegiado: tocar un inputText ahora abre un pequeño cuadro de entrada de AutoJs6 con el teclado (requiere el permiso de superposición de AutoJs6). El botón OK, la tecla de finalizar o un toque en otro lugar introducen el texto en el cursor del campo; el texto que ya está en el campo no se puede editar en el cuadro
-* `Mejora` Las ventanas ahora siguen los cambios de tamaño de pantalla (densidad) y de tamaño de fuente del sistema mientras se ejecutan: el texto y los controles toman el nuevo tamaño, y la ventana conserva su tamaño en dp. configurationChanged tiene los nuevos campos density, oldDensity, fontScale y oldFontScale. Una ventana a pantalla completa de imgui.launch se cierra en su lugar (session.closeReason es "configuration-changed"), porque Android recrea su Activity
 
 ##### Para consultar más versiones
 

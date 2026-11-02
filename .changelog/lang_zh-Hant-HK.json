@@ -5,6 +5,13 @@
   "changelog_label_improvement": "優化",
   "changelog_label_dependency": "依賴",
   "$data": {
+    "v1.18.1": {
+      "released_date": "2026/11/02",
+      "fix": [
+        "session.on: createWindow 傳回後才註冊的 ready 監聽器收不到事件, 因為視窗通常在傳回前就已準備好. 現在這樣的監聽器會收到一次",
+        "session.once: 監聽器收不到第二個參數 session. 現在和 session.on 一樣傳入 (event, session)"
+      ]
+    },
     "v1.18.0": {
       "released_date": "2026/11/01",
       "feature": [

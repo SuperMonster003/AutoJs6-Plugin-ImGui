@@ -6056,9 +6056,9 @@ module.exports = function (bridge) {
 
             once: function (eventName, listener) {
                 argFunction("Session.once", "listener", listener);
-                function onceListener(event) {
+                function onceListener(event, eventSession) {
                     session.off(eventName, onceListener);
-                    listener(event);
+                    listener(event, eventSession);
                 }
                 onceListener._originalListener = listener;
                 return session.on(eventName, onceListener);

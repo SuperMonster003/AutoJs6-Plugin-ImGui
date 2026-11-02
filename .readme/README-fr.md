@@ -174,6 +174,13 @@ Les API courantes ont aussi des alias PascalCase (p. ex. `ui.Button` équivaut �
 
 ******
 
+#### v1.18.1
+
+###### 2026/11/02
+
+* `Correctif` session.on: un écouteur ready ajouté après le retour de createWindow n'était jamais appelé, car la fenêtre est en général prête avant. Il reçoit maintenant l'événement une fois
+* `Correctif` session.once: l'écouteur ne recevait pas la session comme deuxième argument. Il reçoit maintenant (event, session), comme avec session.on
+
 #### v1.18.0
 
 ###### 2026/11/01
@@ -190,16 +197,6 @@ Les API courantes ont aussi des alias PascalCase (p. ex. `ui.Button` équivaut �
 * `Fonctionnalité` Listes à sélection multiple: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection sélectionnent plusieurs lignes avec un appui, Ctrl+appui, Shift+appui, Ctrl+A et Échap (MultiSelectFlags règle les options). imgui.selectionStorage() conserve les lignes sélectionnées pour vous. Cela fonctionne avec listClipper: une plage avec Shift peut couvrir 100000 lignes, même des lignes jamais dessinées. Un téléphone n'a pas de touches Ctrl ni Shift, c'est pourquoi l'exemple large-list affiche deux cases qui les maintiennent; docs/LIMITS.md explique le reste.
 * `Fonctionnalité` Nouvel exemple multi-window et nouveau guide docs/MULTI-WINDOW.md: plusieurs panneaux dans une session, chacun avec sa position, sa flèche de repli et son bouton de fermeture, et la fenêtre touchée passe au premier plan. Une seule session (une Surface) peut exister à la fois, donc "plusieurs fenêtres" désigne toujours des fenêtres dans une session, pas plusieurs fenêtres flottantes.
 * `Correctif` Fenêtres flottantes en mode TouchMode.Auto par défaut: un appui arrivait une hauteur de barre d'état plus bas que le doigt, si bien que les commandes proches du haut d'une fenêtre pouvaient ne pas réagir et que les barres de titre ne se déplaçaient pas
-
-#### v1.16.0
-
-###### 2026/10/31
-
-* `Fonctionnalité` session.capture(options) prend une image de la fenêtre et renvoie une image pour le module images, par exemple images.save(session.capture(), path). options.region choisit une partie de la fenêtre, en dp. Une fenêtre en mode privilégié ne peut être capturée qu'entre deux images, par exemple depuis setTimeout(fn, 0)
-* `Fonctionnalité` createWindow({systemCjkFont: true}) affiche tous les caractères CJK de l'appareil, y compris les caractères rares comme 龘 absents de la police intégrée. Android dessine chaque caractère à sa première utilisation, ce qui ne demande presque pas de mémoire en plus; docs/LIMITS.md indique ce que couvre la police intégrée
-* `Fonctionnalité` createWindow({pinchZoom: true}) permet de changer la taille du texte de 0.5 à 3 fois avec deux doigts; déplacer les deux doigts ensemble fait toujours défiler. Lisez l'échelle dans session.fontScale, réglez-la avec session.setFontScale(scale) et écoutez le nouvel événement fontScaleChanged. L'exemple widget-overview montre tout cela
-* `Fonctionnalité` Saisie de texte en mode privilégié: toucher un inputText ouvre maintenant une petite zone de saisie d'AutoJs6 avec le clavier (cela demande l'autorisation de superposition pour AutoJs6). Le bouton OK, la touche de validation ou un toucher ailleurs insère le texte au curseur du champ; le texte déjà présent ne peut pas être modifié dans cette zone
-* `Amélioration` Les fenêtres suivent maintenant les changements de taille d'affichage (densité) et de taille de police du système pendant l'exécution: le texte et les contrôles prennent la nouvelle taille, et la fenêtre garde sa taille en dp. configurationChanged a les nouveaux champs density, oldDensity, fontScale et oldFontScale. Une fenêtre plein écran de imgui.launch se ferme à la place (session.closeReason vaut "configuration-changed"), car Android recrée son Activity
 
 ##### Pour consulter davantage de versions
 

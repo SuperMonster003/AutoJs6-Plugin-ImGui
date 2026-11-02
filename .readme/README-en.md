@@ -174,6 +174,13 @@ Common APIs also have PascalCase aliases (e.g. `ui.Button` equals `ui.button`). 
 
 ******
 
+#### v1.18.1
+
+###### 2026/11/02
+
+* `Fix` session.on: a ready listener added after createWindow returned never ran, because the window is usually ready by then. It now gets the event once
+* `Fix` session.once: the listener did not get the session as its second argument. It now gets (event, session), the same as with session.on
+
 #### v1.18.0
 
 ###### 2026/11/01
@@ -190,16 +197,6 @@ Common APIs also have PascalCase aliases (e.g. `ui.Button` equals `ui.button`). 
 * `Feature` Multi-select lists: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection select several rows with a tap, Ctrl+tap, Shift+tap, Ctrl+A and Escape (MultiSelectFlags sets the options). imgui.selectionStorage() keeps the selected rows for you. It works with listClipper: a Shift range can span 100000 rows, even rows that were never drawn. A phone has no Ctrl or Shift key, so the large-list example shows two checkboxes that hold them; docs/LIMITS.md explains the rest.
 * `Feature` New example multi-window and new guide docs/MULTI-WINDOW.md: several panels in one session, each with its own position, collapse arrow and close button, and the window you tap comes to the front. Only one session (one Surface) can exist at a time, so "multiple windows" always means windows inside one session, not several floating windows.
 * `Fix` Overlay windows in the default TouchMode.Auto: a touch arrived one status bar height below the finger, so controls near the top of a window could miss it and title bars could not be dragged
-
-#### v1.16.0
-
-###### 2026/10/31
-
-* `Feature` session.capture(options) takes a picture of the window and returns an image for the images module, for example images.save(session.capture(), path). options.region picks a part of the window, in dp. A window in privileged mode can only be captured between two frames, for example from setTimeout(fn, 0)
-* `Feature` createWindow({systemCjkFont: true}) shows every CJK character the device has, including rare ones like 龘 that are missing from the bundled font. Android draws each character when it is first used, so this takes almost no extra memory; docs/LIMITS.md lists what the bundled font covers
-* `Feature` createWindow({pinchZoom: true}) lets two fingers change the text size from 0.5 to 3 times; moving both fingers together still scrolls. Read the scale from session.fontScale, set it with session.setFontScale(scale), and listen to the new fontScaleChanged event. The widget-overview example shows all of this
-* `Feature` Text input in privileged mode: tapping an inputText now opens a small input box of AutoJs6 with the keyboard (this needs the overlay permission of AutoJs6). The OK button, the done key or a tap elsewhere enters the text at the cursor of the field; text already in the field can not be edited in the box
-* `Improvement` Windows now follow changes of the display size (density) and the system font size while they run: text and controls get the new size, and the window keeps its size in dp. configurationChanged has the new fields density, oldDensity, fontScale and oldFontScale. A full-screen window of imgui.launch closes instead (session.closeReason is "configuration-changed"), because Android recreates the Activity it lives in
 
 ##### For more release history
 

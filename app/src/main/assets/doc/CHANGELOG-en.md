@@ -4,6 +4,13 @@
 
 ******
 
+# v1.18.1
+
+###### 2026/11/02
+
+* `Fix` session.on: a ready listener added after createWindow returned never ran, because the window is usually ready by then. It now gets the event once
+* `Fix` session.once: the listener did not get the session as its second argument. It now gets (event, session), the same as with session.on
+
 # v1.18.0
 
 ###### 2026/11/01

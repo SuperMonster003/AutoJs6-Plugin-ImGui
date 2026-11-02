@@ -4,6 +4,13 @@
 
 ******
 
+# v1.18.1
+
+###### 2026/11/02
+
+* `修復` session.on: createWindow 傳回後才註冊的 ready 監聽器收不到事件, 因為視窗通常在傳回前就已準備好. 現在這樣的監聽器會收到一次
+* `修復` session.once: 監聽器收不到第二個參數 session. 現在和 session.on 一樣傳入 (event, session)
+
 # v1.18.0
 
 ###### 2026/11/01

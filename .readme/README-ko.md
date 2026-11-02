@@ -174,6 +174,13 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.18.1
+
+###### 2026/11/02
+
+* `수정` session.on: createWindow가 반환된 뒤에 등록한 ready 리스너는 이벤트를 받지 못했습니다. 창은 보통 반환되기 전에 준비가 끝나기 때문입니다. 이제 이런 리스너도 이벤트를 한 번 받습니다
+* `수정` session.once: 리스너가 두 번째 인수 session을 받지 못했습니다. 이제 session.on과 같이 (event, session)을 받습니다
+
 #### v1.18.0
 
 ###### 2026/11/01
@@ -190,16 +197,6 @@ imgui.runExample("widget-overview");
 * `기능` 다중 선택 목록: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection로 탭, Ctrl+탭, Shift+탭, Ctrl+A, Escape를 사용해 여러 행을 선택할 수 있습니다 (옵션은 MultiSelectFlags). imgui.selectionStorage()가 선택된 행을 보관합니다. listClipper와 함께 쓸 수 있어 Shift 범위가 100000행에 걸칠 수 있고, 한 번도 그려지지 않은 행도 선택됩니다. 휴대폰에는 Ctrl과 Shift 키가 없으므로 large-list 예제는 이 키를 누른 상태로 유지하는 체크박스 두 개를 보여 줍니다. 자세한 내용은 docs/LIMITS.md를 참고하세요.
 * `기능` 새 예제 multi-window와 새 안내서 docs/MULTI-WINDOW.md: 한 세션에 여러 패널을 표시하고, 각 패널은 자체 위치, 접기 화살표, 닫기 버튼을 가지며, 탭한 창이 맨 앞으로 옵니다. 세션은 한 번에 하나(Surface 하나)만 있을 수 있으므로 "다중 창"은 항상 한 세션 안의 창을 뜻하며 여러 개의 플로팅 창이 아닙니다.
 * `수정` 기본 TouchMode.Auto 오버레이 창에서 터치가 손가락보다 상태 표시줄 높이만큼 아래에 전달되어, 창 위쪽의 컨트롤이 반응하지 않을 수 있었고 제목 표시줄을 끌 수 없었습니다
-
-#### v1.16.0
-
-###### 2026/10/31
-
-* `기능` session.capture(options)는 창의 이미지를 캡처하여 images 모듈에서 쓸 수 있는 이미지를 반환합니다. 예: images.save(session.capture(), path). options.region으로 창의 일부를 dp 단위로 지정할 수 있습니다. 권한 모드의 창은 두 프레임 사이에서만 캡처할 수 있습니다. 예: setTimeout(fn, 0) 안에서 호출
-* `기능` createWindow({systemCjkFont: true})는 기기에 있는 모든 CJK 문자를 표시합니다. 내장 글꼴에 없는 龘 같은 희귀 문자도 표시됩니다. 각 문자는 처음 사용할 때 Android가 그리므로 추가 메모리가 거의 필요하지 않습니다. 내장 글꼴의 범위는 docs/LIMITS.md에서 확인할 수 있습니다
-* `기능` createWindow({pinchZoom: true})를 사용하면 두 손가락 핀치로 글자 크기를 0.5배에서 3배까지 바꿀 수 있습니다. 두 손가락을 같은 방향으로 움직이면 이전처럼 스크롤됩니다. 배율은 session.fontScale로 읽고 session.setFontScale(scale)로 설정하며, 새 fontScaleChanged 이벤트로 변경을 받습니다. widget-overview 예제에서 확인할 수 있습니다
-* `기능` 권한 모드의 텍스트 입력: inputText를 누르면 AutoJs6의 작은 입력 상자와 키보드가 열립니다 (AutoJs6의 오버레이 권한 필요). OK 버튼, 키보드의 완료 키 또는 다른 곳을 누르면 글자가 입력란의 커서 위치에 들어갑니다. 입력란에 이미 있는 글자는 상자에서 편집할 수 없습니다
-* `개선` 창이 실행 중에 화면 크기 (밀도)와 시스템 글꼴 크기의 변경을 따라갑니다. 글자와 컨트롤은 새 크기가 되고 창의 dp 크기는 그대로입니다. configurationChanged에 density, oldDensity, fontScale, oldFontScale 필드를 추가했습니다. imgui.launch의 전체 화면 창은 닫힙니다 (session.closeReason은 "configuration-changed"). Android가 해당 Activity를 다시 만들기 때문입니다
 
 ##### 더 많은 릴리스 기록
 

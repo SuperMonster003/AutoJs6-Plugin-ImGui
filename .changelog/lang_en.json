@@ -5,6 +5,13 @@
   "changelog_label_improvement": "Improvement",
   "changelog_label_dependency": "Dependency",
   "$data": {
+    "v1.18.1": {
+      "released_date": "2026/11/02",
+      "fix": [
+        "session.on: a ready listener added after createWindow returned never ran, because the window is usually ready by then. It now gets the event once",
+        "session.once: the listener did not get the session as its second argument. It now gets (event, session), the same as with session.on"
+      ]
+    },
     "v1.18.0": {
       "released_date": "2026/11/01",
       "feature": [

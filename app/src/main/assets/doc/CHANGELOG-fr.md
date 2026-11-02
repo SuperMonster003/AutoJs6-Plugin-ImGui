@@ -4,6 +4,13 @@
 
 ******
 
+# v1.18.1
+
+###### 2026/11/02
+
+* `Correctif` session.on: un écouteur ready ajouté après le retour de createWindow n'était jamais appelé, car la fenêtre est en général prête avant. Il reçoit maintenant l'événement une fois
+* `Correctif` session.once: l'écouteur ne recevait pas la session comme deuxième argument. Il reçoit maintenant (event, session), comme avec session.on
+
 # v1.18.0
 
 ###### 2026/11/01

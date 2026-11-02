@@ -4,6 +4,13 @@
 
 ******
 
+# v1.18.1
+
+###### 2026/11/02
+
+* `修复` session.on: createWindow 返回后才注册的 ready 监听器收不到事件, 因为窗口通常在返回前就已准备好. 现在这样的监听器会收到一次
+* `修复` session.once: 监听器收不到第二个参数 session. 现在和 session.on 一样传入 (event, session)
+
 # v1.18.0
 
 ###### 2026/11/01

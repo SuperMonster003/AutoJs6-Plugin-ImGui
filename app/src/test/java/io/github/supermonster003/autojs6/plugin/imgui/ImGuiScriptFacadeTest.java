@@ -604,6 +604,21 @@ public class ImGuiScriptFacadeTest {
     }
 
     @Test
+    public void onceListenerGetsTheSessionLikeAnOnListener() {
+        eval(
+            "var seen = [];"
+                + "function listener(name) {"
+                + "    return function (event, session) { seen.push(name + ':' + event.type + ':' + (session === s)); };"
+                + "}"
+                + "function drain() { dispatched.splice(0).forEach(function (action) { action(); }); return seen.join(); }"
+                + "var s = openReadyWindow();"
+        );
+        assertEquals("on:ready:true,once:ready:true", String.valueOf(eval(
+            "s.on('ready', listener('on')); s.once('ready', listener('once')); drain()"
+        )));
+    }
+
+    @Test
     public void readyRaisedOnAnotherThreadTakesTheListenersOfItsDelivery() throws InterruptedException {
         eval(
             "var seen = [];"

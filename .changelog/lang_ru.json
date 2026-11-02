@@ -5,6 +5,13 @@
   "changelog_label_improvement": "Улучшение",
   "changelog_label_dependency": "Зависимость",
   "$data": {
+    "v1.18.1": {
+      "released_date": "2026/11/02",
+      "fix": [
+        "session.on: слушатель ready, добавленный после возврата из createWindow, никогда не вызывался, потому что окно обычно готово раньше. Теперь он получает событие один раз",
+        "session.once: слушатель не получал сессию вторым аргументом. Теперь он получает (event, session), как и в session.on"
+      ]
+    },
     "v1.18.0": {
       "released_date": "2026/11/01",
       "feature": [

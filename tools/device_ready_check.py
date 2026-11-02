@@ -12,6 +12,7 @@ and prints one line per check, PASS / FAIL with the key values. The tool never t
   event of the session. The surface comes on the UI thread, so this is the path of a real window.
 - posted: a listener added while the session is ready has not run when on returned, and runs once after that.
 - once: once runs its listener, and a second wait does not run it again.
+- once-session: a listener of once gets the session as its second argument, like a listener of on (AutoJs6 Q236 (a)).
 - off: off right after on cancels the delivery.
 - closed: a closed session delivers nothing.
 """
@@ -87,6 +88,12 @@ waitFor(function () { return session.closed || (session.ready && frames >= 10); 
     var atReturn = posted.count;
     var once = counter();
     session.once('ready', once);
+    var onceEvent = null;
+    var onceSession = null;
+    session.once('ready', function (event, eventSession) {
+        onceEvent = event;
+        onceSession = eventSession;
+    });
     var removed = counter();
     session.on('ready', removed);
     session.off('ready', removed);
@@ -95,6 +102,8 @@ waitFor(function () { return session.closed || (session.ready && frames >= 10); 
         var onceFirst = once.count;
         setTimeout(function () {
             report('once', onceFirst === 1 && once.count === 1, 'calls=' + once.count);
+            report('once-session', onceEvent !== null && onceEvent.type === 'ready' && onceSession === session,
+                'event=' + (onceEvent && onceEvent.type) + ' session=' + (onceSession === session));
             report('off', removed.count === 0, 'calls=' + removed.count);
             report('no-repeat', option === 1 && late === 1 && posted.count === 1, 'option=' + option + ' late=' + late + ' posted=' + posted.count);
             var closed = counter();

@@ -4,6 +4,13 @@
 
 ******
 
+# v1.18.1
+
+###### 2026/11/02
+
+* `Corrección` session.on: un oyente de ready añadido después de que createWindow volviera nunca se ejecutaba, porque la ventana suele estar lista antes. Ahora recibe el evento una vez
+* `Corrección` session.once: el oyente no recibía la sesión como segundo argumento. Ahora recibe (event, session), igual que con session.on
+
 # v1.18.0
 
 ###### 2026/11/01
