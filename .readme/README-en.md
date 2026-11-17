@@ -177,7 +177,7 @@ Common APIs also have PascalCase aliases (e.g. `ui.Button` equals `ui.button`). 
 
 #### v1.18.2
 
-###### 2026/11/17
+###### 2026/11/18
 
 * `Improvement` Redesigned the plugin icon as a single-color glyph on a transparent background that stays clear in both light and dark themes
 
