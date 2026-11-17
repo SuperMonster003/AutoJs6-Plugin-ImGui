@@ -2,6 +2,7 @@
 
 <div align="center">
   <p>
+    <source srcset="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap-night/ic_launcher.png?raw=true" media="(prefers-color-scheme: dark)" />
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-imgui-ic-launcher" border="0" width="128" />
   </p>
 
@@ -174,6 +175,12 @@ Common APIs also have PascalCase aliases (e.g. `ui.Button` equals `ui.button`). 
 
 ******
 
+#### v1.18.2
+
+###### 2026/11/17
+
+* `Improvement` Redesigned the plugin icon as a single-color glyph on a transparent background that stays clear in both light and dark themes
+
 #### v1.18.1
 
 ###### 2026/11/02
@@ -189,14 +196,6 @@ Common APIs also have PascalCase aliases (e.g. `ui.Button` equals `ui.button`). 
 * `Fix` dataTable: the render function of a column was documented but never called. It now draws the cells of that column
 * `Fix` launchPrivileged: on Android 12 and later, touches on the temporary text box and the keyboard did not arrive, and a touch outside did not close the box. The layer is now hidden while the box is open
 * `Improvement` imgui.d.ts describes the API precisely: every member has a comment with its units and thread, alert / confirm / singleChoice / multiChoice have real signatures, each session event has its own fields, and a misspelled option name is now an error in TypeScript. The toast options title and background, which never did anything, are gone. All bundled examples pass tsc --strict
-
-#### v1.17.0
-
-###### 2026/11/01
-
-* `Feature` Multi-select lists: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection select several rows with a tap, Ctrl+tap, Shift+tap, Ctrl+A and Escape (MultiSelectFlags sets the options). imgui.selectionStorage() keeps the selected rows for you. It works with listClipper: a Shift range can span 100000 rows, even rows that were never drawn. A phone has no Ctrl or Shift key, so the large-list example shows two checkboxes that hold them; docs/LIMITS.md explains the rest.
-* `Feature` New example multi-window and new guide docs/MULTI-WINDOW.md: several panels in one session, each with its own position, collapse arrow and close button, and the window you tap comes to the front. Only one session (one Surface) can exist at a time, so "multiple windows" always means windows inside one session, not several floating windows.
-* `Fix` Overlay windows in the default TouchMode.Auto: a touch arrived one status bar height below the finger, so controls near the top of a window could miss it and title bars could not be dragged
 
 ##### For more release history
 

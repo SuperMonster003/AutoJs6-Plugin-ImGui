@@ -2,6 +2,7 @@
 
 <div align="center">
   <p>
+    <source srcset="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap-night/ic_launcher.png?raw=true" media="(prefers-color-scheme: dark)" />
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-imgui-ic-launcher" border="0" width="128" />
   </p>
 
@@ -174,6 +175,12 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.18.2
+
+###### 2026/11/17
+
+* `优化` 插件图标重新设计为透明背景的单色图案, 在亮色与暗色主题下都清晰可辨
+
 #### v1.18.1
 
 ###### 2026/11/02
@@ -189,14 +196,6 @@ imgui.runExample("widget-overview");
 * `修复` dataTable: 列的 render 函数写在文档里却从未被调用, 现在它会绘制这一列的单元格
 * `修复` launchPrivileged: 在 Android 12 及以上, 手指点不到临时输入框和键盘, 点框外也不会收起输入框. 现在输入框打开期间会隐藏特权层
 * `优化` imgui.d.ts 现在准确描述全部 API: 每个成员都有注释, 写明单位和线程, alert / confirm / singleChoice / multiChoice 有了具体的参数形式, 每个会话事件有各自的字段, 选项名拼错时 TypeScript 会报错. 同时去掉了从未生效的 toast 选项 title 和 background. 全部内置示例都能通过 tsc --strict 检查
-
-#### v1.17.0
-
-###### 2026/11/01
-
-* `新增` 多选列表: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection 支持用点按, Ctrl+点按, Shift+点按, Ctrl+A 和 Escape 选择多行 (选项见 MultiSelectFlags). imgui.selectionStorage() 替你保存选中的行. 可以和 listClipper 一起用: Shift 范围可以跨 100000 行, 没有绘制过的行也会选中. 手机没有 Ctrl 和 Shift 键, large-list 示例用两个复选框按住它们; 其余说明见 docs/LIMITS.md.
-* `新增` 新增示例 multi-window 和说明文档 docs/MULTI-WINDOW.md: 在一个会话里显示多个面板, 各有自己的位置, 折叠箭头和关闭按钮, 点按哪个窗口它就到最前面. 同一时间只能有一个会话 (一个 Surface), 所以 "多窗口" 指一个会话里的多个窗口, 不是多个悬浮窗.
-* `修复` 悬浮窗在默认的 TouchMode.Auto 下, 触摸位置比手指低一个状态栏的高度, 窗口顶部的控件可能点不中, 标题栏也拖不动
 
 ##### 更多发行历史可参阅
 

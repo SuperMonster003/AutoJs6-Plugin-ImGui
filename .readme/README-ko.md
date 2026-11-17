@@ -2,6 +2,7 @@
 
 <div align="center">
   <p>
+    <source srcset="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap-night/ic_launcher.png?raw=true" media="(prefers-color-scheme: dark)" />
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-imgui-ic-launcher" border="0" width="128" />
   </p>
 
@@ -174,6 +175,12 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.18.2
+
+###### 2026/11/17
+
+* `개선` 플러그인 아이콘을 투명 배경의 단색 그림으로 새로 디자인하여 밝은 테마와 어두운 테마 모두에서 잘 보이도록 함
+
 #### v1.18.1
 
 ###### 2026/11/02
@@ -189,14 +196,6 @@ imgui.runExample("widget-overview");
 * `수정` dataTable: 열의 render 함수는 문서에 있었지만 호출되지 않았습니다. 이제 해당 열의 셀을 그립니다
 * `수정` launchPrivileged: Android 12 이상에서 임시 입력 상자와 키보드에 터치가 전달되지 않았고, 상자 바깥을 터치해도 닫히지 않았습니다. 이제 상자가 열려 있는 동안 특권 레이어를 숨깁니다
 * `개선` imgui.d.ts 가 API 를 정확하게 설명합니다: 모든 멤버에 단위와 스레드를 적은 주석이 있고, alert / confirm / singleChoice / multiChoice 에 구체적인 시그니처가 있으며, 세션 이벤트마다 고유한 필드가 있고, 옵션 이름을 잘못 쓰면 TypeScript 가 오류를 냅니다. 효과가 없던 toast 옵션 title 과 background 는 제거했습니다. 포함된 모든 예제가 tsc --strict 를 통과합니다
-
-#### v1.17.0
-
-###### 2026/11/01
-
-* `기능` 다중 선택 목록: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection로 탭, Ctrl+탭, Shift+탭, Ctrl+A, Escape를 사용해 여러 행을 선택할 수 있습니다 (옵션은 MultiSelectFlags). imgui.selectionStorage()가 선택된 행을 보관합니다. listClipper와 함께 쓸 수 있어 Shift 범위가 100000행에 걸칠 수 있고, 한 번도 그려지지 않은 행도 선택됩니다. 휴대폰에는 Ctrl과 Shift 키가 없으므로 large-list 예제는 이 키를 누른 상태로 유지하는 체크박스 두 개를 보여 줍니다. 자세한 내용은 docs/LIMITS.md를 참고하세요.
-* `기능` 새 예제 multi-window와 새 안내서 docs/MULTI-WINDOW.md: 한 세션에 여러 패널을 표시하고, 각 패널은 자체 위치, 접기 화살표, 닫기 버튼을 가지며, 탭한 창이 맨 앞으로 옵니다. 세션은 한 번에 하나(Surface 하나)만 있을 수 있으므로 "다중 창"은 항상 한 세션 안의 창을 뜻하며 여러 개의 플로팅 창이 아닙니다.
-* `수정` 기본 TouchMode.Auto 오버레이 창에서 터치가 손가락보다 상태 표시줄 높이만큼 아래에 전달되어, 창 위쪽의 컨트롤이 반응하지 않을 수 있었고 제목 표시줄을 끌 수 없었습니다
 
 ##### 더 많은 릴리스 기록
 

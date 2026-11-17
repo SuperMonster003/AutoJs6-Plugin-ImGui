@@ -2,6 +2,7 @@
 
 <div align="center">
   <p>
+    <source srcset="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap-night/ic_launcher.png?raw=true" media="(prefers-color-scheme: dark)" />
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-imgui-ic-launcher" border="0" width="128" />
   </p>
 
@@ -174,6 +175,12 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 
 ******
 
+#### v1.18.2
+
+###### 2026/11/17
+
+* `Mejora` Icono del plugin rediseñado como una figura de un solo color sobre fondo transparente, bien visible en los temas claro y oscuro
+
 #### v1.18.1
 
 ###### 2026/11/02
@@ -189,14 +196,6 @@ Las API comunes también tienen alias en PascalCase (p. ej., `ui.Button` equival
 * `Corrección` dataTable: la función render de una columna estaba documentada pero nunca se llamaba. Ahora dibuja las celdas de esa columna
 * `Corrección` launchPrivileged: en Android 12 y posteriores, los toques en el cuadro de texto temporal y el teclado no llegaban, y un toque fuera no cerraba el cuadro. Ahora la capa se oculta mientras el cuadro está abierto
 * `Mejora` imgui.d.ts describe la API con precisión: cada miembro tiene un comentario con sus unidades y su hilo, alert / confirm / singleChoice / multiChoice tienen firmas reales, cada evento de sesión tiene sus propios campos, y un nombre de opción mal escrito es un error en TypeScript. Se quitaron las opciones title y background de toast, que nunca hicieron nada. Todos los ejemplos incluidos pasan tsc --strict
-
-#### v1.17.0
-
-###### 2026/11/01
-
-* `Función` Listas de selección múltiple: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection seleccionan varias filas con un toque, Ctrl+toque, Shift+toque, Ctrl+A y Escape (MultiSelectFlags define las opciones). imgui.selectionStorage() guarda las filas seleccionadas por usted. Funciona con listClipper: un rango con Shift puede abarcar 100000 filas, incluso filas que nunca se dibujaron. Un teléfono no tiene teclas Ctrl ni Shift, por eso el ejemplo large-list muestra dos casillas que las mantienen pulsadas; docs/LIMITS.md explica el resto.
-* `Función` Nuevo ejemplo multi-window y nueva guía docs/MULTI-WINDOW.md: varios paneles en una sesión, cada uno con su posición, flecha de plegado y botón de cierre, y la ventana que toca pasa al frente. Solo puede existir una sesión (una Surface) a la vez, así que "varias ventanas" siempre significa ventanas dentro de una sesión, no varias ventanas flotantes.
-* `Corrección` Ventanas flotantes en el modo predeterminado TouchMode.Auto: un toque llegaba a la altura de una barra de estado por debajo del dedo, por lo que los controles cercanos a la parte superior podían no responder y las barras de título no se podían arrastrar
 
 ##### Para consultar más versiones
 

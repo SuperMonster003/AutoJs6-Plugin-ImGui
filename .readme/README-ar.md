@@ -2,6 +2,7 @@
 
 <div align="center">
   <p>
+    <source srcset="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap-night/ic_launcher.png?raw=true" media="(prefers-color-scheme: dark)" />
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-imgui-ic-launcher" border="0" width="128" />
   </p>
 
@@ -174,6 +175,12 @@ imgui.runExample("widget-overview");
 
 ******
 
+#### v1.18.2
+
+###### 2026/11/17
+
+* `تحسين` أُعيد تصميم أيقونة الملحق كرسم بلون واحد على خلفية شفافة يظهر بوضوح في السمتين الفاتحة والداكنة
+
 #### v1.18.1
 
 ###### 2026/11/02
@@ -189,14 +196,6 @@ imgui.runExample("widget-overview");
 * `إصلاح` dataTable: كانت دالة render للعمود موثقة لكنها لم تستدع قط. وهي ترسم الآن خلايا هذا العمود
 * `إصلاح` launchPrivileged: في Android 12 وما بعده لم تكن اللمسات تصل إلى مربع النص المؤقت ولوحة المفاتيح, ولم تكن لمسة خارج المربع تغلقه. تخفى الطبقة الآن ما دام المربع مفتوحا
 * `تحسين` يصف imgui.d.ts الواجهة البرمجية بدقة: لكل عضو تعليق يذكر وحداته وخيطه, ولـ alert / confirm / singleChoice / multiChoice تواقيع حقيقية, ولكل حدث جلسة حقوله الخاصة, ويصبح الخطأ الإملائي في اسم خيار خطأ في TypeScript. أزيل خيارا title و background من toast لأنهما لم يفعلا شيئا قط. تجتاز جميع الأمثلة المضمنة tsc --strict
-
-#### v1.17.0
-
-###### 2026/11/01
-
-* `ميزة` قوائم التحديد المتعدد: تتيح beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection تحديد عدة صفوف بالنقر وCtrl+نقر وShift+نقر وCtrl+A وEscape (يضبط MultiSelectFlags الخيارات). يحفظ imgui.selectionStorage() الصفوف المحددة نيابة عنك. يعمل ذلك مع listClipper: يمكن أن يمتد نطاق Shift على 100000 صف, حتى الصفوف التي لم ترسم قط. لا يحتوي الهاتف على مفتاحي Ctrl وShift, لذا يعرض مثال large-list مربعي اختيار لتثبيتهما, وبقية الشرح في docs/LIMITS.md.
-* `ميزة` مثال جديد multi-window ودليل جديد docs/MULTI-WINDOW.md: عدة لوحات في جلسة واحدة, لكل منها موضعها وسهم الطي وزر الإغلاق, والنافذة التي تنقر عليها تنتقل إلى المقدمة. يمكن أن توجد جلسة واحدة فقط (Surface واحد) في كل مرة, لذا تعني "النوافذ المتعددة" دائما نوافذ داخل جلسة واحدة, وليس عدة نوافذ عائمة.
-* `إصلاح` إصلاح: في النوافذ العائمة بوضع TouchMode.Auto الافتراضي كانت اللمسة تصل إلى موضع أدنى من الإصبع بمقدار ارتفاع شريط الحالة، فكان من الممكن ألا تستجيب الأزرار القريبة من أعلى النافذة وألا يمكن سحب شريط العنوان
 
 ##### لمزيد من سجل الإصدارات
 

@@ -2,6 +2,7 @@
 
 <div align="center">
   <p>
+    <source srcset="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap-night/ic_launcher.png?raw=true" media="(prefers-color-scheme: dark)" />
     <img src="https://github.com/SuperMonster003/AutoJs6-Plugin-ImGui/blob/master/app/src/main/res/mipmap/ic_launcher.png?raw=true" alt="autojs6-plugin-imgui-ic-launcher" border="0" width="128" />
   </p>
 
@@ -174,6 +175,12 @@ Les API courantes ont aussi des alias PascalCase (p. ex. `ui.Button` équivaut �
 
 ******
 
+#### v1.18.2
+
+###### 2026/11/17
+
+* `Amélioration` Icône du plugin redessinée en un motif monochrome sur fond transparent, bien lisible avec les thèmes clair et sombre
+
 #### v1.18.1
 
 ###### 2026/11/02
@@ -189,14 +196,6 @@ Les API courantes ont aussi des alias PascalCase (p. ex. `ui.Button` équivaut �
 * `Correctif` dataTable: la fonction render d'une colonne était documentée mais jamais appelée. Elle dessine maintenant les cellules de cette colonne
 * `Correctif` launchPrivileged: à partir d'Android 12, les touchers sur la zone de texte temporaire et le clavier n'arrivaient pas, et un toucher à l'extérieur ne fermait pas la zone. La couche est maintenant masquée tant que la zone est ouverte
 * `Amélioration` imgui.d.ts décrit l'API avec précision: chaque membre a un commentaire avec ses unités et son thread, alert / confirm / singleChoice / multiChoice ont de vraies signatures, chaque événement de session a ses propres champs, et un nom d'option mal orthographié est une erreur en TypeScript. Les options title et background de toast, qui n'ont jamais rien fait, ont été retirées. Tous les exemples fournis passent tsc --strict
-
-#### v1.17.0
-
-###### 2026/11/01
-
-* `Fonctionnalité` Listes à sélection multiple: beginMultiSelect / endMultiSelect / setNextItemSelectionUserData / isItemToggledSelection sélectionnent plusieurs lignes avec un appui, Ctrl+appui, Shift+appui, Ctrl+A et Échap (MultiSelectFlags règle les options). imgui.selectionStorage() conserve les lignes sélectionnées pour vous. Cela fonctionne avec listClipper: une plage avec Shift peut couvrir 100000 lignes, même des lignes jamais dessinées. Un téléphone n'a pas de touches Ctrl ni Shift, c'est pourquoi l'exemple large-list affiche deux cases qui les maintiennent; docs/LIMITS.md explique le reste.
-* `Fonctionnalité` Nouvel exemple multi-window et nouveau guide docs/MULTI-WINDOW.md: plusieurs panneaux dans une session, chacun avec sa position, sa flèche de repli et son bouton de fermeture, et la fenêtre touchée passe au premier plan. Une seule session (une Surface) peut exister à la fois, donc "plusieurs fenêtres" désigne toujours des fenêtres dans une session, pas plusieurs fenêtres flottantes.
-* `Correctif` Fenêtres flottantes en mode TouchMode.Auto par défaut: un appui arrivait une hauteur de barre d'état plus bas que le doigt, si bien que les commandes proches du haut d'une fenêtre pouvaient ne pas réagir et que les barres de titre ne se déplaçaient pas
 
 ##### Pour consulter davantage de versions
 
